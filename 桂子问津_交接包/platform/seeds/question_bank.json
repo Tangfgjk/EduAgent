@@ -1,0 +1,197 @@
+{
+  "description": "初一 · 一元一次方程题库 v1（docs/03 教学模式库 practice/inquiry；每题预置提示阶梯 L0-L3 文本，LLM 只做个性化润色）",
+  "items": [
+    {
+      "item_id": "EQ-001",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.2,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：3x + 5 = 14",
+      "answer": {"var": "x", "value": "3"},
+      "misconception_links": ["MC.EQ.SIGN", "MC.EQ.REVERSE_OPS"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "先把两边同时减 5 试试，看看左边会剩什么？"},
+        {"level": 1, "form": "directive", "text": "目标是从等式两边同时减去 5，让左边只剩 3x。"},
+        {"level": 2, "form": "worked_partial", "text": "第一步：3x + 5 - 5 = 14 - 5，得到 3x = 9。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "3x + 5 = 14 → 两边减 5 得 3x = 9 → 两边除以 3 得 x = 3。代入验算：3×3+5=14 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-002",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.25,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：2x - 7 = 5",
+      "answer": {"var": "x", "value": "6"},
+      "misconception_links": ["MC.EQ.SIGN"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "左边是 2x 减 7，想想怎么先让 -7 消失？"},
+        {"level": 1, "form": "directive", "text": "两边同时加 7，左边就只剩 2x 了。"},
+        {"level": 2, "form": "worked_partial", "text": "两边加 7：2x - 7 + 7 = 5 + 7，即 2x = 12。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "2x - 7 = 5 → 两边加 7 得 2x = 12 → 除以 2 得 x = 6。验算：2×6-7=5 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-003",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.35,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：5x = 3x + 8",
+      "answer": {"var": "x", "value": "4"},
+      "misconception_links": ["MC.EQ.SIGN"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "两边都有 x，能不能先让其中一边只剩下 x？"},
+        {"level": 1, "form": "directive", "text": "两边同时减 3x，把 x 都集中到左边，注意变号。"},
+        {"level": 2, "form": "worked_partial", "text": "两边减 3x：5x - 3x = 8，即 2x = 8。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "5x = 3x + 8 → 两边减 3x（右侧 +3x 移到左侧变 -3x）得 2x = 8 → x = 4。验算：5×4=20，3×4+8=20 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-004",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.4,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：4(x - 2) = 12",
+      "answer": {"var": "x", "value": "5"},
+      "misconception_links": ["MC.EQ.DISTRIBUTE"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "括号挡在中间，先想办法处理括号——或者先把等式两边缩小一点？"},
+        {"level": 1, "form": "directive", "text": "两条路都行：把 4 乘进括号里，或者两边先同时除以 4。选一条走。"},
+        {"level": 2, "form": "worked_partial", "text": "两边除以 4：x - 2 = 3。接下来交给你。"},
+        {"level": 3, "form": "worked_full", "text": "4(x-2)=12 → 两边除以 4 得 x-2=3 → 两边加 2 得 x=5。（或展开：4x-8=12 → 4x=20 → x=5）验算：4×(5-2)=12 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-005",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.45,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：7 - 2x = 3x + 2",
+      "answer": {"var": "x", "value": "1"},
+      "misconception_links": ["MC.EQ.SIGN"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "左边有个 -2x，移项的时候它的符号会怎么变？"},
+        {"level": 1, "form": "directive", "text": "把含 x 的项移到一边、常数移到另一边，移动必须变号。"},
+        {"level": 2, "form": "worked_partial", "text": "移项：7 - 2 = 3x + 2x，即 5 = 5x。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "7-2x=3x+2 → 移项（-2x 右移变 +2x，+2 左移变 -2）得 7-2 = 3x+2x → 5 = 5x → x = 1。验算：7-2×1=5，3×1+2=5 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-006",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.5,
+      "taxonomy_level": "analyze",
+      "pattern": "practice",
+      "stem": "解方程：2(3x - 1) = 4x + 6",
+      "answer": {"var": "x", "value": "4"},
+      "misconception_links": ["MC.EQ.DISTRIBUTE", "MC.EQ.SIGN"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "先把左边括号乘开，注意 2 要乘给括号里的每一项。"},
+        {"level": 1, "form": "directive", "text": "展开左边得 6x - 2，然后按移项变号的规则合并同类项。"},
+        {"level": 2, "form": "worked_partial", "text": "展开：6x - 2 = 4x + 6 → 移项：6x - 4x = 6 + 2，即 2x = 8。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "2(3x-1)=4x+6 → 6x-2=4x+6 → 2x=8 → x=4。验算：2×(12-1)=22，4×4+6=22 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-007",
+      "kc_id": "MATH.G7.EQ.SETUP",
+      "difficulty": 0.5,
+      "taxonomy_level": "apply",
+      "pattern": "inquiry",
+      "stem": "小明买 3 支同样的笔，付了 14 元，找回 2 元。设每支笔 x 元，列出方程并求 x。",
+      "answer": {"var": "x", "value": "4"},
+      "misconception_links": ["MC.APP.EQUAL_RELATION"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "先找一个不变量：付出去的钱和找回的钱之间是什么关系？"},
+        {"level": 1, "form": "directive", "text": "等量关系：3 支笔的钱 + 找回的 2 元 = 付出的 14 元。"},
+        {"level": 2, "form": "worked_partial", "text": "按等量关系列方程：3x + 2 = 14。解交给你。"},
+        {"level": 3, "form": "worked_full", "text": "等量关系：3x + 2 = 14 → 3x = 12 → x = 4。每支笔 4 元。验算：3×4+2=14 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-008",
+      "kc_id": "MATH.G7.EQ.APPLY",
+      "difficulty": 0.55,
+      "taxonomy_level": "analyze",
+      "pattern": "inquiry",
+      "stem": "一件商品原价 x 元。商家宣传\"先打八折，再立减 10 元\"。用含 x 的式子表示最终付款金额。",
+      "answer": {"var": "x", "expr": "0.8x-10"},
+      "misconception_links": ["MC.APP.DISCOUNT_ORDER"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "\"打八折\"之后的价格是多少？再从那个价格里减 10。"},
+        {"level": 1, "form": "directive", "text": "先算八折价 0.8x，再减 10 元，注意运算顺序不能换。"},
+        {"level": 2, "form": "worked_partial", "text": "八折价：0.8x；最终付款：0.8x - 10。把它和\"先减 10 再打八折\"比一比，一样吗？"},
+        {"level": 3, "form": "worked_full", "text": "先八折再减 10：(0.8x) - 10 = 0.8x - 10。若顺序反过来是 0.8(x-10) = 0.8x - 8，两者相差 2 元——顺序会影响结果。"}
+      ]
+    },
+    {
+      "item_id": "EQ-009",
+      "kc_id": "MATH.G7.EQ.APPLY",
+      "difficulty": 0.6,
+      "taxonomy_level": "analyze",
+      "pattern": "inquiry",
+      "stem": "甲的数量是乙的 2 倍，甲乙总共 45 个。设乙为 x 个，列方程并求乙的数量。",
+      "answer": {"var": "x", "value": "15"},
+      "misconception_links": ["MC.APP.EQUAL_RELATION"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "乙是 x，那甲怎么用 x 表示？总数 45 是哪两部分加起来的？"},
+        {"level": 1, "form": "directive", "text": "甲 = 2x，等量关系：甲 + 乙 = 45。"},
+        {"level": 2, "form": "worked_partial", "text": "列方程：2x + x = 45。解交给你。"},
+        {"level": 3, "form": "worked_full", "text": "2x + x = 45 → 3x = 45 → x = 15。乙 15 个，甲 30 个。验算：30 = 2×15 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-010",
+      "kc_id": "MATH.G7.EQ.SETUP",
+      "difficulty": 0.4,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "哥哥比弟弟大 4 岁。弟弟今年 12 岁，设哥哥 x 岁，列方程并求 x。",
+      "answer": {"var": "x", "value": "16"},
+      "misconception_links": ["MC.APP.EQUAL_RELATION"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "\"哥哥比弟弟大 4 岁\"，用 x 和 12 写出这个\"大 4 岁\"。"},
+        {"level": 1, "form": "directive", "text": "哥哥年龄 - 弟弟年龄 = 4。"},
+        {"level": 2, "form": "worked_partial", "text": "方程：x - 12 = 4。解交给你。"},
+        {"level": 3, "form": "worked_full", "text": "x - 12 = 4 → x = 16。验算：16 - 12 = 4 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-011",
+      "kc_id": "MATH.G7.EQ.SOLVE",
+      "difficulty": 0.5,
+      "taxonomy_level": "apply",
+      "pattern": "practice",
+      "stem": "解方程：3(x + 2) - x = 10",
+      "answer": {"var": "x", "value": "2"},
+      "misconception_links": ["MC.EQ.DISTRIBUTE"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "展开 3(x+2) 时，2 也要乘 3 哦。"},
+        {"level": 1, "form": "directive", "text": "先展开括号，再合并同类项，最后移项。"},
+        {"level": 2, "form": "worked_partial", "text": "展开：3x + 6 - x = 10 → 合并：2x + 6 = 10。下一步交给你。"},
+        {"level": 3, "form": "worked_full", "text": "3(x+2)-x=10 → 3x+6-x=10 → 2x+6=10 → 2x=4 → x=2。验算：3×(2+2)-2=10 ✓"}
+      ]
+    },
+    {
+      "item_id": "EQ-012",
+      "kc_id": "MATH.G7.EQ.APPLY",
+      "difficulty": 0.65,
+      "taxonomy_level": "analyze",
+      "pattern": "inquiry",
+      "stem": "一个长方形的长比宽多 3，周长是 18。设宽为 x，列方程并求宽。",
+      "answer": {"var": "x", "value": "3"},
+      "misconception_links": ["MC.APP.EQUAL_RELATION"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "宽是 x，长怎么表示？周长是四条边的和。"},
+        {"level": 1, "form": "directive", "text": "长 = x + 3，等量关系：2×(长 + 宽) = 18。"},
+        {"level": 2, "form": "worked_partial", "text": "方程：2(x + x + 3) = 18。解交给你。"},
+        {"level": 3, "form": "worked_full", "text": "2(2x+3)=18 → 4x+6=18 → 4x=12 → x=3。宽 3，长 6。验算：2×(3+6)=18 ✓"}
+      ]
+    }
+  ]
+}

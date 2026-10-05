@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桂子问津 · 学习工作台 v2 原型</title>
+<style>
+  :root{
+    --bg0:#0d1117; --bg1:#161b22; --bg2:#1c2128; --bg3:#262c36;
+    --border:#30363d; --border-soft:#21262d;
+    --tx:#e6edf3; --tx2:#8b949e; --tx3:#6e7681;
+    --green:#3fb950; --green-dim:#1a3a22;
+    --blue:#58a6ff; --blue-dim:#12233d;
+    --yellow:#d29922; --yellow-dim:#33270e;
+    --red:#f85149; --red-dim:#3d1416;
+    --purple:#bc8cff;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace;
+    --sans:-apple-system,'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg0);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.55}
+  .mono{font-family:var(--mono)}
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid var(--border);background:var(--bg1);position:sticky;top:0;z-index:50}
+  .logo{display:flex;align-items:center;gap:9px}
+  .seal{width:30px;height:30px;border-radius:7px;background:var(--green-dim);border:1px solid var(--green);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;font-family:var(--sans)}
+  .brand{line-height:1.15}
+  .brand b{font-size:14px;letter-spacing:1px;display:block}
+  .brand span{font-size:10px;color:var(--tx3);letter-spacing:2px}
+  .proj{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 11px;cursor:pointer;white-space:nowrap}
+  .proj b{color:var(--tx);font-weight:500}
+  .proj .pj{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .tabs{display:flex;gap:2px;margin:0 auto}
+  .tab{padding:5px 13px;border-radius:6px;color:var(--tx2);font-size:13px}
+  .tab:hover{color:var(--tx);background:var(--bg2)}
+  .tab.on{color:var(--tx);background:var(--bg3);font-weight:500}
+  .tab .inproj{font-size:9px;color:var(--tx3);display:block;text-align:center;letter-spacing:1px}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .btn{border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--tx);background:var(--bg2)}
+  .btn:hover{border-color:var(--tx3)}
+  .btn.primary{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+  .btn.teacher{color:var(--yellow);border-color:var(--yellow)}
+
+  /* ---------- 视图与栏 ---------- */
+  .shell{display:flex;height:calc(100vh - 45px);width:100%}
+  .view{display:none;flex:1;min-width:0;flex-direction:column;background:var(--bg0);position:relative}
+  .view.on{display:flex}
+  .pane-l{order:-1}
+  .pane-r{order:100}
+  #pane-r{display:none}
+  body.in-study:not(.nor) #pane-r{display:block}
+  body.nol .pane-l,body.nor .pane-r{display:none}
+  .rail button{width:20px;height:20px;color:var(--tx3);font-size:12px;border-radius:4px}
+  .rail button:hover{color:var(--tx);background:var(--bg2)}
+  .panetoggles{display:flex;gap:4px}
+  .iconbtn{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;color:var(--tx3);display:flex;align-items:center;justify-content:center;background:var(--bg2)}
+  .iconbtn:hover{color:var(--tx);border-color:var(--tx3)}
+  .iconbtn.on{color:var(--green);border-color:var(--green)}
+  .top-actions #tg-r{display:none}
+  body.in-study .top-actions #tg-r{display:flex}
+
+  .pane-l{width:225px;min-width:225px;border-right:1px solid var(--border);background:var(--bg1);overflow-y:auto;padding:10px 0}
+  .pane-c{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg0);position:relative}
+  .pane-r{width:252px;min-width:252px;border-left:1px solid var(--border);background:var(--bg1);overflow-y:auto;padding:12px}
+
+  /* 项目导航 */
+  .tree-sec{padding:4px 12px}
+  .tree-h{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 5px}
+  .projcard{margin:4px 10px;border:1px solid var(--border-soft);border-radius:8px;padding:8px 11px;cursor:pointer;background:var(--bg2)}
+  .projcard:hover{border-color:var(--border)}
+  .projcard.cur{border-color:var(--green);background:var(--bg2)}
+  .projcard .pn{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px}
+  .projcard .pn .dot{width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+  .projcard.cur .pn .dot{background:var(--green)}
+  .projcard .pm{font-size:10.5px;color:var(--tx3);font-family:var(--mono);margin-top:3px}
+  .prog{height:4px;background:var(--bg3);border-radius:3px;margin-top:5px;overflow:hidden}
+  .prog i{display:block;height:100%;background:var(--green);border-radius:3px}
+  .prog .warn{background:var(--yellow)}
+  .glink{display:flex;align-items:center;gap:8px;padding:5px 20px;color:var(--tx2);cursor:pointer;font-size:12.5px}
+  .glink:hover{background:var(--bg2);color:var(--tx)}
+  .glink .bdg{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--yellow);background:var(--yellow-dim);border-radius:8px;padding:0 6px}
+  .contract-card{margin:10px 12px;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg2)}
+  .contract-card .t{font-size:11px;color:var(--tx3);margin-bottom:4px}
+  .contract-card .n{font-size:13px;font-weight:500}
+  .mini{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:3px}
+  .link{color:var(--blue);cursor:pointer;font-size:12px}
+  .link:hover{text-decoration:underline}
+
+  /* 会话流 */
+  .feed{flex:1;overflow-y:auto;padding:18px 26px}
+  .msg{max-width:760px;margin:0 auto 14px}
+  .msg .who{font-size:11px;color:var(--tx3);margin-bottom:3px;display:flex;gap:8px;align-items:center}
+  .msg .who b{color:var(--tx2);font-weight:500}
+  .socr{font-size:10px;color:var(--blue);background:var(--blue-dim);border:1px solid #1f3a5f;border-radius:4px;padding:0 6px;font-family:var(--sans)}
+  .bubble{border-radius:9px;padding:10px 14px;background:var(--bg1);border:1px solid var(--border-soft)}
+  .msg.me .bubble{background:var(--blue-dim);border-color:#1f3a5f;margin-left:80px}
+  .qcard{border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:8px;background:var(--bg1);padding:11px 14px;margin-bottom:10px}
+  .qcard .tag{font-size:10px;color:var(--blue);letter-spacing:.5px;margin-bottom:4px}
+  .tool{max-width:760px;margin:0 auto 10px;font-family:var(--mono);font-size:12px}
+  .tool-h{display:flex;align-items:center;gap:8px;background:var(--bg1);border:1px solid var(--border-soft);border-radius:7px;padding:6px 11px;cursor:pointer;color:var(--tx2)}
+  .tool-h:hover{border-color:var(--border)}
+  .tool-h .arr{color:var(--tx3);transition:transform .15s}
+  .tool.open .arr{transform:rotate(90deg)}
+  .tool-h .st{margin-left:auto}
+  .st.ok{color:var(--green)} .st.run{color:var(--blue)}
+  .tool-b{display:none;border:1px solid var(--border-soft);border-top:none;border-radius:0 0 7px 7px;background:var(--bg0);padding:9px 13px;color:var(--tx2)}
+  .tool.open .tool-b{display:block}
+  .tool-b .kv{display:flex;gap:8px;padding:1.5px 0}
+  .tool-b .k{color:var(--tx3);min-width:88px}
+  .notice{max-width:760px;margin:0 auto 14px;border-radius:9px;padding:10px 14px;font-size:12.5px;display:flex;gap:10px;align-items:flex-start}
+  .notice.ladder{background:var(--yellow-dim);border:1px solid #5a4a1a}
+  .notice.deny{background:var(--red-dim);border:1px solid #6b2726}
+  .notice.wait{background:var(--bg2);border:1px dashed var(--border)}
+  .notice .ic{font-size:15px;line-height:1.3}
+  .notice .more{margin-top:4px}
+  .inputbar{border-top:1px solid var(--border);padding:12px 26px;background:var(--bg1)}
+  .inputwrap{max-width:760px;margin:0 auto}
+  .inputrow{display:flex;gap:8px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:9px 12px}
+  .inputrow input{flex:1;background:none;border:none;outline:none;color:var(--tx);font-size:13px;font-family:var(--sans)}
+  .inputrow .ico{color:var(--tx3);cursor:pointer;font-size:14px}
+  .inputrow .ico:hover{color:var(--tx)}
+  .statusline{max-width:760px;margin:8px auto 0;font-size:11.5px;color:var(--tx3);display:flex;gap:16px;flex-wrap:wrap}
+  .statusline .good{color:var(--green)}
+  .statusline .socratic{color:var(--blue)}
+  .statusline .m{font-family:var(--mono)}
+
+  /* 右栏承载件 */
+  .rh{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 7px;border-bottom:1px solid var(--border-soft);padding-bottom:4px}
+  .rh:first-child{margin-top:0}
+  .ladder{display:flex;flex-direction:column;gap:5px}
+  .rung{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:6px;border:1px solid transparent;color:var(--tx2);font-size:12px}
+  .rung .n{font-family:var(--mono);font-size:10px;color:var(--tx3);width:18px}
+  .rung.cur{background:var(--yellow-dim);border-color:#5a4a1a;color:var(--tx)}
+  .rung.lock{color:var(--tx3)}
+  .rung.lock .lk{margin-left:auto;font-size:10px;border:1px solid var(--border);border-radius:4px;padding:0 5px}
+  .budgetbar{display:flex;gap:4px}
+  .budgetbar i{flex:1;height:8px;border-radius:3px;background:var(--bg3)}
+  .budgetbar i.used{background:var(--yellow)}
+  .budgetbar i.free{background:var(--green-dim);border:1px solid var(--green)}
+  .fivesteps{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--tx2)}
+  .fivesteps .s{display:flex;gap:8px;align-items:center;padding:2.5px 4px}
+  .fivesteps .s .dot2{width:7px;height:7px;border-radius:50%;background:var(--bg3)}
+  .fivesteps .s.done .dot2{background:var(--green)}
+  .fivesteps .s.cur{color:var(--tx)} .fivesteps .s.cur .dot2{background:var(--yellow)}
+  .chainbox{background:var(--bg2);border:1px solid var(--border-soft);border-radius:8px;padding:9px 11px}
+  .chainbox .cq{display:flex;gap:7px;font-size:11.5px;color:var(--tx2);padding:2.5px 0}
+  .chainbox .cq .qn{color:var(--blue);font-family:var(--mono);font-size:10px;min-width:18px;padding-top:1px}
+  .chainbox .cq .ans{color:var(--tx3)}
+  .chainbox .cq .ans b{color:var(--green);font-weight:500}
+  .chainbox .cq.now .qn{color:var(--yellow)}
+  .chainbox .csum{margin-top:6px;font-size:11px;color:var(--green);border-top:1px solid var(--border-soft);padding-top:6px}
+  .mirrorbox{background:var(--bg2);border:1px solid var(--border-soft);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--tx2)}
+  .mirrorbox .v{font-family:var(--mono);color:var(--tx)}
+  .mirrorbox .up{color:var(--green);font-family:var(--mono);font-size:11px}
+
+  /* 页头 */
+  .evidence-wrap,.round-wrap,.plan-wrap,.set-wrap{flex:1;overflow-y:auto;padding:20px 28px}
+  .ew,.rw,.pw,.sw2{max-width:980px;margin:0 auto}
+  .pagehead{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .pagehead h1{font-size:17px;font-weight:600}
+  .pagehead .sub{color:var(--tx3);font-size:12px}
+  .persp{margin-left:auto;display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;font-size:12px}
+  .persp span{padding:4px 12px;color:var(--tx2);cursor:pointer}
+  .persp span.on{background:var(--bg3);color:var(--tx)}
+
+  /* 路径推荐 */
+  .pathcard{background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .pathcard .ph2{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .pathcard .pdesc{font-size:12px;color:var(--tx2);margin-bottom:12px}
+  .signals{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .sig{font-size:11px;font-family:var(--mono);background:var(--bg2);border:1px solid var(--border-soft);border-radius:5px;padding:2px 9px;color:var(--tx2)}
+  .sig b{color:var(--tx);font-weight:500}
+  .sig.hot{border-color:#5a4a1a;background:var(--yellow-dim);color:#e3b341}
+  .pathflow{display:flex;align-items:stretch;margin-bottom:10px}
+  .pnode{flex:1;background:var(--bg2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 10px;min-width:0}
+  .pnode .pt{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pnode .pm{font-size:10px;color:var(--tx3);font-family:var(--mono);margin-top:3px}
+  .pnode.done{border-color:var(--green)} .pnode.done .pt{color:var(--green)}
+  .pnode.cur{border-color:var(--yellow);background:#2a2110}
+  .pnode.reco{border-style:dashed;border-color:var(--blue)}
+  .parrow{display:flex;align-items:center;color:var(--tx3);padding:0 5px;font-size:12px}
+  .pcond{font-size:11px;color:var(--tx3);margin-bottom:12px}
+  .pathactions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .pathactions .contract-line{margin-top:0;margin-left:auto}
+
+  /* 计划：图形进度 */
+  .progrow{display:grid;grid-template-columns:150px 1fr;gap:16px;background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+  .ringbox{text-align:center}
+  .ringbox .rl{font-size:11px;color:var(--tx3);margin-top:4px}
+  .miles{padding:4px 2px}
+  .miles .mt{font-size:11px;color:var(--tx3);margin-bottom:14px;letter-spacing:.8px}
+  .mtl{position:relative;height:64px;margin:6px 6px 0}
+  .mtl .line{position:absolute;top:9px;left:8px;right:8px;height:2px;background:var(--bg3)}
+  .mtl .line i{position:absolute;left:0;top:0;height:100%;background:var(--green);width:38%}
+  .mnode{position:absolute;top:2px;transform:translateX(-50%);text-align:center;width:86px}
+  .mnode .nd{width:15px;height:15px;border-radius:50%;background:var(--bg1);border:2px solid var(--tx3);margin:0 auto 4px}
+  .mnode.done .nd{background:var(--green);border-color:var(--green)}
+  .mnode.now .nd{border-color:var(--yellow);background:var(--yellow);box-shadow:0 0 0 4px var(--yellow-dim)}
+  .mnode.future .nd{border-style:dashed}
+  .mnode .ml{font-size:11px;color:var(--tx2)}
+  .mnode .md{font-size:9.5px;color:var(--tx3);font-family:var(--mono)}
+  .goalbars{grid-column:1/-1;border-top:1px solid var(--border-soft);padding-top:12px}
+  .gbar{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--tx2);padding:3px 0}
+  .gbar .gn{width:130px;white-space:nowrap}
+  .gbar .track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+  .gbar .track i{display:block;height:100%;border-radius:4px}
+  .gbar .gv{font-family:var(--mono);font-size:11px;width:44px;text-align:right;color:var(--tx)}
+  .plan-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;overflow:hidden}
+  .plan-side .ph{padding:10px 16px;border-bottom:1px solid var(--border-soft);font-size:12px;color:var(--tx3);background:var(--bg2)}
+  .diff{font-family:var(--mono);font-size:12px;padding:10px 0}
+  .dl{padding:1.5px 16px;white-space:pre-wrap}
+  .dl.add{background:#12261a;color:#7ee2a0}
+  .dl.del{background:#2d1517;color:#ffa198;text-decoration:line-through;text-decoration-color:#8b3a3a}
+  .dl.ctx{color:var(--tx2)}
+  .dl .cm{display:block;font-family:var(--sans);font-size:11px;color:var(--blue);background:var(--blue-dim);border-radius:5px;padding:2px 8px;margin:3px 0 3px 16px;text-decoration:none}
+  .gate-bar{margin-top:14px;display:flex;align-items:center;gap:14px;background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:12px 16px}
+  .gate-bar .warn2{font-size:12px;color:var(--tx2)}
+  .gate-bar .warn2 b{color:var(--yellow)}
+  .gate-actions{margin-left:auto;display:flex;gap:9px}
+  .btn.approve{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--green);color:var(--tx);border-radius:9px;padding:10px 20px;font-size:13px;display:none;z-index:99}
+  .toast.show{display:block}
+
+  /* 圆桌 */
+  .round-hint{color:var(--tx3);font-size:12px;margin:4px 0 16px}
+  .seats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .seat{background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;padding:13px 15px}
+  .seat .head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .seat .ava{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#0d1117;font-size:13px}
+  .seat .nm{font-weight:500}
+  .seat .stance{font-size:10.5px;border-radius:4px;padding:0 6px;margin-left:auto}
+  .stance.pro{background:var(--green-dim);color:var(--green)}
+  .stance.con{background:var(--red-dim);color:var(--red)}
+  .stance.q{background:var(--blue-dim);color:var(--blue)}
+  .seat .say{font-size:12.5px;color:var(--tx2)}
+  .seat .ask{margin-top:9px;font-size:11.5px;color:var(--blue);cursor:pointer}
+  .concl{margin-top:16px;background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .concl .ct{font-weight:600;margin-bottom:6px;display:flex;gap:10px;align-items:center}
+  .disagree{font-size:11px;font-family:var(--mono);background:var(--yellow-dim);color:var(--yellow);border-radius:5px;padding:1px 8px}
+  .concl p{color:var(--tx2);font-size:12.5px}
+  .committee{margin-top:10px;border:1px dashed var(--border);border-radius:10px;padding:11px 15px;font-size:12px;color:var(--tx3);display:flex;gap:9px;align-items:center}
+
+  /* 成长证据 */
+  .evgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  .evcard{background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;padding:14px 16px}
+  .evcard.wide{grid-column:1/-1}
+  .evcard .et{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .evcard .et b{font-size:13.5px;font-weight:600}
+  .evcard .et .src{font-size:10.5px;color:var(--tx3);font-family:var(--mono)}
+  .evcard .edesc{color:var(--tx2);font-size:12px;margin-bottom:10px}
+  .evcard svg{width:100%;height:110px;display:block}
+  .evcard .drill{margin-top:9px;font-size:11.5px;color:var(--blue);cursor:pointer}
+  .evcard .drill:hover{text-decoration:underline}
+  .evnote{font-size:11px;color:var(--tx3);margin-top:6px}
+  .evcard.reserved{border-style:dashed;border-color:var(--border)}
+  .rbadge{font-size:10px;font-family:var(--mono);color:var(--purple);background:#251a3d;border:1px solid #3d2d63;border-radius:4px;padding:0 7px;margin-left:auto}
+  .contract-line{font-family:var(--mono);font-size:10.5px;color:var(--purple);background:#171126;border-radius:6px;padding:6px 9px;margin-top:9px}
+  .heatrow{display:flex;gap:3px;margin:2px 0}
+  .heatrow .hc{flex:1;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-family:var(--mono);color:#0d1117}
+  .heatlbl{display:flex;font-size:9px;color:var(--tx3);font-family:var(--mono)}
+  .heatlbl span{flex:1;text-align:center}
+
+  /* 设置 */
+  .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .setcard{background:var(--bg1);border:1px solid var(--border-soft);border-radius:10px;padding:15px 17px}
+  .setcard h3{font-size:13.5px;margin-bottom:3px;font-weight:600}
+  .setcard .d{font-size:11.5px;color:var(--tx3);margin-bottom:11px}
+  .opt{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:6px;cursor:pointer;color:var(--tx2);font-size:12.5px}
+  .opt:hover{background:var(--bg2)}
+  .opt.on{color:var(--tx);background:var(--bg2)}
+  .opt .rd{width:13px;height:13px;border-radius:50%;border:2px solid var(--tx3)}
+  .opt.on .rd{border-color:var(--green);background:radial-gradient(circle at center,var(--green) 0 3.5px,transparent 4px)}
+  .cost-hint{margin-top:9px;background:var(--yellow-dim);border:1px solid #5a4a1a;border-radius:7px;padding:7px 11px;font-size:11.5px;color:#e3b341}
+  .locked{display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border-soft);font-size:12.5px;align-items:flex-start}
+  .locked:last-child{border-bottom:none}
+  .locked .lk2{color:var(--tx3);margin-top:1px}
+  .locked .why{margin-left:auto;color:var(--blue);cursor:pointer;white-space:nowrap;font-size:11.5px}
+  .sw{position:relative;width:34px;height:19px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:.15s}
+  .sw i{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--tx2);transition:.15s}
+  .sw.on{background:var(--green-dim);border-color:var(--green)}
+  .sw.on i{left:17px;background:var(--green)}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:7px 4px;font-size:12.5px;color:var(--tx2)}
+  .row+.row{border-top:1px solid var(--border-soft)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 顶栏 ═══════════ -->
+<div class="topbar">
+  <div class="logo">
+    <div class="seal">问</div>
+    <div class="brand"><b>桂子问津</b><span>问津，而后自渡</span></div>
+  </div>
+  <div class="panetoggles">
+    <button class="iconbtn on" id="tg-l" title="项目导航（快捷键 [ ）" onclick="togglePane('l')"><svg width="15" height="15" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="5.8" y1="2.5" x2="5.8" y2="13.5" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  </div>
+  <div class="proj" onclick="toast('多项目切换将在 Postgres 迁移后开放 · 当前项目：折扣问题单元')">
+    <span class="pj"></span>项目 · <b>折扣问题单元</b> ▾
+  </div>
+  <nav class="tabs">
+    <button class="tab" data-v="plan" onclick="go('plan',this)">计划<span class="inproj">项目内</span></button>
+    <button class="tab on" data-v="study" onclick="go('study',this)">陪学<span class="inproj">项目内</span></button>
+    <button class="tab" data-v="roundtable" onclick="go('roundtable',this)">圆桌<span class="inproj">项目内</span></button>
+    <button class="tab" data-v="evidence" onclick="go('evidence',this)">成长证据<span class="inproj">项目内</span></button>
+    <button class="tab" data-v="settings" onclick="go('settings',this)">设置</button>
+  </nav>
+  <div class="top-actions">
+    <button class="btn teacher">📣 召唤老师</button>
+    <button class="iconbtn on" id="tg-r" title="教学面板（快捷键 ] ）" onclick="togglePane('r')"><svg width="15" height="15" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="10.2" y1="2.5" x2="10.2" y2="13.5" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  </div>
+</div>
+
+<!-- ═══════════ 陪学（项目内） ═══════════ -->
+<div class="shell">
+<aside class="pane-l">
+    <div class="tree-sec">
+      <div class="tree-h">进行中的项目</div>
+      <div class="projcard cur">
+        <div class="pn"><span class="dot"></span>折扣问题单元</div>
+        <div class="prog"><i style="width:43%"></i></div>
+        <div class="pm">D6/14 · 43% · 陪学中</div>
+      </div>
+      <div class="projcard" onclick="toast('该项目数据待接入（M1 余项）· 当前演示「折扣问题单元」')">
+        <div class="pn"><span class="dot"></span>期中备考·一元一次方程</div>
+        <div class="prog"><i class="warn" style="width:12%"></i></div>
+        <div class="pm">D2/21 · 12% · 计划已签署</div>
+      </div>
+      <div class="projcard" onclick="toast('该项目数据待接入（M1 余项）· 当前演示「折扣问题单元」')">
+        <div class="pn"><span class="dot"></span>物理·浮力探究</div>
+        <div class="pm">计划待签署 →</div>
+      </div>
+      <div class="tree-h">已归档</div>
+      <div class="glink">✓ 分式运算专项 <span class="bdg">达成</span></div>
+      <div class="tree-h">全局（跨项目）</div>
+      <div class="glink" onclick="toast('晨间简报：今日 3 项待办·6 项复习')">🌅 今日简报</div>
+      <div class="glink" onclick="toast('我的镜子：跨项目的学习者画像')">🪞 我的镜子</div>
+      <div class="glink" onclick="go('evidence',document.querySelector('[data-v=evidence]'))">📈 成长总览（跨项目）</div>
+      <div class="glink" onclick="toast('复习队列：FSRS 排程 12 项')">🔁 复习队列 <span class="bdg">12</span></div>
+    </div>
+    <div class="contract-card">
+      <div class="t">本项目契约（你签署的）</div>
+      <div class="n">独立解一元一次方程应用题</div>
+      <div class="prog"><i style="width:43%"></i></div>
+      <div class="mini">第6天/14 · 43% · [查看/修订]</div>
+    </div>
+</aside>
+
+<main class="view on" id="v-study">
+    <div class="feed">
+      <div class="msg">
+        <div class="who"><b>津津</b> · 14:32 <span class="socr">设问 · 请你先猜</span></div>
+        <div class="qcard"><div class="tag">好问题 · Explore</div>打八折再减 10 元，和先减 10 元再打八折，什么时候结果不一样？先猜猜看——不用急着算。</div>
+      </div>
+      <div class="msg me">
+        <div class="who"><b>我</b> · 14:33</div>
+        <div class="bubble">一样的吧…打折嘛</div>
+      </div>
+      <div class="msg">
+        <div class="who"><b>津津</b> · 14:34 <span class="socr">特例试探</span></div>
+        <div class="bubble">我不给结论，给两个例子：x=100 和 x=50，各算一遍再比。<span style="color:var(--yellow);font-family:var(--mono);font-size:11px">〔L1 · strategic〕</span></div>
+      </div>
+      <div class="tool open" onclick="this.classList.toggle('open')">
+        <div class="tool-h"><span class="arr">▸</span>bank.search · 检索相似例题<span class="st ok">✓ 2条 · 已接地 KG:折扣问题</span></div>
+        <div class="tool-b">
+          <div class="kv"><span class="k">query</span><span>折扣顺序 · 应用题 · 难度≤0.65</span></div>
+          <div class="kv"><span class="k">接地</span><span>kg_node: discount_order ✓ (R-06)</span></div>
+        </div>
+      </div>
+      <div class="msg me">
+        <div class="who"><b>我</b> · 14:35</div>
+        <div class="bubble">咦，真不一样……100 的时候差 2 块，50 的时候差 1 块</div>
+      </div>
+      <div class="tool" onclick="this.classList.toggle('open')">
+        <div class="tool-h"><span class="arr">▸</span>verify.answer · 验算两个结果<span class="st ok">✓ 均正确 (0.42s)</span></div>
+        <div class="tool-b">
+          <div class="kv"><span class="k">方式</span><span>sympy 等价验算 · verifier.sympy.1.3</span></div>
+          <div class="kv"><span class="k">Bloom</span><span>apply ✓ · misconception_hits: []</span></div>
+        </div>
+      </div>
+      <div class="notice ladder">
+        <span class="ic">🪜</span>
+        <div><b>提示升级 L1 → L2</b>：你尝试了两次仍未建立等式，按阶梯规则放行"部分范例"。
+          <div class="link more">为什么现在升级？▸ 规则解释（3 次尝试 × 同类卡点 · ladder.rule.02）</div>
+        </div>
+      </div>
+      <div class="msg">
+        <div class="who"><b>津津</b> · 14:36 <span class="socr">部分范例</span></div>
+        <div class="bubble">【L2 · 先给第一步】两种顺序的差 = 0.2×10 = 2 元。剩下的一步交给你：这个"10"是什么？换成减 a 元呢？</div>
+      </div>
+      <div class="msg me">
+        <div class="who"><b>我</b> · 14:37</div>
+        <div class="bubble">我觉得关键在"减 10"是在打折前还是打折后——基数不一样！</div>
+      </div>
+      <div class="msg">
+        <div class="who"><b>津津</b> · 14:37 <span class="socr">追问 · 请你先说</span></div>
+        <div class="bubble">这个方向有意思——能把你的想法写成符号吗？写完我们来对照。你也可以把它讲给"虚拟学弟"听（我教AI）。</div>
+      </div>
+      <div class="notice wait">
+        <span class="ic">⏳</span>
+        <div>津津在等你写，不催你。（productive struggle：挣扎是学习的一部分，但单次等待有上限，随时可以 [提示L1] 或 [召唤老师]）</div>
+      </div>
+      <div class="notice deny">
+        <span class="ic">🛡</span>
+        <div>你请求了"直接告诉我完整解法"——这一步我先不给（R-01：不许提前给答案）。你已经有很好的猜想，先把符号式写出来，我们对照。<span class="link"> 查看这条规则的全文与理由 ▸</span></div>
+      </div>
+    </div>
+    <div class="inputbar">
+      <div class="inputwrap">
+        <div class="inputrow">
+          <span class="ico">@</span>
+          <input id="chat-input" placeholder="说说你的想法…  [/提示L1] [/看类似例] [/讲给虚拟学弟]" onkeydown="if(event.key==='Enter')sendMsg()">
+          <span class="ico">🎤</span><span class="ico">📷</span><span class="ico" onclick="sendMsg()" title="发送">➤</span>
+        </div>
+        <div class="statusline">
+          <span>主动提示 <span class="m">2/5</span></span>
+          <span class="socratic">💬 本会话 你说了 <span class="m">9</span> 句 · 津津说了 <span class="m">5</span> 句（学生话语占比 64% ✓）</span>
+          <span class="good">👍 你先尝试了 3 次才求助</span>
+          <span class="m">policy_v42</span>
+        </div>
+      </div>
+    </div>
+</main>
+
+  <aside class="pane-r" id="pane-r">
+    <div class="rh">提示阶梯</div>
+    <div class="ladder">
+      <div class="rung"><span class="n">L0</span>轻推 · 指向关键处</div>
+      <div class="rung"><span class="n">L1</span>定向提示 · 不给步骤</div>
+      <div class="rung cur"><span class="n">L2</span>部分范例 · 已放行 ←</div>
+      <div class="rung lock"><span class="n">L3</span>完整讲解<span class="lk">🔒 需先有你的产物</span></div>
+    </div>
+    <div class="rh">干预预算（R-07）</div>
+    <div class="budgetbar"><i class="used"></i><i class="used"></i><i class="free"></i><i class="free"></i><i class="free"></i></div>
+    <div class="mini">已用 2 / 上限 5 · 自主性越高预算越少——这是设计，不是惩罚</div>
+    <div class="rh">会话阶段（5E）</div>
+    <div class="fivesteps">
+      <div class="s done"><span class="dot2"></span>Engage 情境卷入</div>
+      <div class="s done"><span class="dot2"></span>Explore 动手探究</div>
+      <div class="s cur"><span class="dot2"></span>Explain 学生先讲</div>
+      <div class="s"><span class="dot2"></span>Elaborate 迁移任务</div>
+      <div class="s"><span class="dot2"></span>Evaluate 反思关卡</div>
+    </div>
+    <div class="rh">问题链（你自己的结论）</div>
+    <div class="chainbox">
+      <div class="cq"><span class="qn">Q1</span><div>两种顺序一样吗？<div class="ans">你：一样的吧 <span style="color:var(--tx3)">→ 未验证</span></div></div></div>
+      <div class="cq"><span class="qn">Q2</span><div>特例 x=100、x=50 呢？<div class="ans">你：不一样，差 2 块/1 块 <b>✓ 已验证</b></div></div></div>
+      <div class="cq now"><span class="qn">Q3</span><div>差异到底由什么决定？<div class="ans">等你的符号式…</div></div></div>
+      <div class="csum">✦ 其中 1 个结论完全由你自己得出</div>
+    </div>
+    <div class="rh">镜子速览（是猜测，不是判决）</div>
+    <div class="mirrorbox">
+      掌握 · 移项 <span class="v">0.68 ±0.06</span> <span class="up">↑两周+0.21</span><br>
+      猜测A · 折扣顺序符号易错 <span class="v">62%</span><br>
+      <span class="link">不是这样 ▸</span> · <span class="link">打开完整镜子 ▸</span>
+    </div>
+    <div class="rh">证据链</div>
+    <div class="mini">本会话 14 个事件 · 全部可回放<br><span class="link">查看津津为什么这么做 ▸</span></div>
+</aside>
+
+<!-- ═══════════ 计划签署（项目内） ═══════════ -->
+<main class="view" id="v-plan">
+  <div class="plan-wrap"><div class="pw">
+    <div class="pagehead"><h1>关口① · 计划签署</h1><span class="sub">计划.md · v1 → v2 草案 · 津津只能提议，最终决定权在你</span></div>
+
+    <div class="progrow">
+      <div class="ringbox">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#262c36" stroke-width="10"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#3fb950" stroke-width="10" stroke-linecap="round"
+                  stroke-dasharray="135 314" transform="rotate(-90 60 60)"/>
+          <text x="60" y="57" text-anchor="middle" fill="#e6edf3" font-size="21" font-family="monospace" font-weight="600">43%</text>
+          <text x="60" y="74" text-anchor="middle" fill="#6e7681" font-size="10" font-family="monospace">D6/14</text>
+        </svg>
+        <div class="rl">总进度</div>
+      </div>
+      <div class="miles">
+        <div class="mt">里程碑 · 本项目的路（虚线=还没走到）</div>
+        <div class="mtl">
+          <div class="line"><i></i></div>
+          <div class="mnode done" style="left:4%"><div class="nd">✓</div><div class="ml">诊断</div><div class="md">D1</div></div>
+          <div class="mnode done" style="left:27%"><div class="nd">✓</div><div class="ml">巩固·6次</div><div class="md">D2-5</div></div>
+          <div class="mnode now" style="left:50%"><div class="nd"></div><div class="ml">撤辅助挑战</div><div class="md">D6 · 今天</div></div>
+          <div class="mnode future" style="left:77%"><div class="nd"></div><div class="ml">期中模拟测</div><div class="md">D11</div></div>
+          <div class="mnode future" style="left:98%"><div class="nd"></div><div class="ml">复盘·反思关</div><div class="md">D14</div></div>
+        </div>
+      </div>
+      <div class="goalbars">
+        <div class="gbar"><span class="gn">达成标准① 概念辨析</span><div class="track"><i style="width:80%;background:#3fb950"></i></div><span class="gv">80%</span></div>
+        <div class="gbar"><span class="gn">达成标准② 独立解题</span><div class="track"><i style="width:55%;background:#58a6ff"></i></div><span class="gv">55%</span></div>
+        <div class="gbar"><span class="gn">达成标准③ 给别人讲明白 3 题</span><div class="track"><i style="width:0%;background:#d29922"></i></div><span class="gv">0/3</span></div>
+        <div class="mini" style="margin-top:6px">③ 完成路径：「我教AI」模式 · 讲给虚拟学弟听 · TeachReport 计数</div>
+      </div>
+    </div>
+
+    <div class="pathcard">
+      <div class="ph2">学习路径推荐（津津的提案）<span class="rbadge">推荐引擎 · 接口就绪</span></div>
+      <div class="pdesc">津津综合下列信号给出路径提案。<b>路径归你所有</b>：可以采纳、可以改，也可以让它重新想——一切改动都会以 diff 呈现在下方，由你签署（R-02）。</div>
+      <div class="signals">
+        <span class="sig">KT · <b>折扣建模 p=0.44 薄弱</b></span>
+        <span class="sig">FSRS · <b>2 项临遗忘</b></span>
+        <span class="sig">契约 · <b>期中模拟测 D11</b></span>
+        <span class="sig">偏好 · <b>标准提示</b></span>
+        <span class="sig hot">新证据 · <b>撤辅助小测 +6%</b></span>
+      </div>
+      <div class="pathflow">
+        <div class="pnode done"><div class="pt">① 等量关系识别</div><div class="pm">p=0.82 ✓ 已掌握</div></div>
+        <div class="parrow">→</div>
+        <div class="pnode done"><div class="pt">② 设未知数</div><div class="pm">p=0.68 ✓ 已掌握</div></div>
+        <div class="parrow">→</div>
+        <div class="pnode cur"><div class="pt">③ 折扣建模</div><div class="pm">p=0.44 · 当前薄弱点</div></div>
+        <div class="parrow">→</div>
+        <div class="pnode reco"><div class="pt">④ 综合应用·撤辅助</div><div class="pm">推荐下一步 · 预计 3 次</div></div>
+        <div class="parrow">+</div>
+        <div class="pnode reco"><div class="pt">⑤ 讲明白×3 · 教AI</div><div class="pm">推荐并行 · 虚拟学弟</div></div>
+      </div>
+      <div class="pcond">分支规则：③若连续 2 次验证通过率 &lt;60% → 在③④之间自动插入「等量关系变式 3 题」（规则可解释，参数可调）</div>
+      <div class="pathactions">
+        <button class="btn approve" onclick="toast('✓ 路径已写入计划草案 · 改动已进下方 diff，请审阅后签署')">✓ 采纳进计划</button>
+        <button class="btn" onclick="toast('直接说你要改什么（如：④提到D8）· 你的修改会以 diff 呈现')">✎ 我改一改</button>
+        <button class="btn" onclick="toast('津津重新生成一版路径提案…（原型演示）')">↻ 换个思路</button>
+        <span class="contract-line">PathRecommendation{ path_id, nodes[{kc_id,seq,est_sessions,difficulty,depends_on}], source_signals, status }</span>
+      </div>
+    </div>
+
+    <div class="plan-grid">
+      <div class="plan-side">
+        <div class="ph">变更评审（diff）· 你可以逐条批准或评论</div>
+        <div class="diff">
+          <div class="dl ctx">目标：两周内独立解一元一次方程应用题</div>
+          <div class="dl ctx">时间盒：10/01 – 10/14 · 今日 D6</div>
+          <div class="dl del">- 每日练习 8 道（匀速）</div>
+          <div class="dl add">+ 每日练习改为"6+2"：6 道巩固 + 2 道撤辅助挑战</div>
+          <div class="dl add">+ 依据：近3次无辅助小测 58%→64%，可加挑战比重（策略·graduated_challenge）</div>
+          <div class="dl ctx">每周三错题重练（FSRS 排程）</div>
+          <div class="dl del">- 期中模拟测：第 12 天</div>
+          <div class="dl add">+ 期中模拟测提前至第 11 天，留 3 天补漏（你上次提议"多留复盘时间"）</div>
+          <div class="dl ctx">撤辅助规则：模拟测全程无提示（R-09 考试模式）</div>
+          <span class="cm">评论：撤辅助挑战 2 道会不会太多？——点击输入你的想法</span>
+        </div>
+      </div>
+      <div></div>
+      <div class="plan-side">
+        <div class="ph">这份计划由谁决定？</div>
+        <div class="diff" style="font-family:var(--sans)">
+          <div class="dl ctx" style="white-space:normal;padding:10px 16px;color:var(--tx2)">
+            <b style="color:var(--tx)">津津起草了 v2</b>，改动 3 处（绿=新增，红=删除）。<br><br>
+            ✓ 目标条款未变——那是你在目标工坊亲手签署的。<br>
+            ✓ 每处改动都附了依据，点依据可钻取到原始事件。<br>
+            ✓ 你也可以直接改文字——修改权在你（R-02）。<br><br>
+            签署后 v2 生效并锁定；再修订需先过一次反思小步骤（双环学习）。
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gate-bar">
+      <span class="warn2"><b>⚠</b> 签署是关口① · 完成后津津才会按新计划执行</span>
+      <div class="gate-actions">
+        <button class="btn" onclick="toast('已把你的评论发给津津，它会修订后再来')">💬 对某条提修改</button>
+        <button class="btn approve" onclick="toast('✓ 计划 v2 已由你签署生效 · 版本已锁定留档')">✍ 我签署这份计划</button>
+      </div>
+    </div>
+  </div></div>
+</main>
+
+<!-- ═══════════ 圆桌（项目内） ═══════════ -->
+<main class="view" id="v-roundtable">
+  <div class="round-wrap"><div class="rw">
+    <div class="pagehead"><h1>圆桌研讨 · 折扣问题</h1><span class="sub">派生⑤ · 立场由模板注入 · 你的插话优先级最高</span></div>
+    <div class="round-hint">话题：什么时候"先减再折"比"先折再减"划算？各席先表态，你随时 @任何人追问。</div>
+    <div class="seats">
+      <div class="seat">
+        <div class="head"><span class="ava" style="background:#58a6ff">师</span><span class="nm">林老师（教师席）</span><span class="stance pro">主持</span></div>
+        <div class="say">先把问题数学化：两种顺序相差 <span class="mono">0.2×a</span>（a 为减免额）。谁来说说这代表什么？</div>
+        <div class="ask">@追问 ▸</div>
+      </div>
+      <div class="seat">
+        <div class="head"><span class="ava" style="background:#3fb950">同</span><span class="nm">同学·举例派</span><span class="stance q">举例试探</span></div>
+        <div class="say">我试了原价 100：先减后折是 72，先折后减是 80，差 8 块！原价越大差越多。</div>
+        <div class="ask">@追问 ▸</div>
+      </div>
+      <div class="seat">
+        <div class="head"><span class="ava" style="background:#d29922">同</span><span class="nm">同学·质疑派</span><span class="stance con">有保留</span></div>
+        <div class="say">我不太同意"原价越大差越多"——如果减免额是 0 呢？那两种顺序应该一样。差异应该只跟减免额有关。</div>
+        <div class="ask">@追问 ▸</div>
+      </div>
+      <div class="seat">
+        <div class="head"><span class="ava" style="background:#bc8cff">津</span><span class="nm">津津（学伴·总结席）</span><span class="stance q">待共识</span></div>
+        <div class="say">目前两个候选结论：①与原价有关 ②只与减免额有关。等大家用符号验证后我再总结。</div>
+        <div class="ask">@追问 ▸</div>
+      </div>
+    </div>
+    <div class="concl">
+      <div class="ct">阶段性结论（草案）<span class="disagree">分歧标注 · 2席同意 · 1席保留</span></div>
+      <p>两种顺序的差 = 0.2 × 减免额 a，与原价无关（质疑派的反例已采纳；举例派的"差 8 块"实为 a=40 的特例）。</p>
+    </div>
+    <div class="committee">🛡 此结论须经对抗委员会验证（验证者·提问者·评价者三席）后才会写入你的错题本与镜子。<span class="link" style="margin-left:auto">查看委员会规程 ▸</span></div>
+  </div></div>
+</main>
+
+<!-- ═══════════ 成长证据（项目内 / 可切全局） ═══════════ -->
+<main class="view" id="v-evidence">
+  <div class="evidence-wrap"><div class="ew">
+    <div class="pagehead">
+      <h1>成长证据中心</h1><span class="sub">证据，不是排名 · 每张卡都可钻取到原始事件 · 当前：折扣问题单元</span>
+      <div class="persp"><span class="on">本项目</span><span>全局总览</span><span>教师聚合视角</span></div>
+    </div>
+    <div class="evgrid">
+
+      <div class="evcard">
+        <div class="et"><b>① 掌握度轨迹</b><span class="src">Verifier + 学习引擎</span></div>
+        <div class="edesc">移项：<span class="mono">0.41 → 0.68 ±0.06</span>（14 天）· ▲节点=通过0.9门槛晋级</div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+          <line x1="0" y1="90" x2="300" y2="90" stroke="#30363d"/><line x1="0" y1="50" x2="300" y2="50" stroke="#21262d"/><line x1="0" y1="10" x2="300" y2="10" stroke="#21262d"/>
+          <circle cx="215" cy="52" r="3.5" fill="#3fb950"/><text x="222" y="46" fill="#3fb950" font-size="9" font-family="monospace">晋级 0.9</text>
+          <polyline points="10,85 50,80 90,72 130,66 215,52 250,46 290,40" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <polygon points="10,89 50,84 90,77 130,71 215,57 250,51 290,45 290,35 250,41 215,47 130,61 90,67 50,76 10,81" fill="#3fb95022"/>
+          <text x="12" y="103" fill="#6e7681" font-size="8" font-family="monospace">0.40</text><text x="12" y="18" fill="#6e7681" font-size="8" font-family="monospace">0.80</text>
+        </svg>
+        <div class="evnote">区间 = 津津的把握程度 · 只与自己的历史比较</div>
+        <div class="drill">这条证据怎么来的？▸ 事件链（L3→L2→L1）</div>
+      </div>
+
+      <div class="evcard">
+        <div class="et"><b>② 认知层级跃迁（Bloom）</b><span class="src">Verifier taxonomy</span></div>
+        <div class="edesc">30 天前后对比：应用 +12%，分析 +9% —— 层级在右移</div>
+        <svg viewBox="0 0 300 110">
+          <g font-size="9" fill="#8b949e" font-family="monospace">
+            <text x="8"  y="102">记忆</text><text x="55" y="102">理解</text><text x="102" y="102">应用</text><text x="149" y="102">分析</text><text x="196" y="102">评价</text><text x="243" y="102">创造</text>
+          </g>
+          <g>
+            <rect x="12"  y="52" width="26" height="40" fill="#58a6ff44"/><rect x="14"  y="30" width="22" height="22" fill="#58a6ff"/>
+            <rect x="59"  y="42" width="26" height="50" fill="#58a6ff44"/><rect x="61"  y="22" width="22" height="20" fill="#58a6ff"/>
+            <rect x="106" y="34" width="26" height="58" fill="#58a6ff44"/><rect x="108" y="10" width="22" height="24" fill="#58a6ff"/>
+            <rect x="153" y="66" width="26" height="26" fill="#58a6ff44"/><rect x="155" y="52" width="22" height="14" fill="#58a6ff"/>
+            <rect x="200" y="82" width="26" height="10" fill="#58a6ff44"/><rect x="202" y="76" width="22" height="6"  fill="#58a6ff"/>
+            <rect x="247" y="88" width="26" height="4"  fill="#58a6ff44"/>
+          </g>
+          <g font-size="8.5" fill="#e6edf3" font-family="monospace">
+            <text x="108" y="6">+12%</text><text x="150" y="48">+9%</text>
+          </g>
+        </svg>
+        <div class="evnote">淡色=30天前 · 实色=现在 · 层级判定是 rubric 估计</div>
+        <div class="drill">哪些作业贡献了这次跃迁？▸</div>
+      </div>
+
+      <div class="evcard">
+        <div class="et"><b>③ 脚手架依赖在下降</b><span class="src">事件流 hint 计数 · R-07</span></div>
+        <div class="edesc">提示预算使用率：<span class="mono">92% → 40%</span> —— 越来越少的提示，一样对的题</div>
+        <svg viewBox="0 0 300 110">
+          <line x1="20" y1="95" x2="290" y2="95" stroke="#30363d"/>
+          <g fill="#d29922"><rect x="30" y="12" width="24" height="83" rx="3"/><rect x="66" y="20" width="24" height="75" rx="3"/><rect x="102" y="30" width="24" height="65" rx="3"/></g>
+          <g fill="#3fb950"><rect x="138" y="42" width="24" height="53" rx="3"/><rect x="174" y="52" width="24" height="43" rx="3"/><rect x="210" y="60" width="24" height="35" rx="3"/><rect x="246" y="66" width="24" height="29" rx="3"/></g>
+          <g font-size="8.5" fill="#6e7681" font-family="monospace">
+            <text x="30" y="107">W1</text><text x="102" y="107">W3</text><text x="246" y="107">W7</text>
+            <text x="30" y="8">92%</text><text x="246" y="62">40%</text>
+          </g>
+        </svg>
+        <div class="evnote">求助量不下降 ≠ 退步：求助是策略，不是失败</div>
+        <div class="drill">看每周的提示都花在哪个知识点 ▸</div>
+      </div>
+
+      <div class="evcard">
+        <div class="et"><b>④ 无辅助表现增量</b><span class="src">撤辅助小测 · 北极星①</span></div>
+        <div class="edesc">有提示时 <span class="mono">71%</span> → 撤提示小测 <span class="mono">64%</span>，差距在缩小</div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+          <line x1="20" y1="95" x2="290" y2="95" stroke="#30363d"/>
+          <polyline points="30,30 90,32 150,33 210,34 270,35" fill="none" stroke="#58a6ff" stroke-width="2"/>
+          <polyline points="30,68 90,60 150,48 210,42 270,39" fill="none" stroke="#3fb950" stroke-width="2" stroke-dasharray="5 3"/>
+          <g font-size="9" fill="#8b949e" font-family="monospace"><text x="32" y="24">有辅助 71%</text><text x="196" y="58">撤辅助 64%</text></g>
+          <g font-size="8.5" fill="#6e7681" font-family="monospace"><text x="30" y="107">W1</text><text x="260" y="107">W7</text></g>
+        </svg>
+        <div class="evnote">虚线=无辅助 · 标注样本量：n=18 道撤辅助题</div>
+        <div class="drill">撤辅助小测的题目构成 ▸</div>
+      </div>
+
+      <div class="evcard">
+        <div class="et"><b>⑤ 遗忘曲线与复习排程</b><span class="src">FSRS 调度器</span></div>
+        <div class="edesc">今日待复习 <span class="mono">6 项</span> · 按遗忘风险排序（为什么是这 6 项？▸）</div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+          <line x1="0" y1="95" x2="300" y2="95" stroke="#30363d"/>
+          <path d="M10,15 C40,15 55,60 75,60 C95,60 105,20 130,20 C160,20 170,64 190,64 C210,64 220,26 245,26 C268,26 275,58 295,58" stroke="#3fb950" fill="none" stroke-width="1.8"/>
+          <circle cx="75" cy="60" r="3" fill="#d29922"/><circle cx="190" cy="64" r="3" fill="#d29922"/>
+          <line x1="0" y1="75" x2="300" y2="75" stroke="#f8514944" stroke-dasharray="4 4"/>
+          <text x="236" y="72" fill="#f85149" font-size="8.5" font-family="monospace">风险线0.9</text>
+          <text x="80" y="78" fill="#d29922" font-size="8.5" font-family="monospace">今日复习×2</text>
+        </svg>
+        <div class="evnote">曲线是模型估计（"津津的把握"）· 复习顺序可解释、可跳过</div>
+        <div class="drill">查看这 6 项的排程依据 ▸</div>
+      </div>
+
+      <div class="evcard">
+        <div class="et"><b>⑥ 元认知校准</b><span class="src">反思关自评 + Verdict</span></div>
+        <div class="edesc">预计 vs 实际正确率：差距 <span class="mono">17% → 9%</span>，在缩小</div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+          <line x1="20" y1="95" x2="290" y2="95" stroke="#30363d"/>
+          <polyline points="30,25 90,32 150,38 210,42 270,45" fill="none" stroke="#bc8cff" stroke-width="2"/>
+          <polyline points="30,48 90,44 150,42 210,46 270,52" fill="none" stroke="#3fb950" stroke-width="2"/>
+          <g font-size="9" fill="#8b949e" font-family="monospace"><text x="32" y="20">你预计</text><text x="200" y="62">实际表现</text></g>
+          <g font-size="8.5" fill="#6e7681" font-family="monospace"><text x="30" y="107">第1周</text><text x="255" y="107">第7周</text></g>
+        </svg>
+        <div class="evnote">差距大不标红——我们只说"差距在缩小"</div>
+        <div class="drill">回看每次反思关的预估 ▸</div>
+      </div>
+
+      <div class="evcard wide">
+        <div class="et"><b>⑦ 错误类型在演变</b><span class="src">错误四分类 · R-04 归因纪律</span></div>
+        <div class="edesc">概念性错误占比 <span class="mono">44% → 28%</span>；元认知型"空白" <span class="mono">3次 → 0次</span> —— 概念性错误在变少，这是策略的功劳</div>
+        <svg viewBox="0 0 300 110">
+          <g font-size="8.5" fill="#6e7681" font-family="monospace"><text x="40" y="107">前3周</text><text x="200" y="107">近3周</text></g>
+          <g>
+            <rect x="60" y="20" width="34" height="37" fill="#f8514988"/><rect x="60" y="57" width="34" height="22" fill="#d2992288"/><rect x="60" y="79" width="34" height="12" fill="#58a6ff88"/>
+            <rect x="210" y="42" width="34" height="24" fill="#f8514988"/><rect x="210" y="66" width="34" height="22" fill="#d2992288"/><rect x="210" y="88" width="34" height="3" fill="#58a6ff88"/>
+          </g>
+          <g font-size="9" fill="#8b949e" font-family="monospace">
+            <rect x="14" y="14" width="8" height="8" fill="#f8514988"/><text x="26" y="21">概念</text>
+            <rect x="14" y="30" width="8" height="8" fill="#d2992288"/><text x="26" y="37">策略</text>
+            <rect x="14" y="46" width="8" height="8" fill="#58a6ff88"/><text x="26" y="53">元认知</text>
+          </g>
+        </svg>
+        <div class="evnote">归因纪律：界面永远说"这个策略用得好"，不说"你很聪明/你不行"</div>
+        <div class="drill">高错点的误区假设云 ▸</div>
+      </div>
+
+      <div class="evcard reserved">
+        <div class="et"><b>⑧ 认知诊断画像</b><span class="rbadge">预留接口 · 模型接入中</span></div>
+        <div class="edesc">认知属性掌握度（雷达+Q矩阵热力）· 薄弱属性提示 · 接入 CDA/IRT 族模型后启用</div>
+        <svg viewBox="0 0 300 110">
+          <g stroke="#30363d" fill="none">
+            <polygon points="150,10 250,60 210,100 90,100 50,60" />
+            <polygon points="150,30 215,62 193,87 107,87 85,62" stroke-dasharray="3 3"/>
+          </g>
+          <polygon points="150,18 228,61 196,92 112,90 72,60" fill="#bc8cff33" stroke="#bc8cff" stroke-width="1.5"/>
+          <g font-size="9" fill="#8b949e" font-family="monospace">
+            <text x="132" y="8">符号运算</text><text x="252" y="60">等量关系</text><text x="212" y="110">建模</text><text x="62" y="110">检验习惯</text><text x="8" y="60">迁移</text>
+          </g>
+          <text x="150" y="58" text-anchor="middle" fill="#6e7681" font-size="8.5" font-family="monospace">示意 · 非真实模型输出</text>
+        </svg>
+        <div class="heatrow">
+          <div class="hc" style="background:#3fb950cc">0.82</div><div class="hc" style="background:#3fb95099">0.61</div><div class="hc" style="background:#d29922bb">0.44</div><div class="hc" style="background:#3fb95077">0.55</div><div class="hc" style="background:#f8514999">0.29</div>
+        </div>
+        <div class="heatlbl"><span>符号</span><span>等量</span><span>建模</span><span>检验</span><span>迁移</span></div>
+        <div class="contract-line">DiagnosisReport{ attr_id, p_mastery, ci, model_version, q_matrix_ref }</div>
+        <div class="drill">属性词表与接口规格（docs/11 §6.4）▸</div>
+      </div>
+
+      <div class="evcard reserved">
+        <div class="et"><b>⑨ 知识状态追踪</b><span class="rbadge">预留接口 · 模型接入中</span></div>
+        <div class="edesc">每知识点 p_mastery 轨迹（事件打标）+ 下一题表现预测 · 接入 BKT/DKT 族模型后启用</div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+          <line x1="0" y1="95" x2="300" y2="95" stroke="#30363d"/>
+          <polyline points="10,80 45,72 80,76 115,60 150,64 185,48 220,42 255,38 290,34" fill="none" stroke="#bc8cff" stroke-width="2"/>
+          <g><circle cx="45" cy="72" r="3" fill="#58a6ff"/><circle cx="115" cy="60" r="3" fill="#58a6ff"/><circle cx="220" cy="42" r="3" fill="#d29922"/></g>
+          <g font-size="8" fill="#6e7681" font-family="monospace">
+            <text x="36" y="88">练习</text><text x="106" y="76">练习</text><text x="210" y="58">撤辅助</text>
+          </g>
+          <text x="10" y="14" fill="#6e7681" font-size="8.5" font-family="monospace">p_mastery(t) · 示意</text>
+        </svg>
+        <div class="edesc" style="margin-top:6px">下一题预计正确率 <span class="mono">62%–78%</span>（津津的估计·区间）</div>
+        <div class="contract-line">KTState{ kc_id, p_mastery, ci, history_ref, model_version }</div>
+        <div class="drill">接口规格与模型替换点（docs/10 §2）▸</div>
+      </div>
+
+    </div>
+  </div></div>
+</main>
+
+<!-- ═══════════ 设置 ═══════════ -->
+<main class="view" id="v-settings">
+  <div class="set-wrap"><div class="sw2">
+    <div class="pagehead"><h1>设置 · 个性化中心</h1><span class="sub">桂子问津 · 你的工作台你做主（校规除外）</span></div>
+    <div class="set-grid">
+    <div class="setcard">
+      <h3>外观与布局</h3>
+      <div class="d">三栏可一键收纳（陪学信息密集时用）· 学段档会调整默认值</div>
+      <div class="row">左右栏收纳（演示）<button class="btn" style="padding:1px 10px" onclick="document.body.classList.toggle('nol');document.body.classList.toggle('nor');syncPaneBtns()">切换</button></div>
+      <div class="row">紧凑密度（初中默认）<span class="sw on"><i></i></span></div>
+      <div class="row">右栏教学面板常显<span class="sw on"><i></i></span></div>
+      <div class="row">暗色主题<span class="sw on"><i></i></span></div>
+      <div class="row">减少动效（跟随系统）<span class="sw"><i></i></span></div>
+    </div>
+    <div class="setcard">
+      <h3>学段档（StageProfile）</h3>
+      <div class="d">只改界面形态与支架默认值，不改变你的数据</div>
+      <div class="opt"><span class="rd"></span>小学低段 · 大卡片 · 语音优先</div>
+      <div class="opt"><span class="rd"></span>小学高段 · 预测卡强化</div>
+      <div class="opt on"><span class="rd"></span>初中 · 默认工作台</div>
+      <div class="opt"><span class="rd"></span>高中 · 紧凑 · 数据向</div>
+    </div>
+    <div class="setcard">
+      <h3>支架偏好（带内自由）</h3>
+      <div class="d">你想要的被提醒程度，津津会照做</div>
+      <div class="opt on"><span class="rd"></span>标准 · 阶梯规则决定何时提示</div>
+      <div class="opt"><span class="rd"></span>多提醒我 · 主动轻推+2</div>
+      <div class="opt"><span class="rd"></span>少打扰我 · 主动提示上限 2 次/会话</div>
+      <div class="cost-hint">ⓘ 你选了"少打扰"后：津津主动提示上限降为 2 次/会话，卡壳时需要你先开口——这是你的选择的代价，随时可改回来。</div>
+    </div>
+    <div class="setcard">
+      <h3>无障碍（必选项）</h3>
+      <div class="d">全键盘导航 · 读屏标签 · WCAG AA · 收纳快捷键 [ 和 ]</div>
+      <div class="row">字号 4 档<span class="mono" style="color:var(--tx)">A⁺⁺</span></div>
+      <div class="row">高对比模式<span class="sw"><i></i></span></div>
+      <div class="row">语音输入快捷键<span class="sw on"><i></i></span></div>
+      <div class="row">防沉迷休息提醒<span class="sw on"><i></i></span></div>
+    </div>
+    <div class="setcard">
+      <h3>数据同意（随时可撤回）</h3>
+      <div class="d">撤回后数据退出进化且不可追溯使用</div>
+      <div class="row">教学必需<span class="mini">✓ 必选</span></div>
+      <div class="row">支撑进化（匿名）<span class="sw on"><i></i></span></div>
+      <div class="row">研究（额外知情）<span class="sw"><i></i></span></div>
+    </div>
+    <div class="setcard">
+      <h3>平台级约定（不可解除，但可读全文）</h3>
+      <div class="d">这些不是设置——是这间教室的校规，对谁都一样</div>
+      <div class="locked"><span class="lk2">🔒</span><div>R-01 不许提前给答案</div><span class="why">为什么？▸</span></div>
+      <div class="locked"><span class="lk2">🔒</span><div>R-07 脚手架预算随自主性递减</div><span class="why">为什么？▸</span></div>
+      <div class="locked"><span class="lk2">🔒</span><div>R-09 考试模式锁死帮助</div><span class="why">为什么？▸</span></div>
+      <div class="locked"><span class="lk2">🔒</span><div>R-10 探究任务不代做完整方案</div><span class="why">为什么？▸</span></div>
+      <div class="locked"><span class="lk2">🔒</span><div>反思关卡不可跳过</div><span class="why">为什么？▸</span></div>
+    </div>
+    </div>
+  </div></div>
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function go(v, btn){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  if(btn) btn.classList.add('on');
+  document.body.classList.toggle('in-study', v==='study');
+  window.scrollTo(0,0);
+}
+let tt;
+function toast(s){
+  const t=document.getElementById('toast');
+  t.textContent=s; t.classList.add('show');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2600);
+}
+document.querySelectorAll('.opt').forEach(o=>o.addEventListener('click',()=>{
+  o.parentElement.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+  o.classList.add('on');
+}));
+document.querySelectorAll('.sw').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+// 键盘快捷键：[ 收左栏 ] 收右栏
+function togglePane(side){
+  document.body.classList.toggle(side==='l'?'nol':'nor');
+  syncPaneBtns();
+}
+function syncPaneBtns(){
+  document.getElementById('tg-l').classList.toggle('on', !document.body.classList.contains('nol'));
+  document.getElementById('tg-r').classList.toggle('on', !document.body.classList.contains('nor'));
+}
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key==='[') togglePane('l');
+  if(e.key===']') togglePane('r');
+});
+syncPaneBtns();
+// #hash 直达视图
+const h=(location.hash||'').replace('#','');
+if(h && document.getElementById('v-'+h)){
+  go(h, document.querySelector('.tab[data-v="'+h+'"]'));
+}
+document.body.classList.toggle('in-study', document.getElementById('v-study').classList.contains('on'));
+// 演示参数：?panes=none 启动即双栏收纳（用于截图/评审）
+if(new URLSearchParams(location.search).get('panes')==='none'){
+  document.body.classList.add('nol','nor');
+  syncPaneBtns();
+}
+</script>
+
+<script>
+/* ═══ 正式版数据层（docs/10 M1）：优先接入平台网关，失败回落演示数据（原型即规格） ═══ */
+(async function(){
+  const LEARNER = "demo-learner";
+  try{
+    const r = await fetch("/api/evidence/"+LEARNER, {headers:{accept:"application/json"}});
+    if(r.ok){
+      const d = await r.json();
+      if(d.mastery && d.mastery.current){
+        const el = document.querySelector(".mirrorbox .v");
+        const first = Object.entries(d.mastery.current)[0];
+        if(el && first) el.textContent = first[1].toFixed(2);
+      }
+      const bar = document.querySelector(".statusline");
+      if(bar && d.notes && d.notes.length === 0){
+        const s = document.createElement("span");
+        s.className = "good"; s.textContent = "· 已接入网关实时证据";
+        bar.appendChild(s);
+      }
+    }
+  }catch(_){ /* 网关未启动：保留演示数据 */ }
+  try{
+    const r = await fetch("/api/path/recommend?learner_id="+LEARNER, {headers:{accept:"application/json"}});
+    if(r.ok){
+      const d = await r.json();
+      const desc = document.querySelector(".pathcard .pdesc");
+      if(desc && d.rationale) desc.title = "网关 rationale："+d.rationale;
+    }
+  }catch(_){ /* 回落演示数据 */ }
+  const adopt = document.querySelector(".pathactions .btn.approve");
+  if(adopt) adopt.addEventListener("click", () => {
+    const path = {path_id:"ui-"+Date.now(), nodes:[], source_signals:[], status:"accepted"};
+    fetch("/api/path/accept", {method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({learner_id: LEARNER, path})
+    }).then(r => r.ok && console.info("[问津] 路径已签署入计划版本", r.status)).catch(()=>{});
+  });
+})();
+</script>
+
+<script>
+/* ═══ 陪学实时会话层：输入框 → 网关 /api/sessions（离线回落演示提示） ═══ */
+function appendMsg(role, text, badge){
+  const feed = document.querySelector("#v-study .feed");
+  const div = document.createElement("div");
+  div.className = "msg" + (role === "me" ? " me" : "");
+  const who = role === "me"
+    ? '<div class="who"><b>我</b> · 刚刚</div>'
+    : '<div class="who"><b>津津</b> · 刚刚 ' + (badge ? '<span class="socr">' + badge + '</span>' : '') + '</div>';
+  div.innerHTML = who + '<div class="bubble"></div>';
+  div.querySelector(".bubble").textContent = text;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+  return div;
+}
+async function sendMsg(){
+  const inp = document.getElementById("chat-input");
+  const text = (inp.value || "").trim();
+  if(!text) return;
+  inp.value = "";
+  appendMsg("me", text);
+  const pending = appendMsg("jinjin", "津津在想…");
+  const feed = document.querySelector("#v-study .feed");
+  try{
+    if(!window.__WJ_SID){
+      const r = await fetch("/api/sessions", {method: "POST",
+        headers: {"content-type": "application/json"},
+        body: JSON.stringify({learner_id: "workbench"})});
+      if(!r.ok) throw new Error("session");
+      window.__WJ_SID = (await r.json()).session_id;
+    }
+    const r = await fetch("/api/sessions/" + window.__WJ_SID + "/messages", {method: "POST",
+      headers: {"content-type": "application/json"}, body: JSON.stringify({text})});
+    if(!r.ok) throw new Error("turn");
+    const d = await r.json();
+    pending.querySelector(".bubble").textContent = d.reply || "（这一步我没接住，再说一次？）";
+    if(d.denial && d.denial.reason){
+      const n = document.createElement("div");
+      n.className = "notice deny";
+      n.innerHTML = '<span class="ic">🛡</span><div></div>';
+      n.lastElementChild.textContent = d.denial.reason + "（" + (d.denial.rule_id || "规则") + " · 已留审计）";
+      feed.appendChild(n);
+      feed.scrollTop = feed.scrollHeight;
+    }
+    const bar = document.querySelector("#v-study .statusline");
+    if(bar && !bar.dataset.live){
+      bar.dataset.live = "1";
+      const s = document.createElement("span");
+      s.className = "good"; s.textContent = "· 实时对话已接入";
+      bar.appendChild(s);
+    }
+  }catch(e){
+    pending.querySelector(".bubble").textContent =
+      "（离线演示模式：这条没送到津津那里。启动 uv run python -m app.main 后即可真实对话。）";
+  }
+}
+</script>
+</body>
+</html>

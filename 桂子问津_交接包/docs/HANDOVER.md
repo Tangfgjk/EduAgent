@@ -1,0 +1,168 @@
+# 桂子问津（Wenjin）· 项目交接文档
+
+| | |
+|---|---|
+| 交接日期 | 2026-09-28 |
+| 交接人 | 项目原负责人 |
+| 状态 | 设计 v0.3 定稿 + docs/10-11 评审通过 + M0 全量、M1 第一刀已验证（61 测试绿，端到端跑通） |
+| 给谁看 | 接手开发/研究的团队成员。**先读完本文档，再按 §5 的 30/60/90 天路线开工** |
+
+---
+
+## 0. 一分钟版本
+
+**这是什么**：一个"指渡口不渡人"的教育智能体平台——苏格拉底式陪学、脚手架随自主性递减、
+一切教学动作过 10 条哈希锁定的硬约束、为 v2 的 RSI（递归自我改进）预留全部轨道。
+北极星指标：**无辅助表现增量 + 认知层级跃迁 + 自主性增益**（不是完课率/互动率）。
+
+**产品名**：桂子问津（英文/内部代号 **Wenjin**；学伴"津津"；可教体"虚拟学弟"；
+slogan「问津，而后自渡。」）——已定稿，标识系统见 docs/11 §0.6.1。
+
+**现在能跑什么**：官方 Web 工作台（五视图：计划/陪学/圆桌/成长证据/设置）+ 智能体 CLI
+（三关口单元循环）+ 10 条硬约束规则引擎 + 路径推荐 v1 + 成长证据 v1 + 内网 GLM 实时对话。
+
+**下一件事**（M1 余项第一优先）：抽取 DeepTutor `learning/` 引擎（掌握门槛+FSRS 调度），
+配合 `参考项目/DeepTutor` 本地仓库，先写适配器测试再搬代码。
+
+---
+
+## 1. 仓库地图
+
+```text
+教育智能体RSI/
+├── docs/                      # 11 份设计文档（先读 01、08、09、10、11）
+│   ├── 01–09                  #   v0.3 设计定稿（架构/Schema/动作语法/进化环/UML/ER/UI/融合/对标）
+│   ├── 10-实施方案_v1_…        #   ★ 开发蓝图：基座融合地图、RSI 就绪契约、里程碑 M0–M6、v2 点火条件
+│   ├── 11-UI设计_v2_…          #   ★ 全套 UI 规格：20 屏、个性化矩阵、理论效果可视化、命名与标识
+│   └── HANDOVER.md            #   本文档
+├── platform/                  # 可运行工程（Python 3.11 + FastAPI + 零构建前端）
+│   ├── app/
+│   │   ├── core/              #   schema(02) · actions(信封+ScaffoldType) · rules(R-01…R-10) · machines(阶梯/5E)
+│   │   ├── orchestration/     #   trigger(介入门) → policy(策略+支架矩阵) → session(5E 会话编排)
+│   │   ├── learning/          #   verifier(验证器) · tracer(BKT) · perception · path(路径推荐v1) · evidence(证据v1)
+│   │   ├── agent/ + agents/   #   v2 智能体循环（三关口）+ 派生模板（怀疑者）
+│   │   ├── gateway/routes.py  #   全部 REST/SSE 端点 + 官方前端服务
+│   │   ├── llm/client.py      #   OpenAI 兼容客户端（FakeLLM 兜底）· extra_body 透传
+│   │   └── storage/db.py      #   SQLite（events/snapshots 严格 append-only）
+│   ├── evolution/l0_digest.py #   L0 沉淀演示（进化环前驱）
+│   ├── web/                   #   index.html（官方工作台）· prototype_v2_workbench.html（原型）· screenshots/
+│   ├── seeds/ data/ workspace/
+│   ├── tests/                 #   61 个测试（test_m1.py = M1 第一刀验收 8 项）
+│   └── README.md              #   运行说明（启动/配置/API/玩法）
+├── 研究设计精简/               # 两份教育实验设计（同伴建议核查 2×2 · 教师帮助分配 5 组）
+├── 参考项目/                   # DeepTutor + OpenMAIC 浅克隆（交接包未附带，见 §4 重建）
+└── README.md                  # 根项目说明（文档地图 + 版本史）
+```
+
+## 2. 五分钟跑起来
+
+```bash
+cd platform
+uv venv --python 3.11 && uv pip install -e ".[dev]"   # 首次
+uv run pytest -q                                       # 61 passed 即环境 OK
+cp .env.example .env                                   # 然后按需填 LLM（也可不填）
+uv run python -m app.main                              # http://127.0.0.1:8000/ = 官方工作台
+```
+
+- **LLM**：默认接内网 GLM（`.env` 已有配置模板）；离网/无 Key 自动回落 FakeLLM，机制照常演示。
+- **端口冲突**：`RSI_PORT=8010 uv run python -m app.main`（2026-09-27 新增）。
+- **推理模型提速**：`RSI_LLM_EXTRA_BODY={"chat_template_kwargs":{"enable_thinking":false}}`（36s→4.5s/回合）。
+- **CLI**：`uv run python -m app.cli`（打一句话目标，三关口单元循环）。
+- **工作台直达**：`#plan` `#study` `#roundtable` `#evidence` `#settings`；键盘 `[` `]` 收纳左右栏。
+
+## 3. 设计共识（勿轻易动摇的锚）
+
+接手后改任何设计前，先对照这些多轮评审沉淀的共识（详文在各号文档）：
+
+1. **北极星不可替换**：无辅助表现增量/认知层级跃迁/自主性增益。完课率、互动量、停留时长
+   永远只做诊断遥测，不进任何奖励与晋升判据（防古德哈特；04 §3；代码里 evidence.py 不输出
+   autonomy_index 原始分，评审时可查）。
+2. **RSI 主体在 harness**：模型只能提案、harness 裁决；硬约束（R-01…R-10）哈希锁定、进化只读；
+   模型级 LoRA 无限期搁置（01 §6、04 §9）。
+3. **v1 不点火自动 RSI，但轨道全铺**：04 号文档接口在 v1 照建，v2 只填实现不加接口；
+   点火需满足 5 条量化条件（docs/10 §9.3：200 学习者×8 周、回归集 100 场景、孪生校准达标、
+   金标 500 条、基线面板稳定 4 周）。
+4. **抽取不 fork**：DeepTutor/OpenMAIC 按 docs/10 §2 处置动词抽取/移植/参考/自建；
+   vendor 单向依赖，Apache-2.0/MIT 合规留痕。
+5. **派生 = 模板实例化 + 上下文注入 + 生命周期契约**，智能体无状态（P2）；派生体无特权通道，
+   一切动作过规则引擎；任何结论见学生前必过对抗委员会。
+6. **学习者模型按人累积、按知识点索引**（推翻 DeepTutor per-path 分片）；三层记忆 L1/L2/L3，
+   L3 禁止引用 L3。
+7. **教育学承载件不得删减**（07/11 UI 铁律）：阶梯条、预算条、假设云、反思关、否决入口、
+   同意开关——高保真化只可美化。
+8. **诚实降级是产品原则**：无数据显示"无"而非假数据；估计必带区间；求助永不污名化。
+
+## 4. 参考项目（交接包未附带，两条命令重建）
+
+DeepTutor（93MB）与 OpenMAIC（210MB）为浅克隆，未打进交接包：
+
+```bash
+mkdir -p 参考项目 && cd 参考项目
+git clone --depth 1 https://github.com/HKUDS/DeepTutor.git       # ⭐40.3k Apache-2.0
+git clone --depth 1 https://github.com/THU-MAIC/OpenMAIC.git     # ⭐39.1k MIT
+```
+
+已核实真实（2026-09-26，GitHub API）；两仓库深度审计结论（功能/完成度/教育机制/差距）沉淀在
+项目记忆与 docs/10 §2 融合地图。**开发基石 = DeepTutor；OpenMAIC 供课堂机制参考**；
+Hyperknow 闭源无仓库，只吸收理念。
+
+## 5. 接手后 30 / 60 / 90 天
+
+**前 30 天（M1 完成）**：
+1. **DeepTutor 引擎抽取**（docs/10 §2 第一行）：`vendor/deeptutor/learning/`——掌握门槛
+   QUANTITATIVE_GATE（按知识类型，默认 0.9）、FSRS 风格调度器、Feynman 检查、错误四分类。
+   纪律：先写适配器测试（把我们 Verifier 的 Verdict 翻译为其 evidence 事件），再搬代码；
+   import-linter 强制 `app → vendor` 单向。
+2. 派生智能体①④⑤⑥ 实现（对抗委员会优先——路径推荐/内容生成都要过它）。
+3. 记忆 L1/L2/L3 + 巩固器（模式对齐 DeepTutor，加"L3 禁引 L3"硬规则）。
+4. Postgres 迁移（06 ER 31 实体为字典；先迁事件流与学习者模型两域）。
+
+**30–60 天**：冻结回归集 30 场景（只许治理委员会换版）+ 红队越界套件（拦截率 100% 验收）；
+教师驾驶舱与金标快路径；学段档 StageProfile 真实接入。
+
+**60–90 天**：小范围真实学习者试运行 → 开始积累北极星基线面板（docs/10 §8.3 五指标）→
+对照 v2 点火条件查缺。**研究线可并行**：研究设计精简/ 两份实验设计（2×2 同伴建议核查、
+教师帮助分配 5 组）可直接用平台做实验载体，A13/B1 数据导出即论文图源。
+
+## 6. 必须知道的"坑"清单
+
+1. **`.env` 不进交接包**（含内网凭证）：团队自建 `cp .env.example .env`，向原负责人索要
+   内网 GLM 三要素（base_url/key/model）。端口默认 8000，可用 `RSI_PORT` 换。
+2. **`gateway/routes.py` 不能加 `from __future__ import annotations`**——闭包内定义的
+   Pydantic 请求模型会被 FastAPI 降级为 query 参数（文件头有注释）。
+3. **装依赖带 dev 附加项**：`uv pip install -e ".[dev]"` 或 `uv sync --extra dev`——
+   否则 `uv sync` 默认不装 pytest（干净环境实测踩过）。
+4. **字段名是 `knowledge_state`** 不是 `knowledge`（MentalStateSnapshot）；改动 schema 后
+   先跑 `uv run pytest -q`，test_m1.py 锚定了 PathRecommendation/EvidenceReport 契约。
+5. **events/snapshots 表是 append-only**：纠错只能补偿事件，绝不 UPDATE/DELETE（04 §1）。
+6. **会话是内存注册表**（`sessions: dict`）：网关重启即失，前端已做回落提示；持久化在
+   Postgres 迁移时一并解决。
+7. **工作区路径**：`platform/workspace/<学习者>/`，智能体真实读写，交接前无需清理。
+8. **DeepTutor 版本锁定**：抽取以 2026-09-24 的 v1.6.11 快照为准（参考项目/ 内克隆）；
+   升级走 PR 评审不自动跟（docs/10 §10 风险表）。
+9. **测试纪律**：机制改动必须带验收测试（docs/10 §8.1 "不可测的机制不进 v1"）；
+   61 个测试是底线，只增不减。
+
+## 7. 治理与合规红线（团队人人有责）
+
+- 硬约束 R-01…R-10 变更**永不自动生效**：治理委员会双签 + 维护窗口手工应用（04 §9）。
+- 未成年人数据：consent_scope 三档（teaching 必选 / evolution 匿名可选 / research 额外知情），
+  撤回即对进化不可见且不可追溯使用；家长端聚合不窥视（P6）。
+- 归因纪律（R-04）：界面与反馈文案禁能力归因——"这个策略用得好"，不说"你很聪明"。
+- 开源合规：抽取 DeepTutor（Apache-2.0）保留 LICENSE 与 THIRD_PARTY_NOTICES；
+  移植 OpenMAIC（MIT）文件头保留版权；发布物附 OPEN_SOURCE_NOTICES.md。
+- 对外使用"华中师范大学"字样与桂子山指涉的宣传，按学校名称使用规范走审批；
+  产品名启用前完成商标检索（建议第 9/41/42 类）。
+
+## 8. 版本基线（本交接包对应）
+
+| 项 | 值 |
+|---|---|
+| 设计文档 | v0.3 定稿（docs/01–09）+ docs/10 v0.1（09-26）+ docs/11 v0.3（09-27） |
+| 代码 | M0 全量 + M1 第一刀：4545 行 Python + 61 测试全绿；官方前端 index.html（零构建） |
+| 已验证 | R-01…R-10 引擎 · scaffold_type 支架矩阵 · PathRecommendation@1 · EvidenceReport@1 · 端到端冒烟（契约→会话→GLM 回复→推荐→采纳→证据）· 内网 GLM 4.5s/回合 |
+| 未做 | DeepTutor 抽取 · 派生①④⑤⑥ · 记忆巩固器 · Postgres · 冻结回归集 · 教师端功能（均见 docs/10 §9.4 勾选态） |
+
+---
+
+*本文档由项目原负责人撰写；问题先查 docs/10（怎么做）与本文件 §6（坑），仍无答案再联系交接人。*
