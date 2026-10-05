@@ -5,7 +5,7 @@
 > **v1 Web 工作台**：`web/index.html`（docs/11 Codex 式三栏工作台，项目优先 IA），
 > 由 FastAPI 网关 `app/gateway/routes.py` 服务，网关在线接实时数据、离线回落演示数据。
 > **v2 = 自主学习定制版 ZCode**：`app/agent/`（多步智能体循环 + 11 个学习工具 + 三关口）+ `app/cli.py`（终端 REPL）。
-> 设计文档见 `../docs/01–11`（10=实施方案，11=UI 设计）。
+> 设计文档见 `../architecture/01–11`（10=实施方案，11=UI 设计）。
 
 ## v2 快速开始（智能体 CLI）
 
@@ -120,6 +120,6 @@ LLM 配置：`cp .env.example .env` 后填 OpenAI 兼容端点（智谱 GLM 默�
 
 ## 后续路线（接口已留桩）
 
-M1 余项：DeepTutor 学习引擎抽取（掌握门槛/FSRS）· 派生①④⑤⑥ · 记忆 L1/L2/L3 巩固器 · Postgres · 冻结回归集。
-后续：Web 转录界面（v2.1）· 孪生模拟器与晋升门（M2/M3=RSI 点火，见 docs/10 §9.3 五条件）·
-技能库结晶与市场 · 师伴与金标通道 · 认知诊断/知识追踪模型接入（docs/11 §6.4 预留位）。
+M1 余项：DeepTutor 学习引擎抽取（掌握门槛/retention）· 派生①④⑤⑥ · 记忆 L1/L2/L3 巩固器 · Postgres · 冻结回归集。
+后续：Web 转录界面（v2.1）· 孪生模拟器与晋升门（M2/M3=RSI 点火，见 `docs/architecture/10-v1-implementation-plan-20260926.md`）·
+技能库结晶与市场 · 师伴与金标通道 · 认知诊断/知识追踪模型接入（见 `docs/architecture/11-v2-codex-workbench-ui-20260927.md`）。

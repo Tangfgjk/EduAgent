@@ -1,0 +1,32 @@
+# 开发状态与缺口
+
+更新时间：2026-10-05
+
+## 状态标记
+
+- `完成`：代码、设计或材料已经存在。
+- `部分完成`：接口或演示已存在，但生产闭环或验证不足。
+- `未开始`：只有方案或预留位，没有可运行实现。
+
+## 当前清单
+
+| 能力 | 状态 | 证据 | 下一步 |
+|---|---|---|---|
+| 总体架构与教学法规格 | 完成 | `docs/architecture/01-09` | 规格变更同步测试 |
+| v1 实施方案与交接 | 完成 | `docs/architecture/10-*`、`docs/overview/` | 按阶段一需求执行 |
+| 硬约束 R-01 至 R-10 | 完成 | `platform/app/core/rules.py` | 增加冻结红队回归 |
+| Agent Runtime 与三个关口 | 完成 | `platform/app/agent/` | 接入 Web 转录 |
+| BKT 与 Verifier | 部分完成 | `platform/app/learning/` | 接入 LearningEvidence 适配层 |
+| 路径推荐与成长证据 | 部分完成 | `path.py`、`evidence.py` | 绑定 retention 与真实事件 |
+| DeepTutor Learning 裁剪接入 | 未开始 | 设计中有接口建议 | 先写 Adapter Test |
+| 三层 Memory 巩固器 | 未开始 | 设计文档有 L1/L2/L3 | 先落实 L1 事件字段 |
+| PostgreSQL | 未开始 | SQLite 原型可用 | 先冻结事件契约再迁移 |
+| 冻结回归场景集 | 未开始 | 仅有机制测试 | 建立 30 个首发场景 |
+| 派生 Agent ①④⑤⑥ | 部分完成 | 有模板与演示角色 | 明确权限、预算和报告契约 |
+| 最小 RAG | 未开始 | 设计预留位 | 绑定 KC/KG 和 Verifier |
+| Provider Registry | 部分完成 | OpenAI-compatible 客户端 | 抽取统一注册接口 |
+| RSI 自动进化 | 暂不启动 | L0 演示与接口存在 | 满足治理和数据条件后再评估 |
+
+## 当前验证结果
+
+已在 `platform/.venv` 安装 `platform/pyproject.toml` 的运行与测试依赖，并执行全量测试：`61 passed`。静态编译、Git 差异检查和目录路径检查均已通过。测试仅有一条第三方 Starlette/TestClient 弃用警告，不影响当前结果。

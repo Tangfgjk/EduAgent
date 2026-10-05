@@ -166,14 +166,16 @@ class Store:
 
     def latest_snapshot(self, learner_id: str) -> MentalStateSnapshot | None:
         row = self.conn.execute(
-            "SELECT payload FROM snapshots WHERE learner_id=? ORDER BY ts DESC LIMIT 1",
+            "SELECT payload FROM snapshots WHERE learner_id=? "
+            "ORDER BY ts DESC, rowid DESC LIMIT 1",
             (learner_id,),
         ).fetchone()
         return MentalStateSnapshot.model_validate_json(row["payload"]) if row else None
 
     def snapshots_for_learner(self, learner_id: str, limit: int = 20) -> list[MentalStateSnapshot]:
         rows = self.conn.execute(
-            "SELECT payload FROM snapshots WHERE learner_id=? ORDER BY ts DESC LIMIT ?",
+            "SELECT payload FROM snapshots WHERE learner_id=? "
+            "ORDER BY ts DESC, rowid DESC LIMIT ?",
             (learner_id, limit),
         ).fetchall()
         return [MentalStateSnapshot.model_validate_json(r["payload"])

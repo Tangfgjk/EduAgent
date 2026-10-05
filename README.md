@@ -1,0 +1,34 @@
+# 桂子问津 Wenjin
+
+桂子问津是一个以自我调节学习为核心的教育伴生智能平台。系统目标不是替学生完成更多任务，而是通过认知诊断、可撤销脚手架、学习证据和长期记忆，让学生逐步获得更强的独立完成能力。
+
+## 从这里开始
+
+1. 阅读 [项目总览与开发路线](docs/overview/project-overview-roadmap-20261005.md)，了解目标、现状和阶段边界。
+2. 阅读 [项目交接文档](docs/overview/project-handover-20260928.md)，了解运行方式、设计锚点和已知坑。
+3. 阅读 [阶段一需求](docs/requirements/phase-1-learning-integration-20261005.md)，确定当前开发任务。
+4. 进入 `platform/` 查看可运行代码、测试、Web 工作台和演示工作区。
+
+## 仓库结构
+
+```text
+docs/
+  overview/       项目总览、交接材料
+  architecture/   架构、Schema、动作、演化、UI 设计
+  requirements/   需求和验收标准
+  progress/       开发进度与里程碑
+  decisions/      架构决策记录
+  guides/         开发与运行指南
+  research/       原始调研、参考资料、研究实验
+  testing/        测试策略和回归集说明
+  logs/           开发日志索引
+platform/
+  app/            Python 应用与领域模块
+  evolution/      L0 演化演示
+  tests/          自动化测试
+  web/            零构建 Web 工作台和原型
+  seeds/          演示题库
+  workspace/      演示学习者工作区
+```
+
+当前工作分支：`v1/20261005-phase1-foundation`。
