@@ -17,6 +17,8 @@ from app.learning.assets import load_catalog
 from app.learning.service import LearningService
 from app.orchestration.session import TutorSession, load_bank
 from app.storage.db import Store
+from app.storage.trigger_state import PersistentTriggerState
+from app.core.clock import CallableClock, SystemClock
 
 
 class RuntimeConflict(ValueError):
@@ -25,8 +27,8 @@ class RuntimeConflict(ValueError):
 
 TABLES = ("learners", "sessions", "event_clock", "verdicts", "learning_evidence", "learning_states",
           "evidence_consumption", "learning_transitions", "learning_rebuilds", "learning_audit",
-          "events", "snapshots", "runtime_sessions", "gateway_receipts", "governance_reviews")
-MUTABLE = frozenset({"learning_states", "runtime_sessions"})
+          "events", "snapshots", "runtime_sessions", "gateway_receipts", "governance_reviews", "trigger_state")
+MUTABLE = frozenset({"learning_states", "runtime_sessions", "trigger_state"})
 
 
 def dump(value):
@@ -100,6 +102,8 @@ class SessionRuntime:
         sources = RuntimeSources(self.bank_factory(), self.catalog)
         sources.assert_bank(session.bank)
         session._runtime_sources = sources
+        session.trigger.state = PersistentTriggerState(session.store, session.learner_id, session.session_id)
+        session.clock_port = CallableClock(self.clock) if self.clock else SystemClock()
 
     def public_state(self, sid, learner_id):
         session = self.load(sid, learner_id)

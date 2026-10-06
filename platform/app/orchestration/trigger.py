@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from app.core.schema import MentalStateSnapshot
+from app.core.clock import ClockPort, SystemClock, aware_utc
+from app.storage.trigger_state import TriggerStatePort
 
 THETA_HIGH = 0.75
 
@@ -35,10 +37,12 @@ class TriggerEngine:
         "TR_STUCK": 0.8,
     })
     _last_fired: dict = field(default_factory=dict)
+    clock: ClockPort = field(default_factory=SystemClock)
+    state: TriggerStatePort | None = None
 
     def evaluate(self, snapshot: MentalStateSnapshot, wrong_streak: int,
                  now: datetime | None = None, learning_signals: dict | None = None) -> list[TriggerProposal]:
-        now = now or datetime.now()
+        now = aware_utc(now) if now is not None else aware_utc(self.clock.now())
         proposals: list[TriggerProposal] = []
         candidates = [
             ("TR_FRUSTRATION", snapshot.affect_motivation.frustration >= THETA_HIGH,
@@ -65,7 +69,11 @@ class TriggerEngine:
             if not fired or confidence < threshold:
                 continue
             last = self._last_fired.get(rule_id)
-            if last and now - last < timedelta(seconds=self.cooldowns.get(rule_id, 120)):
+            cooldown = self.cooldowns.get(rule_id, 120)
+            if self.state is not None:
+                if not self.state.claim(rule_id, now, cooldown, last):
+                    continue
+            elif last and now - aware_utc(last) < timedelta(seconds=cooldown):
                 continue
             self._last_fired[rule_id] = now
             learning = rule_id in {"TR_REVIEW_DUE", "TR_UNKNOWN_EVIDENCE"}

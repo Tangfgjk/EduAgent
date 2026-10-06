@@ -494,8 +494,10 @@ class TutorSession:
             return {}
 
     def _now(self):
-        from app.core.schema import utcnow
-        return self._clock() if getattr(self, '_clock', None) else utcnow()
+        from app.core.clock import SystemClock, aware_utc
+        if getattr(self, '_clock', None):
+            return aware_utc(self._clock())
+        return getattr(self, 'clock_port', SystemClock()).now()
 
     def _attach_learning_provenance(self, env: ActionEnvelope) -> None:
         if env.type != ActionType.TASK:

@@ -46,7 +46,8 @@ def wait_for_job(client, job_id):
 def test_dark_independent_page_and_synthetic_config(client):
     page = client.get("/")
     assert page.status_code == 200
-    assert "#0d1117" in page.text and "仿真实验室" in page.text
+    assert "simulation-assets/lab.css" in page.text and "仿真实验室" in page.text
+    assert "#0d1117" in client.get("/simulation-assets/lab.css").text
     assert "127.0.0.1:8000" not in page.text
     config = client.get("/api/lab/config").json()
     assert len(config["profiles"]) == 6 and len(config["scenarios"]) == 5
@@ -54,6 +55,21 @@ def test_dark_independent_page_and_synthetic_config(client):
     assert "frame-ancestors 'none'" in page.headers["content-security-policy"]
     assert page.headers["cache-control"] == "no-store"
     assert client.get("/docs").status_code == 404
+
+
+def test_lab_modular_assets_and_strict_csp(client):
+    page = client.get("/")
+    for name in ("lab.css", "lab.js", "analytics.js"):
+        response = client.get("/simulation-assets/" + name)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store"
+    assert "unsafe-inline" not in page.headers["content-security-policy"]
+    assert "object-src 'none'" in page.headers["content-security-policy"]
+    assert '<script>' not in page.text and '<style>' not in page.text
+    assert 'mastery-chart' in page.text and 'independent-chart' in page.text
+    assert 'hint-chart' in page.text and 'kc-chart' in page.text
+    assert client.get("/simulation-assets/../simulation.html").status_code == 404
+    assert client.get("/simulation-assets/lab.js", headers={"Origin": "https://attacker.example"}).status_code == 403
 
 
 def test_learner_quit_is_terminal_not_resumable(tmp_path):

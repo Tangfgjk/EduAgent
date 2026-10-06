@@ -148,10 +148,10 @@ class GovernanceService:
         direct = {"learners", "goal_contracts", "sessions", "snapshots", "learning_evidence",
             "learning_states", "evidence_consumption", "learning_transitions", "learning_rebuilds",
             "consent_records", "learning_audit", "learning_api_receipts", "assessment_deliveries", "correction_jobs",
-            "learning_appeals", "runtime_sessions", "derived_daily_budget", "qualitative_artifacts",
+            "learning_appeals", "runtime_sessions", "trigger_state", "derived_daily_budget", "qualitative_artifacts",
             "memory_views", "memory_annotations", "workspace_records", "governance_reviews", "governance_source_reviews"}
         derived = {"events", "verdicts", "plan_versions", "gateway_receipts"}
-        excluded = {"sqlite_sequence", "event_clock", "knowledge_sources", "knowledge_chunks", "governance_privacy", "digests"}
+        excluded = {"sqlite_sequence", "schema_migrations", "event_clock", "knowledge_sources", "knowledge_chunks", "governance_privacy", "digests"}
         tables = {row[0] for row in self.store.conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         unknown = sorted(tables - direct - derived - excluded)
         predicates = {name: ("learner_id=?", (learner_id,)) for name in sorted(tables & direct)}
@@ -161,6 +161,8 @@ class GovernanceService:
             predicates["verdicts"] = ("session_id IN (SELECT session_id FROM sessions WHERE learner_id=?)", (learner_id,))
         if "gateway_receipts" in tables:
             predicates["gateway_receipts"] = ("session_id IN (SELECT session_id FROM sessions WHERE learner_id=?)", (learner_id,))
+        if "trigger_state" in tables:
+            predicates["trigger_state"] = ("learner_id=?", (learner_id,))
         if "plan_versions" in tables:
             predicates["plan_versions"] = ("goal_contract_id IN (SELECT goal_contract_id FROM goal_contracts WHERE learner_id=?)", (learner_id,))
         counts = {name: self.store.conn.execute(f'SELECT COUNT(*) FROM "{name}" WHERE {where}', args).fetchone()[0]

@@ -8,7 +8,7 @@ from app.config import Settings
 @pytest.fixture
 def clean_environment(monkeypatch):
     for name in list(os.environ):
-        if name.startswith("RSI_"):
+        if name.startswith(("RSI_", "WENJIN_")):
             monkeypatch.delenv(name)
 
 
@@ -47,3 +47,17 @@ def test_catalog_local_overlays_and_invalid_shape(tmp_path, clean_environment):
     local.write_text('RSI_LEARNING_CATALOG_OVERLAYS={"not":"an array"}\n', encoding="utf-8")
     with pytest.raises(ValueError, match="JSON array"):
         Settings.load(defaults)
+
+
+def test_wenjin_alias_source_then_prefix_precedence(tmp_path, monkeypatch, clean_environment):
+    defaults = tmp_path / ".env"
+    defaults.write_text("WENJIN_LLM_MODEL=modern-default\nWENJIN_PORT=8003\n", encoding="utf-8")
+    defaults.with_name(".env.local").write_text("RSI_LLM_MODEL=legacy-local\nRSI_PORT=8004\n", encoding="utf-8")
+    assert Settings.load(defaults).llm_model == "legacy-local"
+    assert Settings.load(defaults).port == 8004
+    monkeypatch.setenv("RSI_LLM_MODEL", "legacy-env")
+    assert Settings.load(defaults).llm_model == "legacy-env"
+    monkeypatch.setenv("WENJIN_LLM_MODEL", "")
+    assert Settings.load(defaults).llm_model == ""
+    monkeypatch.setenv("WENJIN_PORT", "8005")
+    assert Settings.load(defaults).port == 8005

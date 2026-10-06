@@ -44,16 +44,22 @@ class Settings:
     assessment_require_ticket: bool = False  # Explicit injected legacy fixtures only; load() defaults to strict.
     learning_catalog_path: str = ""
     learning_catalog_overlay_paths: tuple[str, ...] = ()
+    port: int = 8000
 
     @classmethod
     def load(cls, env_file: Path | None = None) -> "Settings":
         if env_file is None:
             env_file = Path(__file__).resolve().parent.parent / ".env"
-        # Explicit process environment wins, then .env.local, then .env.
-        file_values = _read_dotenv(env_file)
-        file_values.update(_read_dotenv(env_file.with_name(".env.local")))
+        # Source precedence first: process > local file > default file.
+        # Within each source WENJIN_* wins over legacy RSI_*, including empty.
+        sources = (os.environ, _read_dotenv(env_file.with_name(".env.local")), _read_dotenv(env_file))
         def value(key: str, default: str) -> str:
-            return os.environ.get(key, file_values.get(key, default))
+            modern = key.replace("RSI_", "WENJIN_", 1)
+            for source in sources:
+                for candidate in (modern, key):
+                    if candidate in source:
+                        return source[candidate]
+            return default
 
         overlay_paths = json.loads(value("RSI_LEARNING_CATALOG_OVERLAYS", "[]"))
         if not isinstance(overlay_paths, list) or any(not isinstance(path, str) or not path for path in overlay_paths):
@@ -74,4 +80,5 @@ class Settings:
             assessment_require_ticket=value("RSI_ASSESSMENT_REQUIRE_TICKET", "true").lower() == "true",
             learning_catalog_path=value("RSI_LEARNING_CATALOG_PATH", ""),
             learning_catalog_overlay_paths=tuple(overlay_paths),
+            port=int(value("RSI_PORT", "8000")),
         )

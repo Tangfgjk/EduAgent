@@ -43,7 +43,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     catalog = load_catalog(settings)
     runtime = SessionRuntime(store, llm, catalog=catalog, policy_factory=policy_factory, clock=clock, bank_factory=bank_factory)
 
-    app = FastAPI(title="RSI 教育智能体平台", version="0.1.0 (M0+L0)")
+    app = FastAPI(title="桂子问津 Wenjin", version="4.0.0-local-mvp")
     from app.gateway.security import install_local_identity
     install_local_identity(app, settings)
     def local_learner(learner_id):
@@ -88,7 +88,11 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     @app.get("/prototype")
     def prototype() -> FileResponse:
-        return FileResponse(WEB_INDEX)
+        # Keep the legacy URL but never serve prototype's hard-coded scores.
+        return FileResponse(WEB_INDEX.with_name("learning.html"))
+
+    from app.gateway.workbench_routes import install_workbench_routes
+    install_workbench_routes(app, store, settings)
 
     # ---------- 学习契约（docs/02 §3.1） ----------
 

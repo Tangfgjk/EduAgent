@@ -16,6 +16,7 @@ from app.simulation.durable_jobs import DurableLabJobs
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -84,6 +85,7 @@ def create_lab_app(output_root: Path, *, runner_factory=None) -> FastAPI:
             durable.close()
 
     app = FastAPI(title="桂子问津 · 仿真实验室", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.mount("/simulation-assets", StaticFiles(directory=WEB.parent / "simulation-assets"), name="simulation-assets")
 
     @app.middleware("http")
     async def local_only(request: Request, call_next):
@@ -114,7 +116,7 @@ def create_lab_app(output_root: Path, *, runner_factory=None) -> FastAPI:
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'; object-src 'none'"
         return response
 
     def public(job):

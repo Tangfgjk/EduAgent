@@ -7,6 +7,8 @@ import threading
 from functools import wraps
 from pathlib import Path
 
+from app.storage.migrations import migrate
+
 from app.core.schema import (
     GoalContract, InteractionEvent, MentalStateSnapshot, PlanVersion, Verdict, new_id, utcnow,
 )
@@ -124,15 +126,11 @@ class Store:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA busy_timeout=10000")
         self.conn.execute("PRAGMA foreign_keys=ON")
-        self.conn.executescript(_SCHEMA)
-        columns = {r["name"] for r in self.conn.execute("PRAGMA table_info(events)")}
-        if "event_seq" not in columns:
-            self.conn.execute("ALTER TABLE events ADD COLUMN event_seq INTEGER")
-        for row in self.conn.execute("SELECT event_id FROM events WHERE event_seq IS NULL ORDER BY rowid").fetchall():
-            seq = self.conn.execute("INSERT INTO event_clock DEFAULT VALUES").lastrowid
-            self.conn.execute("UPDATE events SET event_seq=? WHERE event_id=?", (seq, row["event_id"]))
-        self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS events_seq ON events(event_seq)")
-        self.conn.commit()
+        try:
+            self.schema_version = migrate(self.conn, _SCHEMA)
+        except Exception:
+            self.conn.close()
+            raise
 
     @_synchronized
     def close(self) -> None:

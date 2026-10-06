@@ -9,3 +9,8 @@ platform/data/
 *.sqlite3
 docs/本地配置/
 .uv-cache/
+.coverage
+.coverage.*
+.mypy_cache/
+.ruff_cache/
+node_modules/

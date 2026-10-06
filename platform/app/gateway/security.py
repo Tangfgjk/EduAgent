@@ -113,7 +113,7 @@ def install_local_identity(app, settings):
             authenticated = identity.authenticated(request.cookies.get(COOKIE))
             if path.startswith("/api/") and path not in {"/api/auth/login", "/api/auth/status"} and not authenticated:
                 return JSONResponse({"detail": "Local login required"}, status_code=401)
-            if path in {"/", "/prototype", "/learning"} and not authenticated:
+            if path in {"/", "/prototype", "/learning", "/teacher", "/parent", "/research"} and not authenticated:
                 return RedirectResponse("/login", status_code=303)
         return await call_next(request)
 
