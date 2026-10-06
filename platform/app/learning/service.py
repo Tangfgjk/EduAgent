@@ -29,6 +29,12 @@ def _hash(evidence):
 
 
 class LearningService:
+    @classmethod
+    def for_repository(cls, repository):
+        """Explicit learning-domain backend; legacy runtime still needs SQLite Store."""
+        from app.learning.repository_service import RepositoryLearningService
+        return RepositoryLearningService(repository)
+
     def __init__(self, store: Store):
         self.store = store
 
@@ -53,6 +59,13 @@ class LearningService:
             return json.loads(row[0]) if row else None
 
     def _authorize(self, learner_id, purpose="teaching", evidence=None):
+        # Quarantine is independent of consent; a fresh consent cannot bypass it.
+        with self.store.lock:
+            governance = self.store.conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='governance_privacy'").fetchone()
+            if governance:
+                state = self.store.conn.execute("SELECT state FROM governance_privacy WHERE learner_id=?", (learner_id,)).fetchone()
+                if state is not None and state[0] != "active":
+                    raise ConsentDenied("learner privacy lifecycle blocks data use")
         current = self.consent(learner_id)
         if current is None or purpose not in current["scopes"]:
             raise ConsentDenied(f"{purpose} consent required")

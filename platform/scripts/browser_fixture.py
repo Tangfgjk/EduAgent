@@ -12,6 +12,7 @@ from app.storage.db import Store
 def main():
     local = Settings.load()
     settings = Settings(learner_id="e2e_validation", local_auth_enabled=True,
+        assessment_require_ticket=True,
         local_auth_password_hash=local.local_auth_password_hash,
         local_teacher_token=local.local_teacher_token, local_parent_token=local.local_parent_token)
     store = Store()

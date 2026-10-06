@@ -11,8 +11,11 @@ import json
 from typing import Callable
 from uuid import uuid4
 
+from app.governance.service import GovernanceService
+from app.governance.runtime_sources import RuntimeSources
+from app.learning.assets import load_catalog
 from app.learning.service import LearningService
-from app.orchestration.session import TutorSession
+from app.orchestration.session import TutorSession, load_bank
 from app.storage.db import Store
 
 
@@ -22,7 +25,7 @@ class RuntimeConflict(ValueError):
 
 TABLES = ("learners", "sessions", "event_clock", "verdicts", "learning_evidence", "learning_states",
           "evidence_consumption", "learning_transitions", "learning_rebuilds", "learning_audit",
-          "events", "snapshots", "runtime_sessions", "gateway_receipts")
+          "events", "snapshots", "runtime_sessions", "gateway_receipts", "governance_reviews")
 MUTABLE = frozenset({"learning_states", "runtime_sessions"})
 
 
@@ -45,8 +48,11 @@ def rows(conn, table):
 
 
 class SessionRuntime:
-    def __init__(self, store: Store, llm, catalog=None):
-        self.store, self.llm, self.catalog = store, llm, catalog
+    def __init__(self, store: Store, llm, catalog=None, *, policy_factory=None, clock=None, bank_factory=None):
+        self.store, self.llm, self.catalog = store, llm, catalog or load_catalog()
+        self.policy_factory, self.clock = policy_factory, clock
+        self.bank_factory = bank_factory or load_bank
+        GovernanceService(store)
         with store.lock:
             store.conn.execute("CREATE TABLE IF NOT EXISTS runtime_sessions (session_id TEXT PRIMARY KEY,learner_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL)")
             store.conn.execute("CREATE TABLE IF NOT EXISTS gateway_receipts (session_id TEXT,attempt_id TEXT,content_hash TEXT,payload TEXT,PRIMARY KEY(session_id,attempt_id))")
@@ -65,6 +71,8 @@ class SessionRuntime:
                 if self._token() != token:
                     raise RuntimeConflict("Database changed during snapshot capture")
             baseline = {table: rows(replica.conn, table) for table in TABLES}
+            governance = GovernanceService(replica)
+            replica.governance_review_sink = lambda action, reason: governance.enqueue_safety_review(learner_id, action, "R-05")
             return replica, baseline, token
         except Exception:
             replica.close()
@@ -85,7 +93,13 @@ class SessionRuntime:
             _, state = self._state(self.store, sid, learner_id)
             session = TutorSession.restore(self.store, self.llm, state)
             session._asset_catalog = self.catalog
+            self._bind_sources(session)
             return session
+
+    def _bind_sources(self, session):
+        sources = RuntimeSources(self.bank_factory(), self.catalog)
+        sources.assert_bank(session.bank)
+        session._runtime_sources = sources
 
     def public_state(self, sid, learner_id):
         session = self.load(sid, learner_id)
@@ -144,8 +158,14 @@ class SessionRuntime:
     def create(self, learner_id, contract=None, session_type="explore", *, fault: Callable | None = None):
         replica, baseline, token = self._capture(learner_id)
         try:
-            session = TutorSession(replica, self.llm, learner_id, contract=contract, session_type=session_type)
+            session = TutorSession(replica, self.llm, learner_id, contract=contract, session_type=session_type,
+                                   bank=self.bank_factory())
+            if self.policy_factory:
+                session.policy = self.policy_factory()
+            if self.clock:
+                session._clock = self.clock
             session._asset_catalog = self.catalog
+            self._bind_sources(session)
             result = session.start()
             replica.conn.execute("INSERT INTO runtime_sessions VALUES (?,?,?,?)",
                                  (session.session_id, learner_id, 1, dump(session.export_state())))
@@ -170,7 +190,12 @@ class SessionRuntime:
                     raise RuntimeConflict("attempt_id content conflict")
                 return json.loads(existing["payload"])
             session = TutorSession.restore(replica, self.llm, state)
+            if self.policy_factory:
+                session.policy = self.policy_factory()
+            if self.clock:
+                session._clock = self.clock
             session._asset_catalog = self.catalog
+            self._bind_sources(session)
             result = session.handle_turn(text=text, answer=answer, attempt_id=f"session:{sid}:{key}")
             response = dict(reply=result.reply, ui=result.ui, denial=result.denial, events=len(result.events), attempt_id=key)
             replica.conn.execute("UPDATE runtime_sessions SET version=?,payload=? WHERE session_id=? AND version=?",
@@ -193,6 +218,7 @@ class SessionRuntime:
             version, state = self._state(replica, sid, learner_id)
             session = TutorSession.restore(replica, self.llm, state)
             session._asset_catalog = self.catalog
+            self._bind_sources(session)
             response = session.submit_reflection(payload)
             replica.conn.execute("UPDATE runtime_sessions SET version=?,payload=? WHERE session_id=?",
                                  (version + 1, dump(session.export_state()), sid))

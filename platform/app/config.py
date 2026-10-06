@@ -41,6 +41,7 @@ class Settings:
     local_auth_session_hours: int = 8
     local_auth_cookie_secure: bool = False
     allow_simulated_time: bool = False
+    assessment_require_ticket: bool = False  # Explicit injected legacy fixtures only; load() defaults to strict.
     learning_catalog_path: str = ""
     learning_catalog_overlay_paths: tuple[str, ...] = ()
 
@@ -70,6 +71,7 @@ class Settings:
             local_auth_password_hash=value("RSI_LOCAL_AUTH_PASSWORD_HASH", ""),
             local_auth_session_hours=int(value("RSI_LOCAL_AUTH_SESSION_HOURS", "8")),
             local_auth_cookie_secure=value("RSI_LOCAL_AUTH_COOKIE_SECURE", "false").lower() == "true",
+            assessment_require_ticket=value("RSI_ASSESSMENT_REQUIRE_TICKET", "true").lower() == "true",
             learning_catalog_path=value("RSI_LEARNING_CATALOG_PATH", ""),
             learning_catalog_overlay_paths=tuple(overlay_paths),
         )

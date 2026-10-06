@@ -1,0 +1,1542 @@
+{
+  "schema_version": "course-review-package-v3.1",
+  "course_ref": {
+    "asset_id": "math-g7-linear-equations",
+    "version": "3.1.0-draft"
+  },
+  "title": "初中一元一次方程：AI候选课程审核包（待教师审核）",
+  "created_at": "2026-10-06T17:33:00+08:00",
+  "review_status": "pending",
+  "source": {
+    "source_kind": "synthetic_ai_generated",
+    "locator": "seeds/synthetic/learning_assets_overlay_v1.json; KC references: seeds/learning_assets_v1.json",
+    "source_sha256": "439ce1903c9e6717b4a1a90ce4496d0661efe5de021ab8e85db5d6d7b857b42d",
+    "license_ref": "local-development-synthetic-candidate; no externally licensed curriculum claimed",
+    "usage_scope": "simulation_only",
+    "grade_band": "G7"
+  },
+  "catalog": {
+    "catalog_version": "v3-equation-course-draft-20261006",
+    "knowledge": [
+      {
+        "ref": {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        },
+        "title": "等式的基本性质",
+        "domain": "mathematics",
+        "kc_type": "concept",
+        "curriculum_ref": "demo-not-official-curriculum",
+        "grade_band": "G7",
+        "prerequisite_refs": [],
+        "provenance": "local-authored-demo-20261006"
+      },
+      {
+        "ref": {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        },
+        "title": "解一元一次方程",
+        "domain": "mathematics",
+        "kc_type": "procedure",
+        "curriculum_ref": "demo-not-official-curriculum",
+        "grade_band": "G7",
+        "prerequisite_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "provenance": "local-authored-demo-20261006"
+      }
+    ],
+    "rubrics": [
+      {
+        "ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "dimensions": [
+          {
+            "dimension_id": "correctness",
+            "description": "整数代入满足所生成等式",
+            "weight": 1.0
+          }
+        ],
+        "passing_score": 1.0,
+        "assessor_policy": "deterministic",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      }
+    ],
+    "assessments": [
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "diagnostic",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 2 = 10。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "diagnostic",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 5 = 10。",
+        "answer": {
+          "var": "x",
+          "value": "5"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "practice",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 4 = 13。",
+        "answer": {
+          "var": "x",
+          "value": "9"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "practice",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 9 = 18。",
+        "answer": {
+          "var": "x",
+          "value": "9"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "pretest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 1 = 10。",
+        "answer": {
+          "var": "x",
+          "value": "9"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "pretest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 1 = 3。",
+        "answer": {
+          "var": "x",
+          "value": "2"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "posttest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 2 = 6。",
+        "answer": {
+          "var": "x",
+          "value": "4"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "posttest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 5 = 7。",
+        "answer": {
+          "var": "x",
+          "value": "2"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "transfer",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成迁移练习：某数量 x 的 1 倍再增加 7 得到 15，求 x。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "transfer",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 10，求 x。",
+        "answer": {
+          "var": "x",
+          "value": "6"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "delayed",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 2 = 3。",
+        "answer": {
+          "var": "x",
+          "value": "1"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.BALANCE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "delayed",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "understand",
+        "stem": "合成练习：解等式 x + 8 = 11。",
+        "answer": {
+          "var": "x",
+          "value": "3"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "diagnostic",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 1 = 4。",
+        "answer": {
+          "var": "x",
+          "value": "3"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "diagnostic",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 6 = 13。",
+        "answer": {
+          "var": "x",
+          "value": "7"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "practice",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 9 = 11。",
+        "answer": {
+          "var": "x",
+          "value": "2"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "practice",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 1 = 7。",
+        "answer": {
+          "var": "x",
+          "value": "6"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "pretest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 3 = 11。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "pretest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 2 = 5。",
+        "answer": {
+          "var": "x",
+          "value": "3"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "posttest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 1 = 9。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "posttest",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 2 = 11。",
+        "answer": {
+          "var": "x",
+          "value": "9"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "transfer",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 12，求 x。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "transfer",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成迁移练习：某数量 x 的 1 倍再增加 5 得到 13，求 x。",
+        "answer": {
+          "var": "x",
+          "value": "8"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-1",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "delayed",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 9 = 12。",
+        "answer": {
+          "var": "x",
+          "value": "3"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      },
+      {
+        "ref": {
+          "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-2",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kc_refs": [
+          {
+            "asset_id": "MATH.G7.EQ.SOLVE",
+            "version": "1.0.0"
+          }
+        ],
+        "rubric_ref": {
+          "asset_id": "synthetic-exact-equation",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        },
+        "kind": "delayed",
+        "difficulty_band": "easy",
+        "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+        "bloom_level": "apply",
+        "stem": "合成练习：解等式 x + 2 = 4。",
+        "answer": {
+          "var": "x",
+          "value": "2"
+        },
+        "calibration_status": "demo",
+        "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+      }
+    ]
+  },
+  "knowledge_reviews": [
+    {
+      "kc_ref": {
+        "asset_id": "MATH.G7.EQ.BALANCE",
+        "version": "1.0.0"
+      },
+      "observable_objective": "能在等式两边执行同一非零可逆运算，并通过代入检验说明仍然相等。",
+      "positive_example": "对 x+3=8 两边同时减3，并将所得值代入左右两边核对。",
+      "negative_example": "只修改等号左边并认为等式仍成立；不能说明为什么两边相等。"
+    },
+    {
+      "kc_ref": {
+        "asset_id": "MATH.G7.EQ.SOLVE",
+        "version": "1.0.0"
+      },
+      "observable_objective": "能按等式性质独立求出未知数，记录逆运算并代回原式自检。",
+      "positive_example": "对 x+3=8 两边同时减3，并将所得值代入左右两边核对。",
+      "negative_example": "只修改等号左边并认为等式仍成立；不能说明为什么两边相等。"
+    }
+  ],
+  "task_reviews": [
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": "从符号方程转为文字数量关系，先建模再逆运算；属于近迁移假设，非远迁移证明。"
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": "从符号方程转为文字数量关系，先建模再逆运算；属于近迁移假设，非远迁移证明。"
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应解释两边同运算为何保持等式，并通过代入证明结果；不是认知能力诊断。",
+      "misconception_refs": [
+        "MATH.G7.EQ.BALANCE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": "从符号方程转为文字数量关系，先建模再逆运算；属于近迁移假设，非远迁移证明。"
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": "从符号方程转为文字数量关系，先建模再逆运算；属于近迁移假设，非远迁移证明。"
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    },
+    {
+      "assessment_ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "difficulty_basis": "草案容易层：一个未知数、整数常数和最多两步逆运算；未经真人难度校准。",
+      "bloom_requirement": "学生应独立执行逆运算并代回原式核验；任务要求标签不是学生认知能力结论。",
+      "misconception_refs": [
+        "MATH.G7.EQ.SOLVE.one_sided_operation"
+      ],
+      "hints": [
+        {
+          "level": 0,
+          "text": "先独立作答，并保留你的推导和自检过程。",
+          "answer_exposed": false
+        },
+        {
+          "level": 1,
+          "text": "指出等号两边的量，考虑怎样同时执行逆运算以保持相等。",
+          "answer_exposed": false
+        },
+        {
+          "level": 2,
+          "text": "先去掉常数项，再考虑未知数的系数；每一步都对两边执行同一运算。",
+          "answer_exposed": false
+        }
+      ],
+      "fade_condition": "连续两次无提示正确且有代入自检后，下次先降一级支架；遇错再根据误区补充。",
+      "transfer_difference": null
+    }
+  ],
+  "rubric_reviews": [
+    {
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "level_descriptions": [
+        "0：答案与可验证条件不等价或无法完成。",
+        "1：答案等价；推导质量另由教师复核。"
+      ],
+      "positive_example": "正确解答并代回原等式两边得到相同结果。",
+      "negative_example": "只给错误的数值，或者使用不受支持的表达式无法验算。",
+      "scoring_procedure": "使用受限数学验证器检查答案等价性；不可验证不计入掌握与正式测量。",
+      "disagreement_procedure": "记录争议证据和版本，请真实教师复核；不以LLM自评直接改写学习证据。"
+    }
+  ],
+  "misconceptions": [
+    {
+      "misconception_id": "MATH.G7.EQ.BALANCE.one_sided_operation",
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "description": "只对等式一边运算，或移项时遗漏逆运算。",
+      "positive_error_example": "x+3=8 被错误写为 x=8+3，只改变了左边而未维护相等。",
+      "negative_error_example": "x+3=8 两边同时减3，随后把结果代回原等式。",
+      "evidence_basis": "synthetic misconception hypothesis; not observed human frequency or teacher gold",
+      "intervention": "要求学生指出左右两边各执行了什么运算，使用代入验证纠正，而不直接给最终答案。"
+    },
+    {
+      "misconception_id": "MATH.G7.EQ.SOLVE.one_sided_operation",
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "description": "只对等式一边运算，或移项时遗漏逆运算。",
+      "positive_error_example": "x+3=8 被错误写为 x=8+3，只改变了左边而未维护相等。",
+      "negative_error_example": "x+3=8 两边同时减3，随后把结果代回原等式。",
+      "evidence_basis": "synthetic misconception hypothesis; not observed human frequency or teacher gold",
+      "intervention": "要求学生指出左右两边各执行了什么运算，使用代入验证纠正，而不直接给最终答案。"
+    }
+  ],
+  "measurement_windows": [
+    {
+      "phase": "pretest",
+      "start_offset_minutes": -60,
+      "end_offset_minutes": 0,
+      "min_independent_items_per_kc": 2,
+      "unassisted_required": true
+    },
+    {
+      "phase": "posttest",
+      "start_offset_minutes": 0,
+      "end_offset_minutes": 1440,
+      "min_independent_items_per_kc": 2,
+      "unassisted_required": true
+    },
+    {
+      "phase": "transfer",
+      "start_offset_minutes": 1440,
+      "end_offset_minutes": 2880,
+      "min_independent_items_per_kc": 2,
+      "unassisted_required": true
+    },
+    {
+      "phase": "delayed",
+      "start_offset_minutes": 10080,
+      "end_offset_minutes": 20160,
+      "min_independent_items_per_kc": 2,
+      "unassisted_required": true
+    }
+  ],
+  "educational_effect_claim": false,
+  "real_learner_data_included": false
+}

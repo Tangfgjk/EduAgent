@@ -102,6 +102,10 @@ def test_teacher_correction_is_authorized_append_only_and_metrics_use_active_evi
             attempt("POST-SOLVE-2", "6", "q2", BASE + timedelta(days=1))]
     evidence_id = None
     for body in rows:
+        delivery = client.post("/api/learning/assessment/s/issue", json=dict(
+            assessment_id=body["assessment_id"], assessment_version=body["assessment_version"],
+            issuance_id=body["attempt_id"], occurred_at=body["occurred_at"])).json()
+        body["delivery_ref"] = delivery["delivery_ref"]
         response = client.post("/api/learning/assessment/s/submit", json=body)
         assert response.status_code == 200
         evidence_id = response.json()["evidence_id"]

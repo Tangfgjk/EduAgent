@@ -181,6 +181,58 @@ def test_hybrid_search_explicit_feature_vector_version(workspace):
     assert response.json()["vector_model"] == "hashed_lexical_features_not_semantic_embeddings"
 
 
+@pytest.mark.parametrize("mode,canonical,version", [
+    ("bm25", "bm25", "bm25-local-v1"),
+    ("hashed_lexical", "hashed_lexical", "hashed-ngram-v1"),
+    ("vector", "hashed_lexical", "hashed-ngram-v1"),
+    ("hybrid", "hybrid", "bm25-hashed-ngram-rrf-v1"),
+])
+def test_search_mode_and_audit_match_actual_algorithm(workspace, mode, canonical, version):
+    client, store, _ = workspace
+    response = client.get("/api/knowledge/search", params={
+        "q": "方程", "kc_id": "MATH.G7.EQ.SOLVE", "mode": mode,
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["retrieval_mode"] == canonical
+    assert data["requested_mode"] == mode
+    assert data["deprecated_mode_alias"] is (mode == "vector")
+    assert data["retrieval_version"] == version
+    assert data["feature_model"] == data["vector_model"]
+    assert data["results"]
+    assert all(item["retrieval_version"] == version for item in data["results"])
+    audit = json.loads(store.conn.execute(
+        "SELECT payload FROM learning_audit ORDER BY rowid DESC LIMIT 1").fetchone()[0])
+    assert audit["retrieval_mode"] == canonical
+    assert audit["requested_mode"] == mode
+    assert audit["retrieval_version"] == version
+    assert audit["deprecated_mode_alias"] is (mode == "vector")
+    assert audit["candidate_only"] is True
+
+
+def test_legacy_search_matches_canonical_and_rejects_unknown_mode(workspace):
+    client, _, service = workspace
+    params = {"q": "方程", "kc_id": "MATH.G7.EQ.SOLVE"}
+    canonical = client.get("/api/knowledge/search", params={**params, "mode": "hashed_lexical"})
+    legacy = client.get("/api/knowledge/search", params={**params, "mode": "vector"})
+    assert canonical.json()["results"] == legacy.json()["results"]
+    assert client.get("/api/knowledge/search", params={**params, "mode": "semantic"}).status_code == 422
+    service.set_consent("local", [], "c2", "student:local", datetime.now(timezone.utc))
+    for mode in ("hashed_lexical", "vector"):
+        assert client.get("/api/knowledge/search", params={**params, "mode": mode}).status_code == 403
+
+
+def test_empty_search_audit_still_identifies_hashed_algorithm(workspace):
+    client, store, _ = workspace
+    response = client.get("/api/knowledge/search", params={
+        "q": " ", "kc_id": "MATH.G7.EQ.SOLVE", "mode": "hashed_lexical",
+    })
+    assert response.status_code == 200 and response.json()["results"] == []
+    audit = json.loads(store.conn.execute(
+        "SELECT payload FROM learning_audit ORDER BY rowid DESC LIMIT 1").fetchone()[0])
+    assert audit["retrieval_version"] == "hashed-ngram-v1" and audit["source_refs"] == []
+
+
 def test_configured_role_uses_http_client_with_provenance(workspace, monkeypatch):
     import httpx
     client, _, _ = workspace

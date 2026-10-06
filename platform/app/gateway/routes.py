@@ -22,7 +22,7 @@ WEB_INDEX = Path(__file__).resolve().parent.parent.parent / "web" / "index.html"
 
 
 def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
-               store: Store | None = None) -> FastAPI:
+               store: Store | None = None, *, policy_factory=None, clock=None, bank_factory=None) -> FastAPI:
     settings = settings or Settings.load()
     if llm is None:
         extra_body: dict | None = None
@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     from app.orchestration.runtime import SessionRuntime, RuntimeConflict
     from app.learning.assets import load_catalog
     catalog = load_catalog(settings)
-    runtime = SessionRuntime(store, llm, catalog=catalog)
+    runtime = SessionRuntime(store, llm, catalog=catalog, policy_factory=policy_factory, clock=clock, bank_factory=bank_factory)
 
     app = FastAPI(title="RSI 教育智能体平台", version="0.1.0 (M0+L0)")
     from app.gateway.security import install_local_identity
@@ -344,4 +344,6 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     install_dashboard_routes(app,store,settings,catalog)
     from app.gateway.qualitative_routes import install_qualitative_routes
     install_qualitative_routes(app,store,settings)
+    from app.gateway.governance_routes import install_governance_routes
+    install_governance_routes(app,store,settings)
     return app

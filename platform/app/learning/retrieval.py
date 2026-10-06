@@ -16,7 +16,16 @@ from pathlib import Path
 from typing import Callable, Literal, Protocol
 
 from markdown_it import MarkdownIt
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+RetrievalMode = Literal["bm25", "hashed_lexical", "hybrid"]
+RETRIEVAL_VERSIONS: dict[str, str] = {
+    "bm25": "bm25-local-v1",
+    "hashed_lexical": "hashed-ngram-v1",
+    "hybrid": "bm25-hashed-ngram-rrf-v1",
+}
+LEXICAL_FEATURE_MODEL = "hashed_lexical_features_not_semantic_embeddings"
 from pypdf import PdfReader
 
 
@@ -28,7 +37,12 @@ class RetrievalContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kc_refs: list[str] = Field(default_factory=list)
     limit: int = Field(default=5, ge=1, le=50)
-    mode: Literal["bm25", "vector", "hybrid"] = "bm25"
+    mode: RetrievalMode = "bm25"
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def normalize_legacy_mode(cls, value):
+        return "hashed_lexical" if value == "vector" else value
 
 
 class Citation(BaseModel):
@@ -111,6 +125,31 @@ class LocalRetrieval:
     def sources(self) -> list[ImportedSource]:
         with self.lock:
             return [source.model_copy(deep=True) for _, source in sorted(self._sources.items())]
+
+    def resolve_reference(self, source_id: str, source_version: str, chunk_id: str) -> RetrievedEvidence:
+        """Resolve a citation from the server index and current file, not caller text."""
+        with self.lock:
+            source = self._sources.get(source_id)
+            if source is None or source.source_version != source_version:
+                raise ParseError("unavailable_source_revision")
+            path = self._confined(source.path)
+            if hashlib.sha256(path.read_bytes()).hexdigest() != source_version:
+                raise ParseError("stale_source_revision")
+            chunk = next((item for item in self._chunks.get(source_id, []) if item.chunk_id == chunk_id), None)
+            if chunk is None or chunk.source_version != source_version:
+                raise ParseError("unavailable_source_chunk")
+            return chunk.model_copy(deep=True)
+
+    def validate_source_revision(self, source_id: str, source_version: str) -> bool:
+        with self.lock:
+            source = self._sources.get(source_id)
+            if source is None or source.source_version != source_version:
+                return False
+            try:
+                path = self._confined(source.path)
+                return hashlib.sha256(path.read_bytes()).hexdigest() == source_version
+            except (ParseError, OSError):
+                return False
 
     def _confined(self, path: str | Path) -> Path:
         resolved = Path(path).resolve()
@@ -227,7 +266,7 @@ class LocalRetrieval:
                     idf = math.log(1 + (len(docs) - df[term] + .5) / (df[term] + .5))
                     score += idf * frequency * 2.5 / (frequency + 1.5 * (1 - .75 + .75 * length / average))
             vector_score = _cosine(query_vector, _hashed_vector(chunk.text))
-            if (context.mode == "bm25" and score <= 0) or (context.mode == "vector" and vector_score <= 0) or (context.mode == "hybrid" and score <= 0 and vector_score <= 0):
+            if (context.mode == "bm25" and score <= 0) or (context.mode == "hashed_lexical" and vector_score <= 0) or (context.mode == "hybrid" and score <= 0 and vector_score <= 0):
                 continue
             status = "ungrounded" if not chunk.kc_refs else "grounded"
             if context.kc_refs and chunk.kc_refs and not set(context.kc_refs).intersection(chunk.kc_refs):
@@ -239,10 +278,10 @@ class LocalRetrieval:
         vector_rank = {result[0].chunk_id: rank for rank, result in enumerate((r for r in vectors if r[2] > 0), 1)}
         scored = []
         for result, lexical_score, vector_score in results:
-            score = lexical_score if context.mode == "bm25" else vector_score if context.mode == "vector" else (
+            score = lexical_score if context.mode == "bm25" else vector_score if context.mode == "hashed_lexical" else (
                 1 / (60 + lexical_rank[result.chunk_id]) if result.chunk_id in lexical_rank else 0) + (
                 1 / (60 + vector_rank[result.chunk_id]) if result.chunk_id in vector_rank else 0)
-            version = "bm25-local-v1" if context.mode == "bm25" else "hashed-ngram-v1" if context.mode == "vector" else "bm25-hashed-ngram-rrf-v1"
+            version = RETRIEVAL_VERSIONS[context.mode]
             scored.append(result.model_copy(update={"score": round(score, 12), "retrieval_version": version}, deep=True))
         return sorted(scored, key=lambda result: (-result.score, result.source_id, result.chunk_id))[:context.limit]
 

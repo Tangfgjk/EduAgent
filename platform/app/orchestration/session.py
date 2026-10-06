@@ -24,7 +24,6 @@ from app.learning.perception import (
 )
 from app.learning.bridge import record_attempt, refresh_projection
 from app.learning.verifier import verify_item
-from app.llm.prompts import reply_messages
 from app.orchestration.policy import BuiltInPolicyV1, TurnContext
 from app.orchestration.trigger import TriggerEngine
 
@@ -103,7 +102,6 @@ class TutorSession:
         self.verdicts: list[Verdict] = []
         self.pending_feedback: Verdict | None = None
         self.last_action_id: str | None = None
-        self.polish = type(self.llm).__name__ == "OpenAICompatClient"
         self.store.ensure_learner(self.learner_id)
         self.store.save_session(self.session_id, self.learner_id,
                                 self.contract.goal_contract_id if self.contract else None,
@@ -164,7 +162,6 @@ class TutorSession:
         session.trigger = TriggerEngine()
         session.trigger._last_fired = {k: datetime.fromisoformat(v) for k, v in state["trigger_last_fired"].items()}
         session.policy, session.governor, session._asset_catalog = BuiltInPolicyV1(), ActionGovernor(), None
-        session.polish = type(llm).__name__ == "OpenAICompatClient"
         return session
 
     # ---------- 题目推进（peek 不消费，执行才消费） ----------
@@ -260,6 +257,8 @@ class TutorSession:
         )
 
     def _governor_ctx(self) -> GovernorContext:
+        # Optional strict provenance/safety ports are installed by the gateway;
+        # the legacy local session remains compatible when they are absent.
         return GovernorContext(
             snapshot=self.snapshot, ladder_pos=self.ladder.pos,
             hints_used=self.hints_used, hint_budget=self.hint_budget,
@@ -267,6 +266,9 @@ class TutorSession:
             artifact_present=False,   # v1 保守：不启用"有作品即可看答案"捷径
             checkpoint_mode=self.session_type == "checkpoint",
             current_difficulty=self.current_item.difficulty if self.current_item else 0.5,
+            grounding_validator=(self._runtime_sources.validate if getattr(self, "_runtime_sources", None)
+                                 else getattr(self.store, "governance_validator", None)),
+            safety_review_sink=getattr(self.store, "governance_review_sink", None),
         )
 
     def _turn_ctx(self, cand, proposals: list, text: str) -> TurnContext:
@@ -302,6 +304,7 @@ class TutorSession:
                 if self._signed_path_context().get("signed"):
                     env = ActionEnvelope.feedback(self.session_id, "MATH.G7.EQ.SOLVE", "process",
                         "当前已签署范围没有可执行任务，请先复核先修诊断或调整计划草案；未映射知识点需要补齐评测资产。")
+                    self._bind_execution_source(env, system_template=True)
                     outcome = self.governor.decide(env, self._governor_ctx())
                     if outcome.decision == "rewrite":
                         env = outcome.envelope
@@ -321,6 +324,7 @@ class TutorSession:
                 item_id=item.item_id, difficulty=item.difficulty,
                 kind="inquiry" if item.pattern in ("inquiry", "pbl") else "practice")
             self._attach_learning_provenance(env)
+        self._bind_execution_source(env)
         outcome = self.governor.decide(env, self._governor_ctx())
         denial_info = None
         if outcome.decision == "deny":
@@ -328,9 +332,13 @@ class TutorSession:
             self.current_item = None
             env = ActionEnvelope.feedback(self.session_id, item.kc_id, "process",
                 "当前任务需要先补充支持或调整计划，我们先放缓一步。")
+            self._bind_execution_source(env, system_template=True)
             outcome = self.governor.decide(env, self._governor_ctx())
         if outcome.decision == "rewrite":
             env = outcome.envelope
+            self._bind_execution_source(env, system_template=True)
+        if outcome.decision == "deny":
+            env = self._safe_wait()
         self._execute(env)
         reply = self._render(env)
         event = self._event("utterance", text=reply,
@@ -362,7 +370,8 @@ class TutorSession:
 
         # 作答 → 验证 + BKT + 阶梯 + 误区后验（step2 固化）
         if answer and self.current_item:
-            verdict = verify_item(answer, self.current_item, llm=self.llm)
+            verdict = verify_item(answer, self.current_item,
+                                  llm=None if getattr(self, "_runtime_sources", None) else self.llm)
             if not verdict.artifact_id:
                 verdict.artifact_id = new_id()
             self.verdicts.append(verdict)
@@ -373,7 +382,7 @@ class TutorSession:
                            answer_exposed=self.current_item.item_id in self.exposed_answers,
                            assessment_kind="post" if self.session_type == "checkpoint"
                            else self.assessment_kinds.get(self.current_item.item_id, "practice"),
-                           action_ref=self.last_action_id)
+                           action_ref=self.last_action_id, occurred_at=self._now())
             refresh_projection(self.store, self.snapshot)
             if correct:
                 self.wrong_streak = 0
@@ -409,8 +418,10 @@ class TutorSession:
 
         # step3 选动作 → step3b 裁决（deny 教学化替代 + 审计；rewrite 审计）
         tctx = self._turn_ctx(cand, proposals, text)
+        expected_template = BuiltInPolicyV1().choose(tctx)
         env = self.policy.choose(tctx)
         self._attach_learning_provenance(env)
+        self._bind_execution_source(env, context=tctx, expected_action=expected_template)
         outcome = self.governor.decide(env, self._governor_ctx())
         if outcome.decision == "deny":
             denial_info = {"rule": outcome.rule_id, "reason": outcome.reason}
@@ -418,14 +429,21 @@ class TutorSession:
                                       payload={"audit": True, "denial": denial_info,
                                                "rejected_action": env.action_id}))
             env = self._fallback_after_denial(env, outcome, tctx)
+            self._attach_learning_provenance(env)
+            self._bind_execution_source(env, context=tctx, system_template=True)
             outcome = self.governor.decide(env, self._governor_ctx())
             if outcome.decision == "rewrite":
                 env = outcome.envelope
+                self._bind_execution_source(env, system_template=True)
         elif outcome.decision == "rewrite":
             events.append(self._event("utterance", text=f"[R-04 改写] {outcome.reason}",
                                       payload={"audit": True, "rewrite": True,
                                                "action": env.action_id}))
             env = outcome.envelope
+            self._bind_execution_source(env, system_template=True)
+
+        if outcome.decision == "deny":
+            env = self._safe_wait()
 
         # step4 执行副作用 + 生成
         self._execute(env)
@@ -477,7 +495,7 @@ class TutorSession:
 
     def _now(self):
         from app.core.schema import utcnow
-        return utcnow()
+        return self._clock() if getattr(self, '_clock', None) else utcnow()
 
     def _attach_learning_provenance(self, env: ActionEnvelope) -> None:
         if env.type != ActionType.TASK:
@@ -513,10 +531,17 @@ class TutorSession:
                                        text="这个请求我先按下不表——先把当前这步自己完成，会更有收获。")
 
     def _execute(self, env: ActionEnvelope) -> None:
+        sources = getattr(self, "_runtime_sources", None)
+        if sources and sources.validate(env):
+            raise PermissionError("Refusing execution of an unbound or changed runtime action")
+        if self.current_item and env.params.get("assistance_hint_level"):
+            self.assistance_levels[self.current_item.item_id] = max(
+                int(env.params["assistance_hint_level"]), self.assistance_levels.get(self.current_item.item_id, 0))
         if self.current_item and env.type == ActionType.HINT:
             level = max(1, env.params.get("ladder_level", 0))
             self.assistance_levels[self.current_item.item_id] = max(level, self.assistance_levels.get(self.current_item.item_id, 0))
-        if self.current_item and env.type == ActionType.EXPLAIN and env.params.get("mode") == "worked_full":
+        if self.current_item and ((env.type == ActionType.EXPLAIN and env.params.get("mode") == "worked_full")
+                                 or (env.type == ActionType.HINT and env.params.get("form") == "worked_full")):
             self.exposed_answers.add(self.current_item.item_id)
         if env.type == ActionType.HINT and env.params.get("proactive"):
             self.hints_used += 1   # R-07 只约束主动提示；学生求助不计入预算
@@ -533,20 +558,23 @@ class TutorSession:
         if self.phase.phase == Phase5E.ENGAGE and env.type in (ActionType.TASK, ActionType.QUESTION):
             self.phase.transition(Phase5E.EXPLORE)
 
-    # ---------- 回复渲染（确定性模板 + 真机 LLM 润色，失败回落） ----------
+    # ---------- 最终回复只渲染已治理模板：自由模型润色不能保留语义安全 ----------
+
+    def _bind_execution_source(self, env, *, context=None, expected_action=None, system_template=False):
+        sources = getattr(self, "_runtime_sources", None)
+        if sources:
+            sources.propose(env, context=context, expected_action=expected_action, system_template=system_template)
+
+    def _safe_wait(self):
+        env = ActionEnvelope(session_id=self.session_id, type=ActionType.WAIT)
+        self._bind_execution_source(env, system_template=True)
+        return env
 
     def _render(self, env: ActionEnvelope) -> str:
-        base = self._deterministic_text(env)
-        if not self.polish:
-            return base
-        try:
-            polish = self.llm.complete(reply_messages(
-                env.type.value,
-                f"把下面的内容说得更自然（信息不增减，不得提前给答案）：{base}",
-                {"阶梯": self.ladder.label}), temperature=0.5)
-            return polish.strip() or base
-        except Exception:
-            return base
+        sources = getattr(self, "_runtime_sources", None)
+        if sources and sources.validate(env):
+            return "内容来源校验未通过，请先调整任务或重新审核课程。"
+        return self._deterministic_text(env)
 
     def _deterministic_text(self, env: ActionEnvelope) -> str:
         t = env.type
@@ -560,6 +588,8 @@ class TutorSession:
             return "用几分钟回顾一下：这次的策略哪里有效？"
         if t == ActionType.ESCALATE:
             return "我把这个情况转给老师看一下。"
+        if t == ActionType.WAIT:
+            return "当前动作未通过安全与来源校验，我们先暂停，请调整任务或重新审核课程。"
         return "……"
 
     # ---------- 反思关卡（必经） ----------
@@ -626,6 +656,12 @@ class TutorSession:
             "autonomy": self.snapshot.autonomy_index.composite,
             "frustration": self.snapshot.affect_motivation.frustration,
             "current_item": self.current_item.stem if self.current_item else None,
+            "current_item_id": self.current_item.item_id if self.current_item else None,
+            "current_kc_id": self.current_item.kc_id if self.current_item else None,
+            "assistance": {
+                "hint_level": self.assistance_levels.get(self.current_item.item_id, 0) if self.current_item else 0,
+                "answer_exposed": bool(self.current_item and self.current_item.item_id in self.exposed_answers),
+            },
             "verdict": ({"status": verdict.status, "explain": verdict.explainability}
                         if verdict else None),
         }

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 from app.agent.workspace import LearningWorkspace, default_plan_md
 from app.core.actions import ActionEnvelope, ActionType
@@ -18,6 +19,10 @@ from app.core.schema import (
 from app.learning.plans import PlanService
 from app.learning.verifier import verify_item
 from app.learning.bridge import record_attempt, refresh_projection
+from app.governance.runtime_sources import RuntimeSources
+from app.governance.service import GovernanceService
+from app.learning.assets import load_catalog
+from app.orchestration.policy import _generic_hint
 from app.llm.client import BaseLLM, LLMError
 from app.storage.db import Store
 
@@ -42,7 +47,10 @@ class LearningTools:
         self.workspace = workspace
         self.plans = PlanService(store)
         self.plan_version_id: str | None = None
-        self.bank = bank                  # 运行时题库（quiz.generate 可追加）
+        self.bank = bank                  # 冻结可信题库；模型候选不得追加
+        self.sources = RuntimeSources(bank, load_catalog())
+        self.governance = GovernanceService(store)
+        self.pending_generated_candidates: list[QuestionItem] = []
         self.hints_used = 0
         self.hint_budget = 4
         self.frustration_streak = 0
@@ -63,10 +71,14 @@ class LearningTools:
             frustration_streak=self.frustration_streak,
             artifact_present=False, checkpoint_mode=self.checkpoint_mode,
             current_difficulty=self.current_difficulty,
+            grounding_validator=self.sources.validate,
+            safety_review_sink=lambda env, _: self.governance.enqueue_safety_review(self.snapshot.learner_id, env, "R-05"),
         )
 
-    def _gated(self, env: ActionEnvelope):
+    def _gated(self, env: ActionEnvelope, *, item=None, expected_action=None):
         """构建信封 → 过门禁 → (ToolResult, envelope)。denied 时审计落库。"""
+        if env.type in (ActionType.TASK, ActionType.QUESTION, ActionType.HINT, ActionType.EXPLAIN, ActionType.FEEDBACK):
+            self.sources.propose(env, context=SimpleNamespace(item=item), expected_action=expected_action)
         outcome = self.governor.decide(env, self.gctx())
         if outcome.decision == "deny":
             self.store.append_event(_audit_event(self.session_id, self.snapshot,
@@ -78,6 +90,8 @@ class LearningTools:
             self.store.append_event(_audit_event(self.session_id, self.snapshot,
                                                  outcome.rule_id or "R-04",
                                                  outcome.reason, env.action_id))
+        if env.type in (ActionType.TASK, ActionType.QUESTION, ActionType.HINT, ActionType.EXPLAIN, ActionType.FEEDBACK) and self.sources.validate(env):
+            return ToolResult("denied", "动作来源或内容发生变化，暂停执行", {"rule": "R-06"}), env
         return ToolResult("ok", "通过门禁", {"action_id": env.action_id}), env
 
     # ---------- 1. learner_model.read ----------
@@ -112,6 +126,8 @@ class LearningTools:
                            "只出一道一元一次方程/应用题，答案为整数。"},
                 {"role": "user", "content": f"知识点：{kc_id}；难度 {difficulty}；要求：{topic_note}"},
             ], temperature=0.4)
+            if len(raw.encode("utf-8")) > 16000:
+                raise ValueError("Generated candidate exceeds local budget")
             from app.llm.client import extract_json
 
             data = json.loads(extract_json(raw))
@@ -120,9 +136,14 @@ class LearningTools:
                 stem=str(data["stem"]), answer={"var": "x", "value": str(data["value"])},
                 hints=[], misconception_links=[],
             )
-            self.bank.append(item)     # 接地生成：必须挂 KC（R-06 语义）
-            return ToolResult(detail=f"生成：{item.stem}", payload={"item": item.model_dump()})
-        except (LLMError, KeyError, json.JSONDecodeError):
+            # Candidate stays separate and never becomes a trusted task by naming a KC.
+            if len(self.pending_generated_candidates) < 20:
+                self.pending_generated_candidates.append(item)
+            fallback = self.bank_search(max_difficulty=difficulty, kc_prefix=kc_id.split(".")[0], count=1).payload.get("items")
+            if fallback:
+                return ToolResult(detail="生成候选待审核，回落题库", payload={"item": fallback[0], "generated_candidate_only": True})
+            return ToolResult("denied", "生成候选未审核且无可信题目；暂停出题", {"candidate_only": True})
+        except (LLMError, KeyError, ValueError, TypeError):
             fallback = self.bank_search(max_difficulty=difficulty, kc_prefix=kc_id.split(".")[0],
                                         count=1).payload.get("items")
             if fallback:
@@ -136,7 +157,7 @@ class LearningTools:
         env = ActionEnvelope.task(self.session_id, item.kc_id, item.stem,
                                   item_id=item.item_id, difficulty=item.difficulty,
                                   kind="inquiry" if item.pattern in ("inquiry", "pbl") else "practice")
-        result, _ = self._gated(env)
+        result, _ = self._gated(env, item=item)
         if result.status == "ok":
             self.current_difficulty = item.difficulty
         return result
@@ -146,12 +167,12 @@ class LearningTools:
     def hint_ladder(self, item: QuestionItem, proactive: bool = True,
                     text: str | None = None) -> ToolResult:
         level = self.ladder_pos
-        text = text or item.hint_text(level) or "先把你的想法说出来。"
+        text = text or item.hint_text(level) or _generic_hint(level)
         form = ("nudge" if level == 0 else "directive" if level == 1 else
                 "worked_partial" if level == 2 else "worked_full")
         env = ActionEnvelope.hint(self.session_id, item.kc_id, level, form, text,
                                   proactive=proactive)
-        result, env = self._gated(env)
+        result, env = self._gated(env, item=item)
         if result.status == "ok":
             if proactive:
                 self.hints_used += 1
@@ -165,7 +186,11 @@ class LearningTools:
     def explain_gated(self, item: QuestionItem, mode: str = "worked_full",
                       text: str = "", target: str = "practice") -> ToolResult:
         env = ActionEnvelope.explain(self.session_id, item.kc_id, mode, text=text, target=target)
-        result, _ = self._gated(env)
+        expected = None
+        if self.sources._bank_item(item) and mode == "worked_full":
+            expected = ActionEnvelope.explain(self.session_id, item.kc_id, mode,
+                text=str(item.answer.get("value", item.answer.get("expr", ""))), target=target)
+        result, _ = self._gated(env, item=item, expected_action=expected)
         if result.status == "denied" and result.payload.get("rule") == "R-01":
             fallback = self.hint_ladder(item, proactive=False)
             fallback.detail = f"R-01 拦截后转阶梯提示：{fallback.detail}"
@@ -179,7 +204,10 @@ class LearningTools:
     # ---------- 7. verify.answer（验证 + Evidence + 阶梯/挫败联动） ----------
 
     def verify_answer(self, item: QuestionItem, answer: str, attempt_id: str | None = None) -> ToolResult:
-        verdict = verify_item(answer, item, llm=self.llm)
+        if not self.sources._bank_item(item):
+            return ToolResult("denied", "验证任务不匹配冻结来源", {"rule": "R-06"})
+        # A free-model rubric cannot become authoritative feedback for frozen math assets.
+        verdict = verify_item(answer, item, llm=None)
         if not verdict.artifact_id:
             verdict.artifact_id = new_id()
         self.store.save_verdict(verdict, self.session_id, item.item_id)

@@ -1,10 +1,28 @@
 """Persistent, hybrid, OCR knowledge adapters with explicit limits."""
+import os
 import sqlite3
 
 import pytest
 from pypdf import PdfWriter
 
 from app.learning.retrieval import LocalRetrieval, ParseError, RetrievalContext
+
+
+def test_hashed_lexical_mode_normalizes_legacy_and_preserves_rankings(tmp_path):
+    source = tmp_path / "lesson.md"
+    source.write_text("方程的系数与验算\n方程两边同时运算", encoding="utf-8")
+    retrieval = LocalRetrieval(tmp_path)
+    retrieval.import_document(source, source_id="lesson", kc_refs=["MATH.G7.EQ.SOLVE"])
+    legacy = RetrievalContext(mode="vector")
+    canonical = RetrievalContext(mode="hashed_lexical")
+    assert legacy.model_dump()["mode"] == "hashed_lexical"
+    results = retrieval.retrieve("验算", canonical)
+    assert results == retrieval.retrieve("验算", legacy)
+    assert results and all(item.retrieval_version == "hashed-ngram-v1" for item in results)
+    source.write_text("source changed", encoding="utf-8")
+    assert retrieval.retrieve("验算", canonical) == []
+    with pytest.raises(ValueError):
+        RetrievalContext(mode="semantic")
 
 
 def test_persisted_index_reloads_and_rejects_changed_source(tmp_path):
@@ -60,9 +78,17 @@ def test_actual_chinese_scan_has_text_and_page_citation(tmp_path):
     from pathlib import Path
     from PIL import Image, ImageDraw, ImageFont
     from app.learning.retrieval import LocalOCR
-    font_path = Path("C:/Windows/Fonts/msyh.ttc")
-    if not font_path.is_file():
-        pytest.skip("Chinese system font unavailable; OCR portability fixture pending")
+    configured_font = os.environ.get("EDUAGENT_OCR_FONT")
+    if configured_font:
+        font_path = Path(configured_font)
+        assert font_path.is_file(), "Configured OCR fixture font is missing"
+    else:
+        font_path = next((path for path in (
+            Path("C:/Windows/Fonts/msyh.ttc"),
+            Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        ) if path.is_file()), None)
+        if font_path is None:
+            pytest.skip("Chinese font unavailable; set EDUAGENT_OCR_FONT")
     image = Image.new("RGB", (1400, 300), "white")
     draw = ImageDraw.Draw(image)
     draw.text((50, 70), "方程两边同时加上相同的数", font=ImageFont.truetype(str(font_path), 65), fill="black")

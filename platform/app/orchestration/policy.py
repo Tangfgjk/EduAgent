@@ -186,4 +186,7 @@ class BuiltInPolicyV1:
         else:
             text = "这道题暂时没法自动判分，说说你的思路，我们一起看。"
         kind = "verification" if v is not None and v.status in ("passed", "failed") else "process"
-        return ActionEnvelope.feedback(session_id=session_id, kc_id=kc, kind=kind, text=text)
+        action = ActionEnvelope.feedback(session_id=session_id, kc_id=kc, kind=kind, text=text)
+        if v is not None and v.status == "failed":
+            action.params["assistance_hint_level"] = 1
+        return action

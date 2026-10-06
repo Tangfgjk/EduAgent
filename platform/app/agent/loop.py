@@ -27,6 +27,8 @@ from app.core.schema import (
     TriedStrategy, new_id, utcnow,
 )
 from app.learning.perception import seed_misconception_space
+from app.learning.service import LearningService, ConsentDenied
+from app.governance.service import GovernanceService
 from app.llm.client import BaseLLM, LLMError
 from app.orchestration.session import load_bank
 from app.storage.db import Store
@@ -58,11 +60,6 @@ class ToolChoice(BaseModel):
     note: str = ""
 
 
-class PlanDraft(BaseModel):
-    """计划正文润色（结构不变，仅文字）。"""
-    content_md: str = ""
-
-
 @dataclass
 class AgentTurn:
     events: list[TranscriptEvent] = field(default_factory=list)
@@ -78,6 +75,11 @@ class LearningAgent:
         self.llm = llm
         self.learner_id = learner_id
         self.contract = contract
+        governance = GovernanceService(store)
+        if governance.blocked(learner_id):
+            raise ConsentDenied("Privacy lifecycle blocks the legacy learning agent")
+        if LearningService(store).consent(learner_id) is not None:
+            LearningService(store)._authorize(learner_id)
         if contract is not None:
             if contract.learner_id != learner_id:
                 raise PermissionError("The goal contract belongs to another learner")
@@ -107,7 +109,6 @@ class LearningAgent:
         self.steps = 0
         self.phase = Phase.GOAL
         self.used_item_ids: list[str] = []
-        self.polish = type(llm).__name__ == "OpenAICompatClient"
         self._gen = None
         store.ensure_learner(learner_id)
         store.save_session(self.tools.session_id, learner_id,
@@ -125,6 +126,14 @@ class LearningAgent:
         return self._pull(text)
 
     def _pull(self, value: str | None) -> AgentTurn:
+        if self.tools.governance.blocked(self.learner_id):
+            return AgentTurn(ask=Ask(prompt="隐私状态已暂停教学，需明确审核后再继续。", gate=GATE_ESCALATION))
+        service = LearningService(self.store)
+        if service.consent(self.learner_id) is not None:
+            try:
+                service._authorize(self.learner_id)
+            except ConsentDenied:
+                return AgentTurn(ask=Ask(prompt="教学授权已撤回，暂停继续教学。", gate=GATE_ESCALATION))
         events: list[TranscriptEvent] = []
         while True:
             try:
@@ -150,26 +159,8 @@ class LearningAgent:
                               payload=result.payload)
 
     def _polish_plain(self, text: str) -> str:
-        """message 级话术润色：仅真机 LLM；任何失败或跑偏回落原文。"""
-        if not self.polish:
-            return text
-        try:
-            from app.llm.prompts import BASE_PEDAGOGY
-
-            out = self.llm.complete([
-                {"role": "system", "content": BASE_PEDAGOGY +
-                 "\n输出纪律：你是润色过滤器——只直接输出改写后的那句话本身；"
-                 "禁止解释、禁止反问、禁止提及润色这件事。"},
-                {"role": "user", "content": f"润色：{text}"},
-            ], temperature=0.3)
-            out = out.strip()
-            # 跑偏防护：润色不得引入原句没有的疑问，也不得提及"润色"
-            if (not out or len(out) < 4 or "润色" in out
-                    or ("？" in out and "？" not in text)):
-                return text
-            return out
-        except LLMError:
-            return text
+        """Compatibility name; exact server text, never free-model rewriting."""
+        return text
 
     # ---------- 主循环 ----------
 
@@ -248,17 +239,6 @@ class LearningAgent:
         self.phase = Phase.PLAN
         deadline_note = self._deadline_note(goal)
         content = default_plan_md(goal, intent.daily_count, deadline_note)
-        try:
-            draft = self.llm.complete_json([{
-                "role": "system",
-                "content": "计划润色器。保持以下条目结构不变，把计划写得更具体温暖，输出 JSON:"
-                           "{\"content_md\":\"完整markdown计划\"}。"},
-                {"role": "user", "content": content},
-            ], PlanDraft, temperature=0.4)
-            if len(draft.content_md.strip()) > 50:
-                content = draft.content_md
-        except LLMError:
-            pass
         saved = self.tools.plan_update(goal, content_md=content)
         yield from self._tool_events("plan.update", saved)
         if saved.status != "ok":
@@ -381,7 +361,7 @@ class LearningAgent:
         yield TranscriptEvent(EventKind.tool_result, "workspace.write 错题本.md",
                               detail=archived, status="ok")
         choice = ToolChoice()
-        if self.polish or isinstance(self.llm, BaseLLM):
+        if isinstance(self.llm, BaseLLM):
             try:
                 choice = self.llm.complete_json([{
                     "role": "system",
@@ -393,7 +373,7 @@ class LearningAgent:
                 pass
         if choice.tool == "explain.gated":
             outcome = self.tools.explain_gated(item, mode="worked_full",
-                                               text=str(item.answer.get("value", "")))
+                                               text=str(item.answer.get("value", item.answer.get("expr", ""))))
         else:
             outcome = self.tools.hint_ladder(item, proactive=True)
         yield from self._tool_events(choice.tool, outcome)
@@ -444,6 +424,7 @@ class LearningAgent:
         self.store.append_snapshot(self.snapshot)
 
     def mirror(self) -> dict:
+        LearningService(self.store)._authorize(self.learner_id)
         s = self.snapshot
         return {
             "learner_id": s.learner_id,

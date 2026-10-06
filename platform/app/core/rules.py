@@ -11,7 +11,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from typing import Literal
+from typing import Callable, Literal
 
 from app.core.actions import ActionEnvelope, ActionType
 from app.core.schema import MentalStateSnapshot
@@ -60,6 +60,8 @@ class GovernorContext:
     artifact_present: bool = False
     checkpoint_mode: bool = False
     current_difficulty: float = 0.5
+    grounding_validator: Callable[[ActionEnvelope], str | None] | None = None
+    safety_review_sink: Callable[[ActionEnvelope, str], None] | None = None
 
 
 @dataclass
@@ -83,6 +85,12 @@ class ActionGovernor:
         ):
             outcome = check(env, ctx)
             if outcome is not None:
+                if outcome.rule_id == "R-05" and ctx.safety_review_sink is not None:
+                    # Review storage cannot turn a safety denial into an execution.
+                    try:
+                        ctx.safety_review_sink(env, outcome.reason)
+                    except Exception:
+                        outcome.reason += "；人工审核入队失败，动作仍被拒绝"
                 return outcome
         return RuleOutcome(None, "allow", "通过全部硬约束", env)
 
@@ -175,12 +183,22 @@ class ActionGovernor:
 
     # ---- R-06 接地约束 ----
     def _r06_grounding(self, env, ctx) -> RuleOutcome | None:
-        if env.type not in (ActionType.EXPLAIN, ActionType.TASK):
+        content_types = (ActionType.EXPLAIN, ActionType.TASK)
+        if ctx.grounding_validator is not None:
+            content_types += (ActionType.QUESTION, ActionType.HINT, ActionType.FEEDBACK)
+        if env.type not in content_types:
             return None
         grounded = env.policy_provenance.get("grounded_to_kg") or []
         if not grounded:
             return RuleOutcome("R-06", "deny",
                                "讲解/任务内容未绑定知识图谱节点（接地缺失）", env)
+        if ctx.grounding_validator is not None:
+            try:
+                reason = ctx.grounding_validator(env)
+            except Exception:
+                reason = "trusted_grounding_validation_failed"
+            if reason:
+                return RuleOutcome("R-06", "deny", str(reason), env)
         return None
 
     # ---- R-04 归因纪律（可改写） ----

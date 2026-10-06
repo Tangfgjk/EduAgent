@@ -60,6 +60,9 @@ def observation_from_evidence(evidence: LearningEvidence, catalog: AssetCatalog,
     """
     if evidence.verifier_details.get("diagnostic_response") in {"skipped", "dont_know", "guessed"}:
         return None
+    details = evidence.verifier_details.get("original_verifier_details", evidence.verifier_details)
+    if details.get("independence_verified") is False or details.get("first_exposure") is False:
+        return None
     asset = next((item for item in catalog.assessments
                   if item.ref.asset_id == evidence.assessment_id
                   and item.ref.version == evidence.assessment_version), None)

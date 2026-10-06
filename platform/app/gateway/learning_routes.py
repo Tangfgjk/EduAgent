@@ -49,6 +49,22 @@ class AssessmentIn(RequestModel):
     assistance_mode: Literal["none", "hint", "answer"] = "none"
     answer_exposed: bool = False
     self_report: Literal["answered", "skipped", "dont_know", "guessed"] = "answered"
+    delivery_ref: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class DeliveryIn(RequestModel):
+    assessment_id: str
+    assessment_version: str = "1.0.0"
+    issuance_id: str = Field(min_length=1, max_length=200)
+    occurred_at: AwareDatetime | None = None
+
+
+class HintIn(RequestModel):
+    delivery_ref: str
+    assessment_id: str
+    assessment_version: str = "1.0.0"
+    level: int = Field(ge=1, le=2)
+    occurred_at: AwareDatetime | None = None
 
 
 class ReviewIn(AssessmentIn):
@@ -68,6 +84,8 @@ class CorrectionIn(RequestModel):
 def install_learning_routes(app: FastAPI, store, settings):
     service = LearningService(store)
     catalog = load_catalog(settings)
+    from app.learning.assessment_delivery import AssessmentDelivery
+    delivery = AssessmentDelivery(store)
     with store.lock:
         store.conn.execute("CREATE TABLE IF NOT EXISTS learning_api_receipts (learner_id TEXT,attempt_id TEXT,content_hash TEXT,payload TEXT,PRIMARY KEY(learner_id,attempt_id))")
         store.conn.commit()
@@ -121,6 +139,12 @@ def install_learning_routes(app: FastAPI, store, settings):
             if old is not None:
                 return old
             asset = asset_for(body.assessment_id, body.assessment_version)
+            consent = service.consent(learner_id)
+            try:
+                delivery_details, hint_level, assistance_mode, answer_exposed = delivery.observation(
+                    learner_id, body, asset, consent["version"], required=settings.assessment_require_ticket)
+            except EvidenceConflict as exc:
+                raise HTTPException(409, str(exc)) from exc
             if asset.kind in {"recall", "explanation"}:
                 raise HTTPException(400, "This assessment kind requires its configured verifier adapter")
             if review:
@@ -133,7 +157,7 @@ def install_learning_routes(app: FastAPI, store, settings):
                     raise HTTPException(409, "Review task is not due or was superseded")
                 if asset.kind != "delayed" or [ref.asset_id for ref in asset.kc_refs] != [task.kc_id]:
                     raise HTTPException(400, "Review assessment must match the due task KC")
-                if body.hint_level or body.assistance_mode != "none" or body.answer_exposed:
+                if hint_level or assistance_mode != "none" or answer_exposed:
                     raise HTTPException(400, "Review requires an independent recall attempt")
             elif asset.kind == "delayed":
                 raise HTTPException(400, "Delayed recall must use the due-review endpoint")
@@ -158,9 +182,9 @@ def install_learning_routes(app: FastAPI, store, settings):
                                       assessment_provenance=asset.provenance,
                                       calibration_status=asset.calibration_status,
                                       comparison_group=asset.comparison_group,
-                                      diagnostic_response=body.self_report),
-                occurred_at=body.occurred_at, hint_level=body.hint_level, assistance_mode=body.assistance_mode,
-                answer_exposed=body.answer_exposed, consent_scope=service.consent(learner_id)["scopes"],
+                                      diagnostic_response=body.self_report, **delivery_details),
+                occurred_at=body.occurred_at, hint_level=hint_level, assistance_mode=assistance_mode,
+                answer_exposed=answer_exposed, consent_scope=service.consent(learner_id)["scopes"],
                 consent_version=service.consent(learner_id)["version"], authorization_source=service.consent(learner_id)["source"],
                 assessment_id=asset.ref.asset_id, assessment_version=asset.ref.version,
                 assessment_kind={"pretest": "pre", "posttest": "post", "delayed": "review"}.get(asset.kind, asset.kind),
@@ -169,7 +193,13 @@ def install_learning_routes(app: FastAPI, store, settings):
                 return dict(evidence_id=evidence.evidence_id, verdict_status=verdict.status,
                             score=verdict.score, transition=transition, assessment=public_asset(asset))
             try:
-                transition = service.consume(evidence, receipt=(key, fingerprint, result_for))
+                def delivery_hook(checkpoint):
+                    if checkpoint == "receipt":
+                        delivery.consume_in_transaction(learner_id, body, asset, consent["version"], evidence.evidence_id,
+                            (delivery_details, hint_level, assistance_mode, answer_exposed))
+                transition = service.consume(evidence, receipt=(key, fingerprint, result_for), fault=delivery_hook)
+            except ConsentDenied as exc:
+                raise HTTPException(403, str(exc)) from exc
             except EvidenceConflict as exc:
                 raise HTTPException(409, str(exc)) from exc
             return result_for(transition)
@@ -181,12 +211,14 @@ def install_learning_routes(app: FastAPI, store, settings):
     @app.get("/api/learning/config")
     def local_config():
         return dict(learner_id=settings.learner_id, mode="local_single_user", catalog_version=catalog.catalog_version,
-                    local_auth_enabled=settings.local_auth_enabled)
+                    local_auth_enabled=settings.local_auth_enabled, assessment_require_ticket=settings.assessment_require_ticket)
 
     @app.get("/api/learning/assets")
     def assets():
         return dict(catalog_version=catalog.catalog_version, knowledge=[item.model_dump(mode="json") for item in catalog.knowledge],
-                    rubrics=[item.model_dump(mode="json") for item in catalog.rubrics], assessments=[public_asset(item) for item in catalog.assessments])
+                    rubrics=[item.model_dump(mode="json") for item in catalog.rubrics], assessments=[
+                        {k: v for k, v in public_asset(item).items() if k != "stem" or not settings.assessment_require_ticket}
+                        for item in catalog.assessments])
 
     @app.get("/api/learning/consent/{learner_id}")
     def get_consent(learner_id: str):
@@ -273,7 +305,40 @@ def install_learning_routes(app: FastAPI, store, settings):
             result = next_task(catalog, (kc_for(body.target_kc_id),), tuple(observations), learner_id=learner_id, max_tasks=body.max_tasks)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
-        return dict(decision=result.model_dump(mode="json"), assessment=public_asset(asset_for(result.assessment_ref.asset_id, result.assessment_ref.version)) if result.assessment_ref else None)
+        selected = public_asset(asset_for(result.assessment_ref.asset_id, result.assessment_ref.version)) if result.assessment_ref else None
+        if selected and settings.assessment_require_ticket:
+            selected.pop("stem", None)
+        return dict(decision=result.model_dump(mode="json"), assessment=selected)
+
+    def delivery_time(requested):
+        if requested and not settings.allow_simulated_time:
+            raise HTTPException(400, "Client-issued delivery time requires explicit simulation mode")
+        return requested or utcnow()
+
+    @app.post("/api/learning/assessment/{learner_id}/issue")
+    def issue_assessment(learner_id: str, body: DeliveryIn):
+        authorized(learner_id)
+        asset = asset_for(body.assessment_id, body.assessment_version)
+        try:
+            with store.lock:
+                result = delivery.issue(learner_id, asset, body.issuance_id, body.occurred_at,
+                    delivery_time(body.occurred_at), service.consent(learner_id)["version"])
+                return dict(**{k: v for k, v in result.items() if k != "assessment_sha256"}, assessment=public_asset(asset))
+        except ConsentDenied as exc:
+            raise HTTPException(403, str(exc)) from exc
+        except EvidenceConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/api/learning/assessment/{learner_id}/hint")
+    def assessment_hint(learner_id: str, body: HintIn):
+        authorized(learner_id)
+        try:
+            return delivery.hint(learner_id, body.delivery_ref, asset_for(body.assessment_id, body.assessment_version),
+                delivery_time(body.occurred_at), service.consent(learner_id)["version"], body.level)
+        except ConsentDenied as exc:
+            raise HTTPException(403, str(exc)) from exc
+        except EvidenceConflict as exc:
+            raise HTTPException(409, str(exc)) from exc
 
     @app.post("/api/learning/assessment/{learner_id}/submit")
     def assessment_submit(learner_id: str, body: AssessmentIn):

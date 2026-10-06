@@ -16,7 +16,10 @@ from app.agents.teach_student import TeachVirtualStudentRunner
 from app.core.rules import ActionGovernor, GovernorContext
 from app.core.schema import MentalStateSnapshot, utcnow
 from app.learning.assets import load_catalog
-from app.learning.retrieval import LocalOCR, LocalRetrieval, ParseError, RetrievalContext
+from app.learning.retrieval import (
+    LEXICAL_FEATURE_MODEL, RETRIEVAL_VERSIONS,
+    LocalOCR, LocalRetrieval, ParseError, RetrievalContext,
+)
 from app.learning.service import ConsentDenied, LearningService
 from app.learning.strategies import DEFAULT_STRATEGIES
 from app.llm.client import BaseLLM, FakeLLM, OpenAICompatClient
@@ -167,12 +170,14 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
 
     @app.get("/api/knowledge/search")
     def knowledge_search(q: str = Query(min_length=1, max_length=1000), kc_id: str = Query(min_length=1),
-                         learner_id: str | None = None, mode: Literal["bm25", "vector", "hybrid"] = "bm25"):
+                         learner_id: str | None = None, mode: Literal["bm25", "hashed_lexical", "vector", "hybrid"] = "bm25"):
         learner_id, _ = authorized(learner_id)
         if kc_id not in known_kcs:
             raise HTTPException(403, "KC is outside the authorized local catalog")
+        context = RetrievalContext(kc_refs=[kc_id], mode=mode)
+        version = RETRIEVAL_VERSIONS[context.mode]
         results = []
-        for item in retrieval.retrieve(q, RetrievalContext(kc_refs=[kc_id], mode=mode)):
+        for item in retrieval.retrieve(q, context):
             if item.grounding_status != "grounded":
                 continue
             result = item.model_dump(mode="json")
@@ -182,9 +187,12 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
         audit(learner_id, dict(kind="knowledge_retrieval", query_sha256=hashlib.sha256(q.encode()).hexdigest(),
             kc_refs=[kc_id], source_refs=[dict(source_id=item["source_id"], source_version=item["source_version"],
             chunk_id=item["chunk_id"], citation=item["citation"]) for item in results],
-            retrieval_version="bm25-local-v1", at=utcnow().isoformat(), candidate_only=True))
+            retrieval_version=version, retrieval_mode=context.mode, requested_mode=mode,
+            deprecated_mode_alias=mode == "vector", at=utcnow().isoformat(), candidate_only=True))
         return dict(results=results, candidate_only=True, verified_teaching_claim=False,
-                    vector_model="hashed_lexical_features_not_semantic_embeddings")
+                    retrieval_mode=context.mode, requested_mode=mode, retrieval_version=version,
+                    deprecated_mode_alias=mode == "vector", feature_model=LEXICAL_FEATURE_MODEL,
+                    vector_model=LEXICAL_FEATURE_MODEL)
 
     @app.post("/api/knowledge/import")
     def knowledge_import(body: KnowledgeImportIn):

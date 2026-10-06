@@ -1,0 +1,891 @@
+{
+  "benchmark_ref": "equation-lexical-retrieval-v3-frozen-20261006",
+  "benchmark_sha256": "24741c6c9770e9eb20d7d24a4946da8cff7d188be5ba3aae5e252c3f19f2f539",
+  "as_of": "2026-10-06T10:02:53.943047Z",
+  "k": 3,
+  "source_kind": "synthetic_ai_generated",
+  "metrics": [
+    {
+      "mode": "bm25",
+      "retrieval_version": "bm25-local-v1",
+      "split": "development",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "bm25",
+      "retrieval_version": "bm25-local-v1",
+      "split": "heldout",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "bm25",
+      "retrieval_version": "bm25-local-v1",
+      "split": "all",
+      "query_count": 8,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hashed_lexical",
+      "retrieval_version": "hashed-ngram-v1",
+      "split": "development",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hashed_lexical",
+      "retrieval_version": "hashed-ngram-v1",
+      "split": "heldout",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hashed_lexical",
+      "retrieval_version": "hashed-ngram-v1",
+      "split": "all",
+      "query_count": 8,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hybrid",
+      "retrieval_version": "bm25-hashed-ngram-rrf-v1",
+      "split": "development",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hybrid",
+      "retrieval_version": "bm25-hashed-ngram-rrf-v1",
+      "split": "heldout",
+      "query_count": 4,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    },
+    {
+      "mode": "hybrid",
+      "retrieval_version": "bm25-hashed-ngram-rrf-v1",
+      "split": "all",
+      "query_count": 8,
+      "mrr_at_k": 1.0,
+      "mean_recall_at_k": 1.0
+    }
+  ],
+  "query_metrics": {
+    "bm25": [
+      {
+        "query_id": "dev-balance",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 3,
+            "chunk_id": "843ff26be28421aec0110166",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "dev-check",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "dev-shopping",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "setup",
+            "source_sha256": "94c9cf96243b09bfa5e13ce47bfd74cc3ba260d0c5e268ab9ebbb1758a2c8d00",
+            "line": 2,
+            "chunk_id": "d3582615211850f667f5c81d",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "setup",
+            "source_sha256": "94c9cf96243b09bfa5e13ce47bfd74cc3ba260d0c5e268ab9ebbb1758a2c8d00",
+            "line": 1,
+            "chunk_id": "0a8ec822382bf623552047b8",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "dev-memory",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 1,
+            "chunk_id": "34321ee13bcd0d2ca4b6f21a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-divisor",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 3,
+            "chunk_id": "150280ffccc81041077fafee",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-sign",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 3,
+            "chunk_id": "843ff26be28421aec0110166",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "unrelated",
+            "source_sha256": "c138687f55c40a907bfb512fe43fdda79ee56b7063546876c93ff6c23003b265",
+            "line": 2,
+            "chunk_id": "b885ea2dfcac99733d447c18",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-help",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 2,
+            "chunk_id": "6780d9e46b4deeadc94443ee",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 1,
+            "chunk_id": "a1f47ba8d303f3c071125ba2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-scaffold",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 2,
+            "chunk_id": "6780d9e46b4deeadc94443ee",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-local-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      }
+    ],
+    "hashed_lexical": [
+      {
+        "query_id": "dev-balance",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 1,
+            "chunk_id": "a818eb5efff2c45345b54946",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "dev-check",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "dev-shopping",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "setup",
+            "source_sha256": "94c9cf96243b09bfa5e13ce47bfd74cc3ba260d0c5e268ab9ebbb1758a2c8d00",
+            "line": 2,
+            "chunk_id": "d3582615211850f667f5c81d",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "conflict",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "conflict",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 2
+      },
+      {
+        "query_id": "dev-memory",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 1,
+            "chunk_id": "34321ee13bcd0d2ca4b6f21a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-divisor",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "conflict",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-sign",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 3,
+            "chunk_id": "843ff26be28421aec0110166",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "unrelated",
+            "source_sha256": "c138687f55c40a907bfb512fe43fdda79ee56b7063546876c93ff6c23003b265",
+            "line": 2,
+            "chunk_id": "b885ea2dfcac99733d447c18",
+            "grounding_status": "conflict",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-help",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 2,
+            "chunk_id": "6780d9e46b4deeadc94443ee",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-scaffold",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "hashed-ngram-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      }
+    ],
+    "hybrid": [
+      {
+        "query_id": "dev-balance",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 1,
+            "chunk_id": "a818eb5efff2c45345b54946",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "dev-check",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "dev-shopping",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "setup",
+            "source_sha256": "94c9cf96243b09bfa5e13ce47bfd74cc3ba260d0c5e268ab9ebbb1758a2c8d00",
+            "line": 2,
+            "chunk_id": "d3582615211850f667f5c81d",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 2
+      },
+      {
+        "query_id": "dev-memory",
+        "split": "development",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 1,
+            "chunk_id": "34321ee13bcd0d2ca4b6f21a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-divisor",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 3,
+            "chunk_id": "332e7772cf8c25f8b6a1d904",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "balance",
+            "source_sha256": "fb64a1d3148d917585b6513d91424ca25c80c4f52e26a39b0ca9ac856d9e96bb",
+            "line": 2,
+            "chunk_id": "03a2b3e1141ce606608e6ab2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 2,
+            "chunk_id": "a72e3134d972f0c69167191a",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-sign",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 3,
+            "chunk_id": "843ff26be28421aec0110166",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "unrelated",
+            "source_sha256": "c138687f55c40a907bfb512fe43fdda79ee56b7063546876c93ff6c23003b265",
+            "line": 2,
+            "chunk_id": "b885ea2dfcac99733d447c18",
+            "grounding_status": "conflict",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 4,
+            "chunk_id": "ece6b4e0af0c303502e5a49b",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 1
+      },
+      {
+        "query_id": "heldout-help",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 2,
+            "chunk_id": "6780d9e46b4deeadc94443ee",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "solve",
+            "source_sha256": "e4fb32a0b644823393128dd53ca38084c2c4269f63fa5493cb636d7ebd4258ff",
+            "line": 1,
+            "chunk_id": "776b92c731716491edf1a0a2",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      },
+      {
+        "query_id": "heldout-scaffold",
+        "split": "heldout",
+        "reciprocal_rank": 1.0,
+        "recall_at_k": 1.0,
+        "source_refs": [
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 3,
+            "chunk_id": "d7f8468d3bdfa8705c80b53a",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "delay",
+            "source_sha256": "87d9470343a2363f0b0698d29203e2775773ccae04d343c86f7aea13c8893bcb",
+            "line": 2,
+            "chunk_id": "5ea727933bd040224e159dff",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          },
+          {
+            "source_id": "autonomy",
+            "source_sha256": "e51888376df5355b79ca13be13d6207f2fa90f5ca82355aa0774e58b66269777",
+            "line": 2,
+            "chunk_id": "6780d9e46b4deeadc94443ee",
+            "grounding_status": "grounded",
+            "retrieval_version": "bm25-hashed-ngram-rrf-v1"
+          }
+        ],
+        "ungrounded_or_conflicting_count": 0
+      }
+    ]
+  },
+  "lexical_feature_model": "hashed_lexical_features_not_semantic_embeddings",
+  "semantic_embedding_installed": false,
+  "causal_or_educational_effect_claim": false,
+  "limitations": [
+    "tiny_synthetic_corpus_not_teacher_gold",
+    "heldout_query_labels_are_developer_fixtures",
+    "no_neural_embedding_comparison",
+    "retrieval_quality_not_teaching_effect",
+    "not_external_domain_generalization"
+  ]
+}

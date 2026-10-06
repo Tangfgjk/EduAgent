@@ -1,0 +1,23 @@
+{
+  "benchmark_ref": "equation-lexical-retrieval-v3-frozen-20261006",
+  "source_kind": "synthetic_ai_generated",
+  "qrel_source": "developer_frozen_fixture_not_teacher_gold",
+  "documents": [
+    {"source_id": "balance", "filename": "balance.md", "kc_refs": ["MATH.G7.EQ.BALANCE"], "text": "# 等式性质\n等式两边同时加减同一个数，等式仍然成立；不能只改变一边。\n两边同时乘除同一非零数可保持相等，除数不能为零。\n"},
+    {"source_id": "solve", "filename": "solve.md", "kc_refs": ["MATH.G7.EQ.SOLVE"], "text": "# 方程求解\n解一元一次方程要按逆运算顺序，先消去常数项再处理未知数系数。\n移项不是魔法，移项变号本质是对等式两边执行相同的逆运算。\n求解后代入原方程，比较左右两边数值是否相等以完成验算。\n"},
+    {"source_id": "setup", "filename": "setup.md", "kc_refs": ["MATH.G7.EQ.SETUP"], "text": "# 数量关系建模\n从购物总价问题中设未知单价，根据数量乘单价加固定费用等于总价列出方程。\n单位必须一致，先明确未知量、已知量和等量关系。\n"},
+    {"source_id": "autonomy", "filename": "autonomy.md", "kc_refs": ["MATH.G7.EQ.SOLVE"], "text": "# 自主学习\n先独立尝试，遇到困难请求提示，再反思、修订并记录自检过程，不抄写完整答案。\n支架渐撤是在独立成功后减少提示强度，而不是禁止学生合理求助。\n"},
+    {"source_id": "delay", "filename": "delay.md", "kc_refs": ["MATH.G7.EQ.SOLVE"], "text": "# 延迟复习\n间隔七天到十四天进行无提示延迟回忆，观察遗忘与保持状态。\n复习推荐必须引用证据与课程版本，模拟结果不能宣称真人教育效果。\n"},
+    {"source_id": "unrelated", "filename": "unrelated.md", "kc_refs": ["SCIENCE.WATER"], "text": "# 水循环\n蒸发、凝结和降水形成水循环，温度变化会影响水的物态。\n"}
+  ],
+  "queries": [
+    {"query_id": "dev-balance", "text": "等式两边同时加减", "kc_refs": ["MATH.G7.EQ.BALANCE"], "relevant": [{"source_id": "balance", "line": 2}], "split": "development", "rationale": "精确词汇的基础检索夹具；不是教师金标。"},
+    {"query_id": "dev-check", "text": "代入原方程验算", "kc_refs": ["MATH.G7.EQ.SOLVE"], "relevant": [{"source_id": "solve", "line": 4}], "split": "development", "rationale": "核对验算资料定位与引用行号。"},
+    {"query_id": "dev-shopping", "text": "数量乘单价总价列方程", "kc_refs": ["MATH.G7.EQ.SETUP"], "relevant": [{"source_id": "setup", "line": 2}], "split": "development", "rationale": "购物建模的领域词汇资料定位。"},
+    {"query_id": "dev-memory", "text": "无提示延迟回忆遗忘", "kc_refs": ["MATH.G7.EQ.SOLVE"], "relevant": [{"source_id": "delay", "line": 2}], "split": "development", "rationale": "明确延迟保持的近词汇检索。"},
+    {"query_id": "heldout-divisor", "text": "为什么除数不能为零", "kc_refs": ["MATH.G7.EQ.BALANCE"], "relevant": [{"source_id": "balance", "line": 3}], "split": "heldout", "rationale": "冻结的不同表达问题，检查非零运算资料。"},
+    {"query_id": "heldout-sign", "text": "移项变号的原因是什么", "kc_refs": ["MATH.G7.EQ.SOLVE"], "relevant": [{"source_id": "solve", "line": 3}], "split": "heldout", "rationale": "冻结的解释性问题，非学生能力标签。"},
+    {"query_id": "heldout-help", "text": "独立尝试求助反思修订自检", "kc_refs": ["MATH.G7.EQ.SOLVE"], "relevant": [{"source_id": "autonomy", "line": 2}], "split": "heldout", "rationale": "检查自主性分解相关资料，而不是推断人格。"},
+    {"query_id": "heldout-scaffold", "text": "成功之后怎样减少提示强度", "kc_refs": ["MATH.G7.EQ.SOLVE"], "relevant": [{"source_id": "autonomy", "line": 3}], "split": "heldout", "rationale": "渐撤用语问题，限定于该冻结词汇语料。"}
+  ]
+}

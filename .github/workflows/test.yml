@@ -1,0 +1,71 @@
+name: V3 Quality Gate
+
+on:
+  push:
+    branches: [main, V2, V3]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Locked Python 3.11 and PostgreSQL 16
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: platform
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: eduagent_ci
+          POSTGRES_USER: eduagent_ci
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eduagent_ci -d eduagent_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      EDUAGENT_POSTGRES_DSN: postgresql://eduagent_ci:disposable-ci-only@127.0.0.1:5432/eduagent_ci
+      EDUAGENT_OCR_FONT: /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+      UV_CACHE_DIR: ${{ github.workspace }}/platform/.uv-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned dependency tool and Chinese test font
+        run: |
+          python -m pip install uv==0.12.23
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fonts-noto-cjk
+      - name: Validate lock and install locked dev environment
+        run: |
+          uv lock --check
+          uv sync --locked --extra dev --python 3.11
+      - name: Check dependencies and compile source
+        run: |
+          uv pip check
+          uv run --no-sync python -m compileall -q app tests scripts
+      - name: Run full suite with real archive and OCR fixtures
+        run: uv run --no-sync python -m pytest -q -ra --junitxml=data/ci-tests.xml
+      - name: Upload test report only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-test-report
+          path: platform/data/ci-tests.xml
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,1189 @@
+可以做，而且我认为**非常适合桂子问津当前这个阶段**。但它应该被定义成：
+
+> **“合成学习者 / 学习者模拟器（Synthetic Learner Simulator）”**，用于开发、压力测试、策略比较和预校准，而不是把它当成“真人数据替代品”。
+
+你们 V2 其实已经有一点这个方向的雏形：`TeachVirtualStudentRunner` 会模拟一个“虚拟学生”，暴露一个可能的误区并提出追问，而且明确设置 `trust_weight=0`、`candidate_only=True`，不会修改真人掌握状态。这说明现有架构已经为模拟学习者留出了边界。只是它现在更像一个**单回合角色工具**，还不是一个真正能连续学习、犯错、求助、受挫、进步的“模拟人类学习者”。
+
+我建议下一步把它正式扩展成一个**独立 Simulation 子系统**，但不要让它成为桂子问津第二套 Runtime。
+
+---
+
+# 一、先回答最核心的问题：模拟人类智能体能解决什么
+
+你列出的四个缺口：
+
+| 当前缺口 | 模拟学习者能否解决 | 能做到什么 |
+|---|---:|---|
+| 真实课程 | △ 部分 | 批量跑题、发现题目/提示/路径设计问题，但不能替代教师内容审核 |
+| 真实学习者 | ✅ 很大程度缓解开发问题 | 可以模拟不同水平、误区、自主性和行为模式的学生，持续与桂子问津交互 |
+| 真实参数校准 | △ 只能预校准 | 可以测试参数敏感性、筛掉明显不合理参数，但不能声称是真实人群最优参数 |
+| 生产级基础设施 | △ 部分 | 可以做并发、长会话、恢复、压力测试，但不能替代真实生产部署 |
+
+所以最准确的定位是：
+
+> **它能解决“没有足够真人时怎么继续开发和验证系统”的问题，但不能解决“系统是否真的对真人有效”的科学证据问题。**
+
+这一点你们现在 V2 的治理设计其实已经处理得很好：`calibration.py` 明确把 `synthetic_ai_generated` 和 `real_learning_data` 分开，合成样本不会进入 `real_sample_count`，也不能解锁参数自动晋级。
+
+这个原则不要改。
+
+---
+
+# 二、这个模拟人类 Agent 值得做，而且不应该只是一个 Prompt
+
+最简单的做法可能是：
+
+```text
+给一个 LLM：
+“你现在是一个初中生，数学水平一般，请和老师对话。”
+```
+
+这个**不够**。
+
+因为这样得到的是一个“会表演学生的大模型”，而不是一个可控、可重复、可研究的学习者模型。
+
+它很容易出现几个问题：
+
+```text
+本来设定不会的题突然会了
+今天说自己基础差，下一轮又像奥数选手
+看到桂子问津给出的解释后直接复述
+不会真实遗忘
+不会稳定保持误区
+自主性变化不可控
+同一个实验重复两遍结果完全不同
+```
+
+所以比较合理的设计应该是：
+
+> **“结构化学习者状态 + 行为策略 + LLM语言表达”混合模型。**
+
+也就是说，**LLM 负责“怎么像人一样说话”，结构化模型负责“这个学生实际上知道什么、会不会、怎么犯错”。**
+
+---
+
+# 三、建议的模拟学习者整体架构
+
+我建议设计成：
+
+```text
+               Synthetic Learner Agent
+┌────────────────────────────────────────────┐
+│                                            │
+│  Learner Profile                           │
+│  ├─ 初始知识水平                           │
+│  ├─ 误区                                   │
+│  ├─ 自主性                                 │
+│  ├─ 求助倾向                               │
+│  ├─ 挫败敏感度                             │
+│  └─ 学习速度                               │
+│                ↓                           │
+│  Latent Learner State                      │
+│  ├─ true mastery                           │
+│  ├─ retention                              │
+│  ├─ misconception                          │
+│  ├─ frustration                            │
+│  ├─ autonomy                               │
+│  └─ hint dependency                        │
+│                ↓                           │
+│  Behavior Policy                           │
+│  ├─ 自己做                                 │
+│  ├─ 答错                                   │
+│  ├─ 猜测                                   │
+│  ├─ 求提示                                 │
+│  ├─ 要答案                                 │
+│  ├─ 自我检查                               │
+│  └─ 反思                                   │
+│                ↓                           │
+│  Response Generator                        │
+│  ├─ structured answer                      │
+│  └─ LLM natural-language renderer          │
+│                                            │
+└────────────────────────────────────────────┘
+                     │
+                     │ 像普通学生一样交互
+                     ▼
+              桂子问津 API
+                     │
+                     ▼
+Verifier → Evidence → KT → Path → Scaffold
+                     │
+                     ▼
+              Synthetic Learner
+```
+
+非常关键的是：
+
+> **模拟学习者应该尽量通过桂子问津正常 API 与系统交互，而不是直接访问 LearningService 内部状态。**
+
+这样它才能真正作为“黑盒学生”测试桂子问津。
+
+---
+
+# 四、它应该作为单独功能，但不要嵌入核心 Runtime
+
+我的建议不是：
+
+```text
+Agent Runtime
+├── 桂子问津
+└── 模拟学生 Runtime
+```
+
+这样容易形成两套系统。
+
+而应该：
+
+```text
+                    桂子问津
+                       │
+               唯一 Agent Runtime
+                       │
+          ┌────────────┴────────────┐
+          │                         │
+      真人客户端              Simulation Client
+                                  │
+                         Synthetic Learner
+```
+
+从桂子问津看来：
+
+```text
+真人学生
+和
+模拟学生
+```
+
+都只是“客户端”。
+
+所以新模块建议放成：
+
+```text
+platform/
+  app/
+    simulation/
+      schema.py
+      profiles.py
+      latent_state.py
+      behavior.py
+      answer_model.py
+      affect.py
+      renderer.py
+      runner.py
+      evaluator.py
+```
+
+而不是塞进：
+
+```text
+app/agent/
+```
+
+也不要塞进：
+
+```text
+app/learning/
+```
+
+因为它不是桂子问津的学习算法，而是**实验环境**。
+
+---
+
+# 五、现有 `TeachVirtualStudentRunner` 不用删，但它和新模拟学生不是一回事
+
+V2 现在这个：
+
+```text
+app/agents/teach_student.py
+```
+
+主要做的是：
+
+```text
+教学材料
+↓
+虚拟学生
+↓
+暴露一个误区
+↓
+提出一个追问
+```
+
+它更适合：
+
+> “学生教虚拟学生”的可教智能体场景。
+
+例如真人学生给虚拟学生讲：
+
+> “解方程的时候直接把 +3 移过去变 -3。”
+
+虚拟学生回答：
+
+> “为什么移到另一边就要变号？”
+
+这是很好的教学互动功能。
+
+但是我们现在讨论的新东西应该是：
+
+> **SyntheticLearnerAgent**
+
+它要能够真的作为“被桂子问津教的学生”，持续多轮运行。
+
+二者关系可以是：
+
+```text
+Virtual Student
+├── TeachVirtualStudent
+│   真人学生 → 教它
+│
+└── SyntheticLearner
+    桂子问津 → 教它
+```
+
+不要混成一个类。
+
+---
+
+# 六、模拟学生必须有“隐藏真实状态”
+
+这是这个设计最重要的一点。
+
+比如模拟学生：
+
+```text
+SIM-001
+```
+
+内部真实状态：
+
+```text
+KC：一元一次方程移项
+true_mastery = 0.35
+
+KC：合并同类项
+true_mastery = 0.80
+
+KC：等式性质
+true_mastery = 0.45
+```
+
+桂子问津**不能看到这些值**。
+
+桂子问津只能看到：
+
+```text
+这个学生做了什么
+说了什么
+答对还是答错
+用了多少提示
+```
+
+然后自己的 BKT 推断：
+
+```text
+estimated_mastery = 0.42
+```
+
+这时候我们反而可以比较：
+
+```text
+模拟学生隐藏真值：
+0.35
+
+桂子问津估计：
+0.42
+```
+
+于是我们就可以研究：
+
+> KT 到底估得准不准。
+
+这其实非常有价值。
+
+---
+
+# 七、可以预设不同“人类画像”
+
+比如先定义 8～12 种典型学习者。
+
+### A. 基础薄弱型
+
+```text
+mastery       低
+learning_rate 中
+help_seeking  高
+frustration   高
+autonomy      低
+```
+
+表现：
+
+> 经常卡在基础步骤，连续失败后主动要提示。
+
+---
+
+### B. 高掌握低自信型
+
+```text
+mastery       高
+confidence    低
+help_seeking  高
+autonomy      中
+```
+
+表现：
+
+> 明明会，但经常问“这样对吗？”
+
+可以专门验证桂子问津会不会过度帮助。
+
+---
+
+### C. 高自主型
+
+```text
+mastery       中高
+help_seeking  低
+self_check    高
+reflection    高
+```
+
+应该验证：
+
+> R-07 是否真的逐渐撤除支架。
+
+---
+
+### D. 容易挫败型
+
+```text
+mastery       中
+frustration_sensitivity 高
+persistence   低
+```
+
+连续两三次失败后：
+
+```text
+frustration ↑
+quit_probability ↑
+```
+
+就可以测试 R-03。
+
+---
+
+### E. 提示依赖型
+
+表现：
+
+```text
+无提示：
+错误率高
+
+给提示：
+立刻成功
+
+但下一题：
+仍然依赖提示
+```
+
+这类模拟人非常适合测试：
+
+> 桂子问津到底是在“帮助学生学会”，还是只是在帮助学生完成当前题。
+
+---
+
+### F. 常见误区型
+
+例如：
+
+```text
+2x + 3 = 9
+```
+
+误区：
+
+```text
+2x = 9 + 3
+```
+
+固定错误机制：
+
+> “移项不变号”。
+
+而不是让 LLM 随机编一个错答案。
+
+这对 Verifier / Misconception Diagnosis 特别重要。
+
+---
+
+# 八、模拟人的错误最好不要完全由 LLM 随机产生
+
+最好有：
+
+```text
+Misconception Library
+```
+
+例如：
+
+```text
+MATH.EQ.001
+移项忘记变号
+
+MATH.EQ.002
+等式只操作一边
+
+MATH.EQ.003
+系数除法错误
+
+MATH.EQ.004
+负号分配错误
+```
+
+模拟学习者状态：
+
+```text
+misconceptions:
+  MATH.EQ.001 = 0.8
+  MATH.EQ.003 = 0.3
+```
+
+面对相应题目时：
+
+```text
+P(触发误区001)=0.8
+```
+
+于是：
+
+```text
+2x + 3 = 9
+```
+
+它很可能答：
+
+```text
+2x = 12
+x = 6
+```
+
+这样才是真正**可控的学生模型**。
+
+LLM 最多负责把它变成自然语言：
+
+> “我觉得把 3 移过去就是加 3，所以 2x=12。”
+
+---
+
+# 九、它还需要模拟“学习”
+
+否则只是一个固定错误机器人。
+
+例如：
+
+```text
+true_mastery = 0.30
+```
+
+桂子问津给：
+
+```text
+L1 提示
+```
+
+学生成功完成下一步。
+
+模拟内部可以更新：
+
+```text
+true_mastery
+0.30 → 0.38
+```
+
+再独立做一题：
+
+```text
+成功
+```
+
+更新：
+
+```text
+0.38 → 0.49
+```
+
+但如果直接给完整答案：
+
+```text
+answer_exposed = true
+```
+
+则：
+
+```text
+learning_gain ≈ 0
+```
+
+甚至：
+
+```text
+hint_dependency ↑
+```
+
+这就很有意思了。
+
+因为这样我们就可以测试不同教学策略：
+
+```text
+Policy A：
+经常给答案
+
+Policy B：
+渐进支架
+
+Policy C：
+苏格拉底式追问
+```
+
+经过 20 个 simulated learners × 100 episodes：
+
+```text
+哪种策略让
+simulated independent mastery
+提升最多？
+```
+
+---
+
+# 十、但这里有一个非常重要的科学边界
+
+即使模拟结果是：
+
+```text
+Policy B
+学习增益 +18%
+```
+
+也**绝对不能写成**：
+
+> 桂子问津使真实学生学习效果提高 18%。
+
+只能写：
+
+> 在当前版本化合成学习者模型下，Policy B 相比 Policy A 表现更优。
+
+因为：
+
+```text
+Simulator
+```
+
+本身就是我们设计的。
+
+如果我们的模拟规则认为：
+
+> “提示阶梯会提升学习”
+
+最后当然容易得到：
+
+> “使用提示阶梯的系统最好”。
+
+这是典型的：
+
+> simulator bias。
+
+因此模拟人最适合三个用途：
+
+```text
+软件验证
+策略筛选
+实验预注册 / 假设生成
+```
+
+而不是最终效果证明。
+
+---
+
+# 十一、它对“参数校准”非常有用，但应该叫预校准
+
+比如 BKT：
+
+```text
+P_Learn
+P_Guess
+P_Slip
+```
+
+可以生成很多模拟学生：
+
+```text
+1000 synthetic learners
+×
+200 interactions
+```
+
+然后试：
+
+```text
+parameter set A
+parameter set B
+parameter set C
+```
+
+研究：
+
+```text
+估计 mastery
+vs
+simulator hidden mastery
+```
+
+得到：
+
+```text
+MAE
+Brier Score
+Calibration Error
+```
+
+可以筛掉明显不合理参数。
+
+但是得到的只是：
+
+> **simulation pre-calibration**
+
+真实参数最后仍然要靠真人数据校准。
+
+你们现在 `calibration.py` 已经非常适合保留这个边界：
+
+```text
+synthetic_ai_generated
+≠
+real_learning_data
+```
+
+不要把这个门拆掉。
+
+---
+
+# 十二、它还可以很好地帮助验证真实课程
+
+虽然不能替代老师审题，但是它可以帮忙发现课程设计 bug。
+
+例如对某 KC 自动跑：
+
+```text
+100 个模拟学生
+```
+
+发现：
+
+```text
+80% 都在 Q17 突然失败
+```
+
+可能说明：
+
+```text
+Q17 难度标错
+```
+
+或者：
+
+```text
+Q17 依赖了未声明的 prerequisite
+```
+
+或者：
+
+```text
+提示根本没解决误区
+```
+
+所以形成：
+
+```text
+Course Assets
+     ↓
+Synthetic Learners
+     ↓
+大量模拟学习
+     ↓
+异常发现
+     ↓
+教师审核
+```
+
+这是非常值得做的。
+
+---
+
+# 十三、对生产基础设施也能起作用
+
+SyntheticLearner 不只能做教育仿真。
+
+还可以：
+
+```text
+100 个虚拟学生
+1000 个虚拟学生
+```
+
+并发运行，测试：
+
+- SessionRuntime；
+- SQLite/PostgreSQL；
+- API；
+- Recovery；
+- queue；
+- idempotence；
+- retry；
+- RAG；
+- Provider；
+- Token cost。
+
+例如：
+
+```text
+1000 synthetic students
+×
+50 turns
+=
+50,000 interactions
+```
+
+可以提前发现：
+
+```text
+事务锁
+重复事件
+状态冲突
+session 恢复
+队列积压
+内存增长
+```
+
+所以它也可以兼任：
+
+> **教育策略模拟器 + 系统负载生成器。**
+
+---
+
+# 十四、我建议增加一个明确的新模块
+
+目录可以这样：
+
+```text
+platform/
+├── app/
+│   ├── learning/
+│   ├── orchestration/
+│   ├── agents/
+│   │   └── teach_student.py
+│   │
+│   └── simulation/
+│       ├── schema.py
+│       ├── profiles.py
+│       ├── latent_state.py
+│       ├── misconception.py
+│       ├── behavior.py
+│       ├── answer_model.py
+│       ├── affect.py
+│       ├── renderer.py
+│       ├── client.py
+│       ├── runner.py
+│       └── evaluator.py
+│
+├── simulations/
+│   ├── profiles/
+│   ├── scenarios/
+│   └── results/
+│
+└── tests/
+    └── simulation/
+```
+
+它是独立 bounded context。
+
+---
+
+# 十五、第一版千万不要一开始就做复杂“认知数字孪生”
+
+第一版可以非常简单。
+
+一个 profile：
+
+```python
+SyntheticLearnerProfile:
+    profile_id
+
+    mastery:
+        KC_A: 0.30
+        KC_B: 0.70
+
+    misconceptions:
+        M01: 0.8
+
+    autonomy: 0.40
+    help_seeking: 0.50
+    frustration_sensitivity: 0.60
+    persistence: 0.70
+    learning_rate: 0.15
+```
+
+一个 latent state：
+
+```python
+SyntheticLearnerState:
+    mastery
+    retention
+    frustration
+    autonomy
+    hint_dependency
+    misconceptions
+```
+
+然后一个：
+
+```text
+BehaviorPolicy
+```
+
+决定当前回合：
+
+```text
+ANSWER
+ASK_HINT
+ASK_EXPLANATION
+SELF_CHECK
+REFLECT
+QUIT
+```
+
+最后：
+
+```text
+LLM Renderer
+```
+
+把：
+
+```json
+{
+  "action": "ASK_HINT",
+  "reason": "procedure_unknown"
+}
+```
+
+变成：
+
+> “我有点不知道第一步应该从哪里开始，可以给我一点提示吗？”
+
+这样就够了。
+
+---
+
+# 十六、最重要的隔离原则
+
+我建议直接增加一条硬架构规则：
+
+> **Synthetic Learner 永远不能进入真实 Learner Evidence Pool。**
+
+最好不仅靠字段判断，而是物理隔离：
+
+```text
+Real Runtime DB
+rsi.sqlite3
+
+Simulation DB
+simulation.sqlite3
+```
+
+或者：
+
+```text
+simulation/{run_id}.sqlite3
+```
+
+不要：
+
+```text
+learner_id = sim_001
+```
+
+然后和真人数据存在同一个表里，靠大家“记得过滤”。
+
+那样早晚会污染数据。
+
+最好是：
+
+```text
+SyntheticLearner
+      ↓
+专门 Simulation Store
+      ↓
+通过相同 API / Runtime 代码运行
+```
+
+这样既测试真实代码，又不会污染真实库。
+
+---
+
+# 十七、推荐的第一批实验
+
+这个模块建好之后，马上就可以做非常有价值的实验。
+
+例如：
+
+### 实验 1：脚手架渐撤
+
+比较：
+
+```text
+Policy A：
+总是主动提示
+
+Policy B：
+R-07 autonomy-aware fading
+```
+
+观察：
+
+```text
+independent success
+hint dependency
+simulated mastery
+```
+
+---
+
+### 实验 2：过早给答案
+
+```text
+Policy A：
+允许完整答案
+
+Policy B：
+R-01 hint ladder
+```
+
+看看模拟学生：
+
+```text
+当前题完成率
+vs
+下一道独立题表现
+```
+
+这正对应桂子问津核心理念。
+
+---
+
+### 实验 3：KT 是否能识别真实状态
+
+模拟器隐藏：
+
+```text
+true_mastery
+```
+
+桂子问津只能估计：
+
+```text
+p_mastery
+```
+
+画：
+
+```text
+true mastery
+vs
+estimated mastery
+```
+
+可以专门评估 BKT。
+
+---
+
+### 实验 4：遗忘调度
+
+模拟真实遗忘曲线。
+
+看看：
+
+```text
+RetentionScheduler
+```
+
+能不能在合适时间安排 Review。
+
+---
+
+### 实验 5：不同学生类型
+
+同一个桂子问津策略跑：
+
+```text
+低基础型
+高基础型
+高自主型
+高依赖型
+高挫败型
+典型误区型
+```
+
+看有没有某一类被系统明显“教坏”。
+
+这个特别适合红队。
+
+---
+
+# 十八、这反而可以成为桂子问津非常有特色的一部分
+
+长远来看可以形成：
+
+```text
+                 桂子问津
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+    Real Learners        Synthetic Learners
+        │                       │
+        │                 Strategy Simulation
+        │                 Stress Testing
+        │                 Pre-calibration
+        │                       │
+        └───────────┬───────────┘
+                    │
+               Evaluation
+                    │
+              Human Review
+                    │
+             Strategy Candidate
+```
+
+这和未来 RSI 有天然关系。
+
+以后真正进入 RSI 时，不是：
+
+```text
+新策略
+↓
+直接给真人
+```
+
+而是：
+
+```text
+新策略
+↓
+Regression
+↓
+Synthetic Learner Simulation
+↓
+Red Team
+↓
+Teacher Review
+↓
+Small Real Pilot
+↓
+A/B
+↓
+Promotion
+```
+
+这实际上会让你们的 RSI 安全很多。
+
+---
+
+# 十九、所以对之前四个问题，我会重新调整路线
+
+不再简单写：
+
+```text
+真实课程
+真实学习者
+真实参数校准
+生产基础设施
+```
+
+而是改成：
+
+```text
+第一层：Synthetic Validation
+────────────────────────
+合成课程
+Synthetic Learner
+策略仿真
+预校准
+压力测试
+
+        ↓
+
+第二层：Human Validation
+────────────────────────
+教师审核真实课程
+少量真实学生 Pilot
+真实参数校准
+真实北极星指标
+
+        ↓
+
+第三层：Production Validation
+────────────────────────
+PostgreSQL 主运行
+多租户
+RBAC
+worker
+监控
+大规模 Pilot
+```
+
+这样现实得多。
+
+你们现在缺真人并不会导致项目停住。
+
+---
+
+# 二十、我建议下一步就做这个，但范围控制住
+
+下一阶段可以直接定义一个：
+
+> **V2.1 Synthetic Learner Simulation**
+
+第一版只做四件事：
+
+```text
+1. SyntheticLearnerProfile
+2. LatentLearnerState
+3. BehaviorPolicy
+4. SimulationRunner
+```
+
+先不用复杂 LLM。
+
+甚至第一版可以做到：
+
+```text
+80% deterministic
+20% LLM natural-language rendering
+```
+
+先让它**可重复、可控制、可测试**。
+
+等结构稳定以后，再逐渐让 LLM 负责：
+
+```text
+自然语言
+开放题答案
+复杂误区表达
+反思文本
+```
+
+而“这个学生到底会不会”始终由 latent model 控制，不交给 LLM 随机决定。
+
+**所以我的建议是：做，而且值得作为接下来一个重要开发模块；但把它定位为“独立的 Simulation/Evaluation 子系统”，不要把它塞进桂子问津主 Runtime，也绝不能让模拟 Evidence 和真人 Evidence 混在一起。**
+
+这样它既能解决目前“真人难找”的开发瓶颈，又不会破坏我们一直坚持的证据边界。
