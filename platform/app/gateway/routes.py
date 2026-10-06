@@ -36,14 +36,58 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
                                   extra_body=extra_body)
                if settings.llm_api_key else FakeLLM())
     store = store or Store(settings.db_path)
-    sessions: dict[str, TutorSession] = {}
+    from app.learning.service import LearningService, ConsentDenied, EvidenceConflict
+    learning = LearningService(store)
+    from app.orchestration.runtime import SessionRuntime, RuntimeConflict
+    from app.learning.assets import load_catalog
+    catalog = load_catalog(settings)
+    runtime = SessionRuntime(store, llm, catalog=catalog)
 
     app = FastAPI(title="RSI 教育智能体平台", version="0.1.0 (M0+L0)")
+    from app.gateway.security import install_local_identity
+    install_local_identity(app, settings)
+    def local_learner(learner_id):
+        if learner_id != settings.learner_id:
+            raise HTTPException(403, "本地工作台仅允许配置的学习者")
+
+    def require_purpose(learner_id, purpose="teaching"):
+        local_learner(learner_id)
+        try:
+            learning._authorize(learner_id,purpose)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
+
+    from app.learning.plans import PlanService, PlanConflict
+    plans = PlanService(store)
+
+    def runtime_call(operation, *args, **kwargs):
+        try:
+            return operation(*args, **kwargs)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(403, str(exc)) from exc
+        except (RuntimeConflict, EvidenceConflict) as exc:
+            raise HTTPException(409, str(exc)) from exc
+
+    def plan_call(operation, *args):
+        try:
+            return operation(*args)
+        except KeyError as exc:
+            raise HTTPException(404,str(exc))
+        except PermissionError as exc:
+            raise HTTPException(403,str(exc))
+        except PlanConflict as exc:
+            raise HTTPException(409,str(exc))
 
     # ---------- 静态单页 ----------
 
     @app.get("/")
     def index() -> FileResponse:
+        return FileResponse(WEB_INDEX.with_name("learning.html"))
+
+    @app.get("/prototype")
+    def prototype() -> FileResponse:
         return FileResponse(WEB_INDEX)
 
     # ---------- 学习契约（docs/02 §3.1） ----------
@@ -57,6 +101,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     @app.post("/api/contracts")
     def create_contract(body: ContractIn) -> dict:
         learner_id = body.learner_id or settings.learner_id
+        require_purpose(learner_id)
         contract = GoalContract(
             learner_id=learner_id,
             goal_statement=GoalStatement(text=body.goal_text.strip(), authored_by="student"),
@@ -71,12 +116,12 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
         contract.status = "active"
         store.ensure_learner(learner_id)
         store.save_contract(contract)
-        plan = PlanVersion(goal_contract_id=contract.goal_contract_id, status="confirmed",
-                           change_reason="契约签署时的初始计划",
+        plan = PlanVersion(goal_contract_id=contract.goal_contract_id, status="draft",
+                           change_reason="学习目标建立后的初始计划草案",
                            content={"bank_scope": ["MATH.G7.EQ.SOLVE", "MATH.G7.EQ.SETUP",
                                                    "MATH.G7.EQ.APPLY"],
                                     "cadence": "每天 2 题 + 1 次阶段测试/周"},
-                           confirmed_at=utcnow())
+                           confirmed_at=None)
         contract.plan_version_refs = [plan.version_id]
         store.save_plan_version(plan)
         store.save_contract(contract)
@@ -84,6 +129,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     @app.get("/api/contracts/latest")
     def latest_contract(learner_id: str | None = None) -> dict:
+        require_purpose(learner_id or settings.learner_id)
         contract = store.latest_contract(learner_id or settings.learner_id)
         if contract is None:
             raise HTTPException(404, "尚未签署学习契约")
@@ -99,64 +145,72 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     @app.post("/api/sessions")
     def create_session(body: SessionIn) -> dict:
         learner_id = body.learner_id or settings.learner_id
+        require_purpose(learner_id)
         contract = store.get_contract(body.contract_id) if body.contract_id \
             else store.latest_contract(learner_id)
+        if contract is not None and contract.learner_id != learner_id:
+            raise HTTPException(403,"学习契约不属于当前学习者")
         if body.session_type == "checkpoint" and contract is None:
             raise HTTPException(400, "阶段测试需要先签署学习契约")
-        session = TutorSession(store, llm, learner_id, contract=contract,
-                               session_type=body.session_type)
-        sessions[session.session_id] = session
-        result = session.start()
-        return {"session_id": session.session_id, "reply": result.reply,
-                "ui": result.ui, "denial": result.denial}
+        return runtime_call(runtime.create, learner_id, contract, body.session_type)
 
     class MessageIn(BaseModel):
         text: str = ""
         answer: str | None = None
+        attempt_id: str | None = None
 
     def _session(sid: str) -> TutorSession:
-        session = sessions.get(sid)
-        if session is None:
-            raise HTTPException(404, "会话不存在（内存注册表）")
-        return session
+        require_purpose(settings.learner_id)
+        return runtime_call(runtime.load, sid, settings.learner_id)
+
+    @app.get("/api/sessions/{sid}")
+    def session_state(sid: str):
+        require_purpose(settings.learner_id)
+        return runtime_call(runtime.public_state, sid, settings.learner_id)
 
     @app.post("/api/sessions/{sid}/messages")
     def send_message(sid: str, body: MessageIn) -> dict:
-        session = _session(sid)
-        result = session.handle_turn(text=body.text, answer=body.answer)
-        return {"reply": result.reply, "ui": result.ui,
-                "denial": result.denial, "events": len(result.events)}
+        require_purpose(settings.learner_id)
+        return runtime_call(runtime.message, sid, settings.learner_id, text=body.text,
+                            answer=body.answer, attempt_id=body.attempt_id)
 
     @app.post("/api/sessions/{sid}/messages/stream")
     async def send_message_stream(sid: str, body: MessageIn) -> StreamingResponse:
-        session = _session(sid)
+        require_purpose(_session(sid).learner_id)
 
         def sse(event: str, data: str) -> str:
             return f"event: {event}\ndata: {data}\n\n"
 
         async def gen():
             yield sse("status", "感知学生状态中…")
-            result = await run_in_threadpool(session.handle_turn, body.text, body.answer)
+            result = await run_in_threadpool(send_message, sid, body)
             yield sse("status", "规则引擎裁决完成")
             import json as _json
 
             yield sse("reply", _json.dumps({
-                "reply": result.reply, "ui": result.ui, "denial": result.denial,
+                "reply": result["reply"], "ui": result["ui"], "denial": result["denial"],
             }, ensure_ascii=False))
 
         return StreamingResponse(gen(), media_type="text/event-stream")
 
     @app.post("/api/sessions/{sid}/reflection")
     def submit_reflection(sid: str, payload: dict) -> dict:
-        return _session(sid).submit_reflection(payload)
+        require_purpose(settings.learner_id)
+        return runtime_call(runtime.reflection, sid, settings.learner_id, payload)
 
     # ---------- 我的镜子（open learner model） ----------
 
     @app.get("/api/mirror/{learner_id}")
     def mirror(learner_id: str) -> dict:
-        for session in sessions.values():
-            if session.learner_id == learner_id:
-                return session.mirror()
+        local_learner(learner_id)
+        try:
+            learning._authorize(learner_id)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
+        with store.lock:
+            row = store.conn.execute("SELECT session_id FROM runtime_sessions WHERE learner_id=? ORDER BY rowid DESC LIMIT 1", (learner_id,)).fetchone()
+        if row:
+            return runtime_call(runtime.load, row["session_id"], learner_id).mirror()
         snapshot = store.latest_snapshot(learner_id)
         if snapshot is None:
             raise HTTPException(404, "未找到学习者状态")
@@ -174,6 +228,11 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     @app.get("/api/events")
     def events(learner_id: str | None = None, limit: int = 200) -> list[dict]:
         learner_id = learner_id or settings.learner_id
+        local_learner(learner_id)
+        try:
+            learning._authorize(learner_id)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
         return [e.model_dump(mode="json") for e in store.events_for_learner(learner_id, limit)]
 
     @app.get("/api/governance/hard-rules")
@@ -186,14 +245,17 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     @app.get("/api/path/recommend")
     def path_recommend(learner_id: str | None = None) -> dict:
-        from app.learning.path import recommend_path
+        from app.learning.decisions import recommend
 
         learner_id = learner_id or settings.learner_id
-        snapshot = store.latest_snapshot(learner_id)
-        if snapshot is None:
-            raise HTTPException(404, "该学习者尚无状态快照：先创建会话产生一次交互")
-        contract = store.latest_contract(learner_id)
-        return recommend_path(snapshot, contract)
+        local_learner(learner_id)
+        if learning.consent(learner_id) is None:
+            raise HTTPException(403,"先建立学习目标并授权教学用途")
+        try:
+            graph = {asset.ref.asset_id: [ref.asset_id for ref in asset.prerequisite_refs] for asset in catalog.knowledge}
+            return recommend(learning, learner_id, utcnow(), prerequisites=graph)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
 
     class PathAcceptIn(BaseModel):
         learner_id: str
@@ -201,21 +263,55 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     @app.post("/api/path/accept")
     def path_accept(body: PathAcceptIn) -> dict:
+        local_learner(body.learner_id)
         contract = store.latest_contract(body.learner_id)
         if contract is None:
             raise HTTPException(404, "无学习契约：路径必须挂在目标契约下（R-02）")
-        plan = PlanVersion(
-            goal_contract_id=contract.goal_contract_id,
-            status="confirmed", change_reason="采纳学习路径推荐（PathRecommendation@1）",
-            content={"path": body.path}, confirmed_at=utcnow(),
-        )
-        store.save_plan_version(plan)
-        return {"ok": True, "version_id": plan.version_id, "status": plan.status}
+        proposed = plan_call(plans.propose,body.learner_id,contract.goal_contract_id,{"path":path_recommend(body.learner_id)},utcnow())
+        plan = plan_call(plans.accept,body.learner_id,proposed.version_id,utcnow())
+        return {"ok": True,"version_id":plan.version_id,"status":plan.status,"diff":plan.diff}
+
+    class PlanActionIn(BaseModel):
+        learner_id: str
+        content: dict | None = None
+        reason: str = "学习者修改"
+
+    @app.get("/api/plans/{version_id}")
+    def get_plan(version_id: str, learner_id: str | None = None):
+        learner_id = learner_id or settings.learner_id
+        local_learner(learner_id)
+        return plan_call(plans.get,learner_id,version_id).model_dump(mode="json")
+
+    @app.post("/api/plans/{version_id}/sign")
+    def sign_plan(version_id: str, body: PlanActionIn):
+        local_learner(body.learner_id)
+        try:
+            learning._authorize(body.learner_id)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
+        return plan_call(plans.sign,body.learner_id,version_id,utcnow()).model_dump(mode="json")
+
+    @app.post("/api/plans/{version_id}/modify")
+    def modify_plan(version_id: str, body: PlanActionIn):
+        local_learner(body.learner_id)
+        require_purpose(body.learner_id)
+        return plan_call(plans.modify,body.learner_id,version_id,body.content or {},body.reason,utcnow()).model_dump(mode="json")
+
+    @app.post("/api/plans/{version_id}/reject")
+    def reject_plan(version_id: str, body: PlanActionIn):
+        local_learner(body.learner_id)
+        require_purpose(body.learner_id)
+        return plan_call(plans.reject,body.learner_id,version_id,body.reason,utcnow()).model_dump(mode="json")
 
     # ---------- 成长证据（docs/11 §6 v1 聚合版） ----------
 
     @app.get("/api/evidence/{learner_id}")
     def evidence(learner_id: str) -> dict:
+        local_learner(learner_id)
+        try:
+            learning._authorize(learner_id)
+        except ConsentDenied as exc:
+            raise HTTPException(403,str(exc))
         from app.learning.evidence import evidence_report
 
         return evidence_report(store, learner_id)
@@ -224,17 +320,28 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     @app.post("/api/evolution/digest")
     def run_digest() -> dict:
-        from evolution.l0_digest import build_digest
-
-        digest = build_digest(store)
+        require_purpose(settings.learner_id,"evolution")
+        from evolution.l0_digest import build_learning_digest
+        digest = build_learning_digest(learning,settings.learner_id)
         store.save_digest(digest)
         return digest
 
     @app.get("/api/evolution/digest/latest")
     def latest_digest() -> dict:
+        require_purpose(settings.learner_id,"evolution")
         digest = store.latest_digest()
         if digest is None:
             raise HTTPException(404, "尚无沉淀报告，先运行一次 digest")
         return digest
 
+    from app.gateway.learning_routes import install_learning_routes
+    install_learning_routes(app,store,settings)
+    from app.gateway.external_routes import install_external_routes
+    install_external_routes(app,store,settings)
+    from app.gateway.extended_routes import install_extended_routes
+    install_extended_routes(app,store,settings)
+    from app.gateway.dashboard_routes import install_dashboard_routes
+    install_dashboard_routes(app,store,settings,catalog)
+    from app.gateway.qualitative_routes import install_qualitative_routes
+    install_qualitative_routes(app,store,settings)
     return app

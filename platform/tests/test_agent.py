@@ -9,6 +9,8 @@ from app.agent.transcript import EventKind, TranscriptEvent
 from app.agent.workspace import LearningWorkspace, WorkspaceError
 from app.llm.client import FakeLLM
 from app.storage.db import Store
+from app.learning.service import LearningService
+from app.core.schema import utcnow
 
 
 @pytest.fixture()
@@ -66,6 +68,7 @@ def test_gates_parsers():
 # ---------- 工具门禁 ----------
 
 def _agent(store, tmp_path, learner="stu_x", **kw):
+    LearningService(store).set_consent(learner, ["teaching"], "test-teaching-v1", "learner:test", utcnow())
     return LearningAgent(store, FakeLLM(), learner, workspace_root=tmp_path, **kw)
 
 

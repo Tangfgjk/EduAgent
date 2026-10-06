@@ -91,8 +91,7 @@ class ActionGovernor:
         if not ctx.checkpoint_mode:
             return None
         # QUESTION 下发考题本身不算帮助；只有 HINT/EXPLAIN 构成答案型帮助
-        answer_help = env.type in (ActionType.HINT, ActionType.EXPLAIN) \
-            and env.params.get("target") == "exam_item"
+        answer_help = env.type in (ActionType.HINT, ActionType.EXPLAIN)
         rule_only = env.type == ActionType.EXPLAIN and env.params.get("mode") == "rule_explanation"
         if answer_help and not rule_only:
             return RuleOutcome("R-09", "deny",
@@ -101,7 +100,7 @@ class ActionGovernor:
 
     # ---- R-01 不许提前给答案 ----
     def _r01_no_early_answer(self, env, ctx) -> RuleOutcome | None:
-        if env.type != ActionType.EXPLAIN:
+        if env.type not in (ActionType.EXPLAIN, ActionType.HINT):
             return None
         is_full = env.params.get("mode") == "worked_full" or env.params.get("form") == "worked_full"
         if not is_full:

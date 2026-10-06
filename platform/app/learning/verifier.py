@@ -6,12 +6,13 @@
 from __future__ import annotations
 
 import re
+import ast
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-from sympy import Eq, simplify, sympify
+from sympy import Eq, simplify, Rational, Symbol
 
 from app.core.schema import QuestionItem, TaxonomyLevel, Verdict
 
@@ -32,16 +33,53 @@ def _extract_value(answer: str, var: str) -> str:
     """学生可能写 'x=3' / '3' / 'X=3'；取等号右侧作值。"""
     text = _sanitize(answer)
     if "=" in text:
-        text = text.split("=")[-1].strip()
+        parts = text.split("=")
+        if len(parts) != 2 or parts[0].strip().lower() != var.lower():
+            raise ValueError("Expected one assignment to the assessment variable")
+        text = parts[1].strip()
     return text.replace(var.upper(), var)
+
+
+def _parse_arithmetic(source: str, variable: str | None = None):
+    """Build SymPy arithmetic from a small AST; never eval student strings."""
+    if len(source) > 256:
+        raise ValueError("Expression too long")
+    tree = ast.parse(source, mode="eval")
+    if sum(1 for _ in ast.walk(tree)) > 100:
+        raise ValueError("Expression too complex")
+
+    def visit(node):
+        if isinstance(node, ast.Constant) and type(node.value) in (int,float):
+            literal = ast.get_source_segment(source,node)
+            if literal is None or len(literal)>30:
+                raise ValueError("Numeric literal too large")
+            return Rational(literal)
+        if isinstance(node, ast.Name) and variable and node.id == variable:
+            return Symbol(variable)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op,(ast.UAdd,ast.USub)):
+            value = visit(node.operand)
+            return value if isinstance(node.op,ast.UAdd) else -value
+        if isinstance(node, ast.BinOp) and isinstance(node.op,(ast.Add,ast.Sub,ast.Mult,ast.Div,ast.Pow)):
+            left,right = visit(node.left),visit(node.right)
+            if isinstance(node.op,ast.Add): return left+right
+            if isinstance(node.op,ast.Sub): return left-right
+            if isinstance(node.op,ast.Mult): return left*right
+            if isinstance(node.op,ast.Div):
+                if right == 0: raise ValueError("Division by zero")
+                return left/right
+            if right.is_Integer is not True or abs(right)>12:
+                raise ValueError("Power exceeds supported arithmetic bounds")
+            return left**right
+        raise ValueError("Only bounded arithmetic and the declared variable are supported")
+    return visit(tree.body)
 
 
 def verify_math(student_answer: str, item: QuestionItem) -> Verdict:
     """数值解验证：期望 item.answer = {"var": "x", "value": "3"}。"""
     var = item.answer.get("var", "x")
     try:
-        expected = sympify(_sanitize(str(item.answer["value"])), rational=True)
-        got = sympify(_extract_value(student_answer, var), rational=True)
+        expected = _parse_arithmetic(_sanitize(str(item.answer["value"])))
+        got = _parse_arithmetic(_extract_value(student_answer, var))
         passed = bool(simplify(Eq(expected, got)))
         return _verdict_math(item, passed=passed,
                              explain=(f"解与标准答案 {var}={expected} 等价"
@@ -71,8 +109,8 @@ def verify_expression(student_expr: str, item: QuestionItem) -> Verdict:
     """表达式题：期望 item.answer = {"expr": "0.8x-10"}，与学生表达式做符号等价。"""
     var = item.answer.get("var", "x")
     try:
-        expected = sympify(_sanitize(str(item.answer["expr"])), rational=True)
-        got = sympify(_sanitize(student_expr), rational=True)
+        expected = _parse_arithmetic(_sanitize(str(item.answer["expr"])),var)
+        got = _parse_arithmetic(_sanitize(student_expr),var)
         diff = simplify(expected - got)
         passed = diff == 0
         return _verdict_math(item, passed=passed,
@@ -86,7 +124,7 @@ def verify_expression(student_expr: str, item: QuestionItem) -> Verdict:
 
 
 def verify_code(code: str, tests: list[dict], timeout: float = 5.0) -> Verdict:
-    """受限子进程执行：tests = [{"stdin": "...", "expect_stdout": "..."}]。"""
+    """Local trusted-code test runner, not a security sandbox or public API."""
     passed, total = 0, len(tests)
     explain_parts: list[str] = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -107,7 +145,6 @@ def verify_code(code: str, tests: list[dict], timeout: float = 5.0) -> Verdict:
                     explain_parts.append(f"用例{i+1}: 期望 {want!r} 实得 {got!r}")
             except subprocess.TimeoutExpired:
                 explain_parts.append(f"用例{i+1}: 超时")
-                total_fail_rest = True
                 break
     if total == 0:
         status = "unverifiable"

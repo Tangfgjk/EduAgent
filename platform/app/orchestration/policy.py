@@ -30,6 +30,9 @@ class TurnContext:
     perception: PerceptionCandidate
     proposals: list[TriggerProposal]
     student_text: str = ""
+    path_context: dict | None = None
+    review_context: dict | None = None
+    learning_signals: dict | None = None
 
 
 def _generic_hint(level: int) -> str:
@@ -104,6 +107,17 @@ class BuiltInPolicyV1:
         if ctx.verdict_pending is not None:
             return self._feedback_for(ctx)
 
+        # Learning review/diagnostic signals can suggest an action, but do not
+        # sign or mutate a learning plan. The Governor still decides whether
+        # the proposed task is allowed.
+        if (not help_asked and not want_answer and ctx.review_context
+                and ctx.review_context.get("due") and ctx.next_item):
+            item = ctx.next_item
+            return ActionEnvelope.task(
+                session_id=session_id, kc_id=item.kc_id, stem=item.stem,
+                item_id=item.item_id, difficulty=item.difficulty, kind="practice",
+            )
+
         # 2) 学生想要答案 → 给 EXPLAIN(worked_full) 候选（预期被 R-01 拦截，会话层转提示）
         if want_answer:
             return ActionEnvelope.explain(
@@ -133,6 +147,13 @@ class BuiltInPolicyV1:
                 text=text, proactive=not help_asked,
                 scaffold_type=choose_scaffold_type(ctx.student_text, ctx.proposals),
             )
+
+        if any(p.rule_id == "TR_UNKNOWN_EVIDENCE" for p in ctx.proposals) and ctx.next_item:
+            item = ctx.next_item
+            candidate = ActionEnvelope.task(session_id=session_id, kc_id=item.kc_id, stem=item.stem,
+                item_id=item.item_id, difficulty=item.difficulty, kind="practice")
+            candidate.params["assessment_kind"] = "diagnostic"
+            return candidate
 
         # 5) 默认 → 布置下一题（TASK 需接地 R-06）
         if ctx.next_item:

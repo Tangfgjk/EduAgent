@@ -13,10 +13,11 @@ from app.agent.workspace import LearningWorkspace, default_plan_md
 from app.core.actions import ActionEnvelope, ActionType
 from app.core.rules import ActionGovernor, GovernorContext
 from app.core.schema import (
-    GoalContract, MentalStateSnapshot, QuestionItem, Verdict, new_id,
+    GoalContext, GoalContract, GoalStatement, MentalStateSnapshot, QuestionItem, new_id, utcnow,
 )
-from app.learning.tracer import BKTTracer
+from app.learning.plans import PlanService
 from app.learning.verifier import verify_item
+from app.learning.bridge import record_attempt, refresh_projection
 from app.llm.client import BaseLLM, LLMError
 from app.storage.db import Store
 
@@ -32,14 +33,15 @@ class LearningTools:
     """工具门面： LearningAgent 持有一个实例并注入共享状态。"""
 
     def __init__(self, store: Store, llm: BaseLLM, governor: ActionGovernor,
-                 snapshot: MentalStateSnapshot, tracer: BKTTracer,
+                 snapshot: MentalStateSnapshot,
                  workspace: LearningWorkspace, bank: list[QuestionItem]):
         self.store = store
         self.llm = llm
         self.governor = governor
         self.snapshot = snapshot          # 与 agent 共享同一引用
-        self.tracer = tracer
         self.workspace = workspace
+        self.plans = PlanService(store)
+        self.plan_version_id: str | None = None
         self.bank = bank                  # 运行时题库（quiz.generate 可追加）
         self.hints_used = 0
         self.hint_budget = 4
@@ -49,6 +51,8 @@ class LearningTools:
         self.current_difficulty = 0.4
         self.checkpoint_mode = False
         self.ladder_pos = 0
+        self.assistance_levels: dict[str, int] = {}
+        self.exposed_answers: set[str] = set()
 
     # ---------- 门禁上下文 ----------
 
@@ -151,6 +155,7 @@ class LearningTools:
         if result.status == "ok":
             if proactive:
                 self.hints_used += 1
+            self.assistance_levels[item.item_id] = max(1, level, self.assistance_levels.get(item.item_id, 0))
             result.detail = text
             result.payload = {"level": level, "form": form, "text": text}
         return result
@@ -167,20 +172,25 @@ class LearningTools:
             return fallback
         if result.status == "ok":
             result.detail = text or mode
+            if mode == "worked_full":
+                self.exposed_answers.add(item.item_id)
         return result
 
-    # ---------- 7. verify.answer（验证 + BKT + 误区 + 阶梯/挫败联动） ----------
+    # ---------- 7. verify.answer（验证 + Evidence + 阶梯/挫败联动） ----------
 
-    def verify_answer(self, item: QuestionItem, answer: str) -> ToolResult:
+    def verify_answer(self, item: QuestionItem, answer: str, attempt_id: str | None = None) -> ToolResult:
         verdict = verify_item(answer, item, llm=self.llm)
         if not verdict.artifact_id:
             verdict.artifact_id = new_id()
         self.store.save_verdict(verdict, self.session_id, item.item_id)
+        record_attempt(self.store, self.snapshot.learner_id, self.session_id, item, verdict,
+                       attempt_id or new_id(), hint_level=self.assistance_levels.get(item.item_id, 0),
+                       answer_exposed=item.item_id in self.exposed_answers)
+        refresh_projection(self.store, self.snapshot)
         if verdict.status == "unverifiable":
             return ToolResult("fail", "无法自动判分，说说你的思路",
                               payload={"verdict": verdict.model_dump()})
         correct = verdict.status == "passed"
-        self.tracer.update(self.snapshot, item.kc_id, correct)
         if correct:
             self.wrong_streak = 0
             self.frustration_streak = 0
@@ -215,11 +225,29 @@ class LearningTools:
     def plan_update(self, goal: str, daily_count: int = 2, deadline_note: str = "",
                     content_md: str | None = None) -> ToolResult:
         content = content_md or default_plan_md(goal, daily_count, deadline_note)
+        result, _ = self._gated(ActionEnvelope(session_id=self.session_id, type=ActionType.GOAL_NEGOTIATE,
+            params={"text": content, "finalize": False, "authored_by": "companion"}))
+        if result.status != "ok":
+            return result
+        contract_id = self.snapshot.goal_context.active_goal_contract_id
+        if not contract_id:
+            contract = GoalContract(learner_id=self.snapshot.learner_id,
+                                    goal_statement=GoalStatement(text=goal))
+            self.store.save_contract(contract)
+            contract_id = contract.goal_contract_id
+            self.snapshot.goal_context = GoalContext(active_goal_contract_id=contract_id, ownership="student")
+            self.store.save_session(self.session_id, self.snapshot.learner_id, contract_id, "agent-unit")
+        body = {"goal": goal, "content_md": content}
+        if self.plan_version_id is None:
+            plan = self.plans.prepare_draft(self.snapshot.learner_id, contract_id, body, utcnow())
+        else:
+            plan = self.plans.modify(self.snapshot.learner_id, self.plan_version_id,
+                                     body, "学习者修订计划", utcnow())
+        self.plan_version_id = plan.version_id
         path = self.workspace.write_plan(content)
-        version = new_id()[:8]
-        self.store.save_plan_update(version, content)
-        return ToolResult(detail=f"计划.md 已写入（版本 {version}）",
-                          payload={"path": path, "version": version, "content": content})
+        return ToolResult(detail=f"计划.md 草案已写入（版本 {plan.version_id}）",
+                          payload={"path": path, "version": plan.version_id, "content": content,
+                                   "status": plan.status, "diff": plan.diff})
 
     # ---------- 11. escalate.teacher（R-05/红线 → 暂停转人工） ----------
 

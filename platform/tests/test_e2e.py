@@ -1,6 +1,7 @@
 """端到端：FakeLLM 下完整 SRL 闭环（契约→探究会话→反思→镜子）+ 检查点 R-09 流程。"""
 from app.agents.templates import derive_skeptic
-from app.core.schema import GoalContract, GoalStatement, MentalStateSnapshot, AutonomyIndex
+from app.core.schema import GoalContract, GoalStatement, MentalStateSnapshot, AutonomyIndex, utcnow
+from app.learning.service import LearningService
 from app.llm.client import FakeLLM
 from app.orchestration.session import TutorSession
 from app.orchestration.trigger import TriggerEngine
@@ -19,6 +20,7 @@ def _contract(store, learner_id):
 
 def test_e2e_explore_full_loop():
     store, llm = Store(":memory:"), FakeLLM()
+    LearningService(store).set_consent("s1", ["teaching"], "test-teaching-v1", "learner:test", utcnow())
     contract = _contract(store, "s1")
     s = TutorSession(store, llm, "s1", contract=contract, session_type="explore")
 
@@ -66,6 +68,7 @@ def test_e2e_explore_full_loop():
 
 def test_checkpoint_r09_isolation():
     store, llm = Store(":memory:"), FakeLLM()
+    LearningService(store).set_consent("s2", ["teaching"], "test-teaching-v1", "learner:test", utcnow())
     s = TutorSession(store, llm, "s2", session_type="checkpoint")
     r0 = s.start()
     assert "考试" not in r0.reply and "3x + 5" in r0.reply   # 考题直接开卷
@@ -114,6 +117,7 @@ def test_skeptic_empty_report_is_terminated():
 def test_r07_budget_exhaustion_blocks_proactive_hint():
     """自主性 0.9 → 预算 1；主动提示用掉后再次触发 → R-07 拦截转鼓励反馈。"""
     store = Store(":memory:")
+    LearningService(store).set_consent("s4", ["teaching"], "test-teaching-v1", "learner:test", utcnow())
     store.append_snapshot(MentalStateSnapshot(
         learner_id="s4", autonomy_index=AutonomyIndex(composite=0.9)))
     s = TutorSession(store, FakeLLM(), "s4", session_type="explore")

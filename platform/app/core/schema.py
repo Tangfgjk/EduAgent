@@ -223,10 +223,13 @@ class PlanVersion(_Forbidden):
     version_id: str = Field(default_factory=new_id)
     goal_contract_id: str
     project_id: str = "default"
-    status: Literal["draft", "confirmed", "superseded"] = "draft"
+    status: Literal["proposed", "draft", "confirmed", "superseded", "rejected"] = "draft"
     change_reason: str = "初始版本"
     content: dict = Field(default_factory=dict)
     confirmed_at: datetime | None = None
+    prior_version_id: str | None = None
+    signed_by: str | None = None
+    diff: dict = Field(default_factory=dict)
 
 
 # ---------- 交互事件与验证裁决（docs/04 §1/§2） ----------
@@ -262,6 +265,9 @@ class InteractionEvent(_Forbidden):
     verdict_ref: str | None = None
     context_snapshot: ContextSnapshot = Field(default_factory=ContextSnapshot)
     consent_scope: Literal["teaching", "evolution", "research"] = "teaching"
+    consent_version: str = "legacy-unconfirmed"
+    authorization_source: str = "legacy-local"
+    event_seq: int | None = None
     audit_id: str | None = None
 
 

@@ -7,7 +7,6 @@
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -24,15 +23,12 @@ from app.agent.workspace import LearningWorkspace, default_plan_md
 from app.core.machines import hint_budget, start_level
 from app.core.rules import ActionGovernor
 from app.core.schema import (
-    Calibration, GoalContext, MentalStateSnapshot, QuestionItem,
-    StrategyProfile, TriedStrategy, new_id,
+    Calibration, GoalContext, GoalContract, GoalStatement, MentalStateSnapshot, QuestionItem,
+    TriedStrategy, new_id, utcnow,
 )
 from app.learning.perception import seed_misconception_space
-from app.learning.tracer import BKTTracer
 from app.llm.client import BaseLLM, LLMError
-from app.orchestration.session import (
-    MISCONCEPTION_HYPOTHESES, load_bank,
-)
+from app.orchestration.session import load_bank
 from app.storage.db import Store
 
 MAX_STEPS = 24   # 单元内工具调用步数预算（软参数）
@@ -82,6 +78,14 @@ class LearningAgent:
         self.llm = llm
         self.learner_id = learner_id
         self.contract = contract
+        if contract is not None:
+            if contract.learner_id != learner_id:
+                raise PermissionError("The goal contract belongs to another learner")
+            existing = store.get_contract(contract.goal_contract_id)
+            if existing is None:
+                store.save_contract(contract)
+            elif existing.learner_id != learner_id:
+                raise PermissionError("The stored goal contract belongs to another learner")
         base = store.latest_snapshot(learner_id)
         self.snapshot = (base.model_copy(deep=True) if base
                          else MentalStateSnapshot(learner_id=learner_id))
@@ -89,10 +93,9 @@ class LearningAgent:
             self.snapshot.goal_context = GoalContext(
                 active_goal_contract_id=contract.goal_contract_id, ownership="student")
         self.workspace = LearningWorkspace(workspace_root, learner_id)
-        self.tracer = BKTTracer()
         self.governor = ActionGovernor()
         self.tools = LearningTools(store, llm, self.governor, self.snapshot,
-                                   self.tracer, self.workspace,
+                                   self.workspace,
                                    bank=bank if bank is not None else load_bank())
         aut = self.snapshot.autonomy_index.composite
         self.tools.hint_budget = hint_budget(aut)
@@ -179,10 +182,19 @@ class LearningAgent:
                              f"请换一个学习目标重新开始。", gate=GATE_ESCALATION)
             return
 
+        if self.contract is None:
+            self.contract = GoalContract(learner_id=self.learner_id, goal_statement=GoalStatement(text=goal))
+            self.store.save_contract(self.contract)
+            self.snapshot.goal_context = GoalContext(
+                active_goal_contract_id=self.contract.goal_contract_id, ownership="student")
+            self.store.save_session(self.tools.session_id, self.learner_id,
+                                    self.contract.goal_contract_id, "agent-unit")
         yield self._msg(f"收到目标：{goal}。先诊断，再定计划，然后我们开练。")
         intent = self._plan_intent(goal)
         yield from self._phase_diagnose(intent)
-        yield from self._phase_plan(goal, intent)
+        planned = yield from self._phase_plan(goal, intent)
+        if planned is False:
+            return
         yield from self._phase_execute(intent)
         yield from self._phase_reflect()
         self.phase = Phase.DONE
@@ -249,31 +261,37 @@ class LearningAgent:
             pass
         saved = self.tools.plan_update(goal, content_md=content)
         yield from self._tool_events("plan.update", saved)
-        self.store.save_plan_update(saved.payload.get("version", "v"), content, status="draft")
+        if saved.status != "ok":
+            yield Ask(prompt="计划草案没有通过规则检查，请重新设定学习目标。", gate=GATE_ESCALATION)
+            return False
 
-        revision = 0
         while True:
             summary = self.workspace.plan_summary(content)
             reply = yield Ask(
                 gate=GATE_PLAN_CONFIRM,
                 prompt=f"关口①（计划签署）：计划已写入 计划.md\n  摘要：{summary}\n"
                        f"回复「确认」开始执行；或直接说要改什么（例：每天 3 题）")
-            if is_confirm(reply) or revision >= 2:
-                self.store.save_plan_update(saved.payload.get("version", "v"),
-                                            content, status="confirmed")
-                yield self._msg("计划确认 ✓ 开始执行。" if is_confirm(reply)
-                                else "先按当前计划执行，随时可以叫我改。")
+            if is_confirm(reply):
+                self.tools.plans.sign(self.learner_id, saved.payload["version"], utcnow())
+                yield self._msg("计划确认 ✓ 开始执行。")
                 break
             rev = parse_plan_revision(reply)
+            previous_content = content
+            previous_daily_count = intent.daily_count
             if rev:
                 intent.daily_count = rev.get("daily_count", intent.daily_count)
                 content = default_plan_md(goal, intent.daily_count,
                                           rev.get("deadline", deadline_note))
             else:
                 content += f"\n- 学生修订：{reply.strip()}"
-            saved = self.tools.plan_update(goal, content_md=content)
-            yield from self._tool_events("plan.update", saved)
-            revision += 1
+            revised = self.tools.plan_update(goal, content_md=content)
+            yield from self._tool_events("plan.update", revised)
+            if revised.status != "ok":
+                content = previous_content
+                intent.daily_count = previous_daily_count
+                yield self._msg("这项修订没有通过规则检查，请修改计划内容。")
+                continue
+            saved = revised
 
     # ---------- 阶段③：执行（自主循环） ----------
 

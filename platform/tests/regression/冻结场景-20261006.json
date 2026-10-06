@@ -1,0 +1,1354 @@
+{
+  "suite_id": "eduagent-local-regression",
+  "suite_version": "1.0.0",
+  "frozen_at": "2026-10-06T13:12:00+08:00",
+  "review_status": "self-reviewed-local; pending independent review",
+  "scope": "Deterministic ports; API/Web integration has separate acceptance",
+  "scenarios": [
+    {
+      "scenario_id": "GOV-01",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-01"
+      ],
+      "initial_state": {
+        "ladder_pos": 2
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "worked_full",
+          "text": "full solution"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-01",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "No full answer before L3 and student artifact.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-02",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-01"
+      ],
+      "initial_state": {
+        "ladder_pos": 3
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "worked_full",
+          "text": "full solution"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "allow",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-03",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-02"
+      ],
+      "initial_state": {},
+      "input": {
+        "action_type": "GOAL_NEGOTIATE",
+        "params": {
+          "finalize": true,
+          "authored_by": "agent"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-02",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "The learner alone owns plan signature.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-04",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-03"
+      ],
+      "initial_state": {
+        "frustration": 0.9,
+        "frustration_streak": 3
+      },
+      "input": {
+        "action_type": "TASK",
+        "params": {
+          "difficulty": 0.8,
+          "stem": "harder task"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-03",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-05",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-04"
+      ],
+      "initial_state": {},
+      "input": {
+        "action_type": "FEEDBACK",
+        "params": {
+          "text": "你真聪明"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "rewrite",
+      "expected_rule": "R-04",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Replace ability attribution with strategy feedback.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-06",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-05"
+      ],
+      "initial_state": {},
+      "input": {
+        "action_type": "FEEDBACK",
+        "params": {
+          "text": "帮我作弊"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-05",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-07",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-06"
+      ],
+      "initial_state": {},
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "conceptual",
+          "text": "lesson"
+        },
+        "kc_refs": []
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-06",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-08",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-07"
+      ],
+      "initial_state": {
+        "hints_used": 3,
+        "hint_budget": 3
+      },
+      "input": {
+        "action_type": "HINT",
+        "params": {
+          "text": "hint",
+          "proactive": true
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-07",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-09",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "R-08"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "research_read"
+      },
+      "expected_decision": "denied",
+      "expected_rule": "R-08",
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1
+      },
+      "rubric": "Teaching consent does not authorize research reads.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-10",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-09"
+      ],
+      "initial_state": {
+        "checkpoint_mode": true
+      },
+      "input": {
+        "action_type": "HINT",
+        "params": {
+          "text": "hint",
+          "target": "exam_item",
+          "proactive": false
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-09",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-11",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-10"
+      ],
+      "initial_state": {},
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "conceptual",
+          "text": "design",
+          "full_design": true,
+          "design_kind": "experiment"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-10",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GOV-12",
+      "scenario_version": "1.0.0",
+      "kind": "rule",
+      "coverage": [
+        "R-09"
+      ],
+      "initial_state": {
+        "checkpoint_mode": true
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "rule_explanation",
+          "text": "test rules",
+          "target": "exam_item"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "allow",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Exam rules explanation remains available.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-1",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "conceptual"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "这个概念什么意思"
+      },
+      "expected_decision": "conceptual",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-2",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "procedural"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "下一步怎么开始"
+      },
+      "expected_decision": "procedural",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-3",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "strategic"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "需要一点提示"
+      },
+      "expected_decision": "strategic",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-4",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "metacognitive"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "我想验算检查"
+      },
+      "expected_decision": "metacognitive",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-5",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "epistemic"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "这有什么证据"
+      },
+      "expected_decision": "epistemic",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-6",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "collaborative"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "两种说法谁对"
+      },
+      "expected_decision": "collaborative",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "SCAFFOLD-7",
+      "scenario_version": "1.0.0",
+      "kind": "scaffold",
+      "coverage": [
+        "participation"
+      ],
+      "initial_state": {},
+      "input": {
+        "student_text": "无聊不想做"
+      },
+      "expected_decision": "participation",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Choose functional scaffold from learner need, then govern the hint.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STAGE-1",
+      "scenario_version": "1.0.0",
+      "kind": "stage_safety",
+      "coverage": [
+        "primary",
+        "R-01"
+      ],
+      "initial_state": {
+        "learner_stage": "primary",
+        "ladder_pos": 0
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "worked_full",
+          "text": "answer"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-01",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Answer ownership protection holds for each stage; this does not assert a stage-specific pedagogy model.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STAGE-2",
+      "scenario_version": "1.0.0",
+      "kind": "stage_safety",
+      "coverage": [
+        "secondary",
+        "R-01"
+      ],
+      "initial_state": {
+        "learner_stage": "secondary",
+        "ladder_pos": 0
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "worked_full",
+          "text": "answer"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-01",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Answer ownership protection holds for each stage; this does not assert a stage-specific pedagogy model.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STAGE-3",
+      "scenario_version": "1.0.0",
+      "kind": "stage_safety",
+      "coverage": [
+        "tertiary",
+        "R-01"
+      ],
+      "initial_state": {
+        "learner_stage": "tertiary",
+        "ladder_pos": 0
+      },
+      "input": {
+        "action_type": "EXPLAIN",
+        "params": {
+          "mode": "worked_full",
+          "text": "answer"
+        },
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "deny",
+      "expected_rule": "R-01",
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Answer ownership protection holds for each stage; this does not assert a stage-specific pedagogy model.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "VERDICT-1",
+      "scenario_version": "1.0.0",
+      "kind": "verdict",
+      "coverage": [
+        "passed"
+      ],
+      "initial_state": {
+        "p_mastery": 0.8
+      },
+      "input": {
+        "verdict_status": "passed"
+      },
+      "expected_decision": null,
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version_delta": 1,
+        "effective_count": 1,
+        "probability_increases": true
+      },
+      "rubric": "Only independently verified binary observations change mastery.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "VERDICT-2",
+      "scenario_version": "1.0.0",
+      "kind": "verdict",
+      "coverage": [
+        "failed"
+      ],
+      "initial_state": {
+        "p_mastery": 0.8
+      },
+      "input": {
+        "verdict_status": "failed"
+      },
+      "expected_decision": null,
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version_delta": 1,
+        "effective_count": 1,
+        "probability_increases": false
+      },
+      "rubric": "Only independently verified binary observations change mastery.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "VERDICT-3",
+      "scenario_version": "1.0.0",
+      "kind": "verdict",
+      "coverage": [
+        "partial"
+      ],
+      "initial_state": {
+        "p_mastery": 0.8
+      },
+      "input": {
+        "verdict_status": "partial"
+      },
+      "expected_decision": "partial",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": {
+        "version_delta": 0,
+        "effective_count": 0,
+        "probability_increases": false
+      },
+      "rubric": "Only independently verified binary observations change mastery.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "VERDICT-4",
+      "scenario_version": "1.0.0",
+      "kind": "verdict",
+      "coverage": [
+        "unverifiable"
+      ],
+      "initial_state": {
+        "p_mastery": 0.8
+      },
+      "input": {
+        "verdict_status": "unverifiable"
+      },
+      "expected_decision": "unverifiable",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": {
+        "version_delta": 0,
+        "effective_count": 0,
+        "probability_increases": false
+      },
+      "rubric": "Only independently verified binary observations change mastery.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GATE-01",
+      "scenario_version": "1.0.0",
+      "kind": "gate",
+      "coverage": [
+        "gate_insufficient"
+      ],
+      "initial_state": {},
+      "input": {
+        "count": 0,
+        "force_probability": 0.99
+      },
+      "expected_decision": "insufficient_evidence",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": {
+        "effective_count": 0
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GATE-02",
+      "scenario_version": "1.0.0",
+      "kind": "gate",
+      "coverage": [
+        "gate_uncertain"
+      ],
+      "initial_state": {},
+      "input": {
+        "count": 6,
+        "confidence": 0
+      },
+      "expected_decision": "uncertain",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "expected_state_transition": {
+        "effective_count": 6
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GATE-03",
+      "scenario_version": "1.0.0",
+      "kind": "gate",
+      "coverage": [
+        "gate_not_mastered"
+      ],
+      "initial_state": {},
+      "input": {
+        "count": 6,
+        "force_probability": 0.2
+      },
+      "expected_decision": "not_mastered",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "expected_state_transition": {
+        "effective_count": 6
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "GATE-04",
+      "scenario_version": "1.0.0",
+      "kind": "gate",
+      "coverage": [
+        "gate_mastered"
+      ],
+      "initial_state": {},
+      "input": {
+        "count": 6
+      },
+      "expected_decision": "mastered",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "expected_state_transition": {
+        "effective_count": 6
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STORE-01",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "idempotence"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "duplicate"
+      },
+      "expected_decision": "idempotent",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1,
+        "transitions": 2
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STORE-02",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "evidence_conflict"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "conflict"
+      },
+      "expected_decision": "conflict",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STORE-03",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "withdrawal",
+        "R-08"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "withdraw"
+      },
+      "expected_decision": "denied",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STORE-04",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "atomicity"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "rollback"
+      },
+      "expected_decision": "rollback",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": {
+        "version": 0
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "STORE-05",
+      "scenario_version": "1.0.0",
+      "kind": "service",
+      "coverage": [
+        "cas"
+      ],
+      "initial_state": {},
+      "input": {
+        "operation": "cas"
+      },
+      "expected_decision": "conflict",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "PATH-01",
+      "scenario_version": "1.0.0",
+      "kind": "prerequisite",
+      "coverage": [
+        "prerequisite"
+      ],
+      "initial_state": {},
+      "input": {
+        "target_kc": "advanced"
+      },
+      "expected_decision": "DIAGNOSE",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "expected_state_transition": {
+        "status": "proposed"
+      },
+      "rubric": "Even mastered target KC cannot advance across unknown prerequisite.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "REPLAY-01",
+      "scenario_version": "1.0.0",
+      "kind": "replay",
+      "coverage": [
+        "replay",
+        "same_timestamp"
+      ],
+      "initial_state": {},
+      "input": {
+        "same_timestamp": true,
+        "reversed_input": true
+      },
+      "expected_decision": "identical",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6"
+      ],
+      "expected_state_transition": {
+        "effective_count": 6
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "RAG-01",
+      "scenario_version": "1.0.0",
+      "kind": "retrieval",
+      "coverage": [
+        "ungrounded"
+      ],
+      "initial_state": {},
+      "input": {
+        "query": "equation",
+        "kc_refs": [
+          "math"
+        ]
+      },
+      "expected_decision": "ungrounded",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": "none",
+      "rubric": "Lexical retrieval without source KC mapping cannot become teaching material.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "ROLE-01",
+      "scenario_version": "1.0.0",
+      "kind": "derived",
+      "coverage": [
+        "derived_permission"
+      ],
+      "initial_state": {},
+      "input": {
+        "role": "skeptic",
+        "payload": {
+          "tool_requests": [
+            "write_plan"
+          ],
+          "actions": []
+        }
+      },
+      "expected_decision": "constraint_violation",
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": "none",
+      "rubric": "Derived role has no tool or plan signature authority.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "RETENTION-01",
+      "scenario_version": "1.0.0",
+      "kind": "retention",
+      "coverage": [
+        "retention_success"
+      ],
+      "initial_state": {},
+      "input": {
+        "assessment_kind": "review"
+      },
+      "expected_decision": null,
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1,
+        "lapses": 0
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "RETENTION-02",
+      "scenario_version": "1.0.0",
+      "kind": "retention",
+      "coverage": [
+        "retention_lapse"
+      ],
+      "initial_state": {},
+      "input": {
+        "assessment_kind": "review",
+        "verdict_status": "failed"
+      },
+      "expected_decision": null,
+      "expected_rule": null,
+      "expected_evidence": [
+        "e1"
+      ],
+      "expected_state_transition": {
+        "version": 1,
+        "lapses": 1
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    },
+    {
+      "scenario_id": "RETENTION-03",
+      "scenario_version": "1.0.0",
+      "kind": "retention",
+      "coverage": [
+        "retention_eligibility"
+      ],
+      "initial_state": {},
+      "input": {
+        "assessment_kind": "practice"
+      },
+      "expected_decision": "not_recall_assessment",
+      "expected_rule": null,
+      "expected_evidence": [],
+      "expected_state_transition": {
+        "version": 0,
+        "lapses": 0
+      },
+      "rubric": "Hard deterministic behavior; no live LLM judgment.",
+      "parameter_versions": {
+        "governor": "R01-R10@20261005",
+        "mastery": "bkt-default-v1",
+        "retention": "retention-default-v1",
+        "gate": "gate-v1",
+        "policy": "policy_v1"
+      },
+      "as_of": "2026-10-06T05:00:00+00:00",
+      "source": "docs/进度/项目最终功能清单与一周实施计划-20261005.md §5 / ADR-003"
+    }
+  ]
+}

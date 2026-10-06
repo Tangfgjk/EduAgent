@@ -10,7 +10,10 @@ from app.storage.db import Store
 def make_client(tmp_path):
     settings = Settings(db_path=str(tmp_path / "t.sqlite3"), learner_id="stu1")
     app = create_app(settings=settings, llm=FakeLLM(), store=Store(":memory:"))
-    return TestClient(app)
+    client = TestClient(app)
+    assert client.post("/api/learning/consent/stu1", json={"scopes": ["teaching"],
+                       "version": "test-teaching-v1", "source": "learner:test"}).status_code == 200
+    return client
 
 
 def test_full_api_flow(tmp_path):
@@ -37,8 +40,11 @@ def test_full_api_flow(tmp_path):
     mirror = c.get("/api/mirror/stu1").json()
     assert mirror["mastery"] and mirror["metacognition"]["calibration"]
 
+    assert c.post("/api/evolution/digest").status_code == 403
+    c.post("/api/learning/consent/stu1",json={"scopes":["teaching","evolution"],"version":"explicit-evolution-v1","source":"learner"})
     digest = c.post("/api/evolution/digest").json()
     assert "suggestions" in digest and "kpis" in digest
+    assert digest["kpis"]["total_attempts"] == 0  # Earlier teaching-only collection is not retroactively authorized.
 
     gov = c.get("/api/governance/hard-rules").json()
     assert len(gov["rules"]) == 10 and gov["hash"]

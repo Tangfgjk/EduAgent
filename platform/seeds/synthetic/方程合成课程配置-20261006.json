@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "data_classification": "synthetic_ai_generated",
+  "not_real_evidence": true,
+  "seed": 20261006,
+  "generated_at": "2026-10-06T00:00:00+08:00",
+  "questions_per_cell": 2,
+  "difficulties": ["easy", "medium", "hard"],
+  "kinds": ["diagnostic", "practice", "transfer"],
+  "courses": [
+    {"kc_id": "MATH.G7.EQ.BALANCE", "title": "等式的基本性质", "family": "balance", "prerequisites": []},
+    {"kc_id": "MATH.G7.EQ.SOLVE", "title": "解一元一次方程", "family": "solve", "prerequisites": ["MATH.G7.EQ.BALANCE"]}
+  ],
+  "provenance": "AI-authored-local-generator-and-templates-20261006",
+  "license_note": "Local original generated content; no external question-bank text copied"
+}

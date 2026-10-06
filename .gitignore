@@ -7,3 +7,5 @@ __pycache__/
 .venv/
 platform/data/
 *.sqlite3
+docs/本地配置/
+.uv-cache/

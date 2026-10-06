@@ -43,7 +43,7 @@ def evidence_report(store, learner_id: str, window: int = 50) -> dict:
             if e.observation.kind == "help_seeking":
                 hints_solicited += 1
             if e.actor.kind == "companion" and \
-                    (e.observation.payload or {}).get("action_type") == "HINT":
+                    ((e.observation.payload or {}).get("action_type") or (e.observation.payload or {}).get("type")) == "HINT":
                 hints_proactive += 1
             if e.observation.kind == "answer":
                 flag = (e.observation.payload or {}).get("correct")
@@ -53,6 +53,18 @@ def evidence_report(store, learner_id: str, window: int = 50) -> dict:
                     wrong += 1
         except (AttributeError, TypeError):
             continue
+
+    from app.learning.service import LearningService, ConsentDenied
+    service = LearningService(store)
+    try:
+        facts = service.evidences(learner_id)
+    except ConsentDenied:
+        facts = []
+    if facts:
+        replaced = {f.supersedes for f in facts if f.supersedes}
+        active = [f for f in facts if f.evidence_id not in replaced]
+        correct = sum(f.verdict_status == "passed" for f in active)
+        wrong = sum(f.verdict_status == "failed" for f in active)
 
     notes: list[str] = []
     if len(snapshots) < 2:

@@ -123,9 +123,9 @@
       "answer": {"var": "x", "expr": "0.8x-10"},
       "misconception_links": ["MC.APP.DISCOUNT_ORDER"],
       "hints": [
-        {"level": 0, "form": "nudge", "text": "\"打八折\"之后的价格是多少？再从那个价格里减 10。"},
-        {"level": 1, "form": "directive", "text": "先算八折价 0.8x，再减 10 元，注意运算顺序不能换。"},
-        {"level": 2, "form": "worked_partial", "text": "八折价：0.8x；最终付款：0.8x - 10。把它和\"先减 10 再打八折\"比一比，一样吗？"},
+        {"level": 0, "form": "nudge", "text": "题目描述了哪两个价格变化？先用自己的话说说它们的先后顺序。"},
+        {"level": 1, "form": "directive", "text": "把计算分成两个步骤，想想八折表示原价的百分之多少。先写第一步，第二步该以哪个金额为基础？"},
+        {"level": 2, "form": "worked_partial", "text": "只写第一步：八折后的价格是 0.8x。第二个变化交给你补上，再检查是否遵守题目的先后顺序。"},
         {"level": 3, "form": "worked_full", "text": "先八折再减 10：(0.8x) - 10 = 0.8x - 10。若顺序反过来是 0.8(x-10) = 0.8x - 8，两者相差 2 元——顺序会影响结果。"}
       ]
     },

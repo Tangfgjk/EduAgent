@@ -1,0 +1,11 @@
+{
+  "catalog_version": "synthetic-teacher-explanations-v1",
+  "knowledge": [],
+  "rubrics": [
+    {"ref":{"asset_id":"teacher-rubric-eq-reflection","version":"1.0.0"},"dimensions":[{"dimension_id":"reasoning","description":"等价变形的步骤与理由完整，不依赖结果猜测","weight":0.6},{"dimension_id":"self_check","description":"独立验算并能解释错误或修订","weight":0.4}],"passing_score":0.8,"assessor_policy":"teacher","provenance":"synthetic_ai_generated-not-calibrated-20261006"}
+  ],
+  "assessments": [
+    {"ref":{"asset_id":"Q-EXPLAIN-BALANCE","version":"1.0.0"},"kc_refs":[{"asset_id":"MATH.G7.EQ.BALANCE","version":"1.0.0"}],"rubric_ref":{"asset_id":"teacher-rubric-eq-reflection","version":"1.0.0"},"kind":"explanation","difficulty_band":"easy","comparison_group":"balance-explanation-v1","bloom_level":"understand","stem":"用一个自己的等式例子说明：为什么必须在等式两边同时进行同一种运算？请给出检查方法。","answer":{},"calibration_status":"demo","provenance":"synthetic_ai_generated-not-calibrated-20261006"},
+    {"ref":{"asset_id":"Q-EXPLAIN-SOLVE","version":"1.0.0"},"kc_refs":[{"asset_id":"MATH.G7.EQ.SOLVE","version":"1.0.0"}],"rubric_ref":{"asset_id":"teacher-rubric-eq-reflection","version":"1.0.0"},"kind":"explanation","difficulty_band":"easy","comparison_group":"solve-explanation-v1","bloom_level":"apply","stem":"独立选择一元一次方程，写出求解步骤、每步理由和代回检查；如有错误说明如何修订。","answer":{},"calibration_status":"demo","provenance":"synthetic_ai_generated-not-calibrated-20261006"}
+  ]
+}

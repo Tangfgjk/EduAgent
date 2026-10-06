@@ -1,0 +1,3949 @@
+{
+  "catalog_version": "synthetic-overlay-85b13eac81a6",
+  "knowledge": [
+    {
+      "ref": {
+        "asset_id": "MATH.G7.EQ.SETUP",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "title": "从数量关系列出方程",
+      "domain": "mathematics",
+      "kc_type": "procedure",
+      "curriculum_ref": "synthetic-local-demo-not-official-curriculum",
+      "grade_band": "G7",
+      "prerequisite_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "MATH.G7.EQ.APPLY",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "title": "在情境中应用一元一次方程",
+      "domain": "mathematics",
+      "kc_type": "procedure",
+      "curriculum_ref": "synthetic-local-demo-not-official-curriculum",
+      "grade_band": "G7",
+      "prerequisite_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    }
+  ],
+  "rubrics": [
+    {
+      "ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "dimensions": [
+        {
+          "dimension_id": "correctness",
+          "description": "整数代入满足所生成等式",
+          "weight": 1
+        }
+      ],
+      "passing_score": 1,
+      "assessor_policy": "deterministic",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    }
+  ],
+  "assessments": [
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 2 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 5 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 4 = 13。",
+      "answer": {
+        "var": "x",
+        "value": "9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 9 = 18。",
+      "answer": {
+        "var": "x",
+        "value": "9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 1 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 1 = 3。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 2 = 6。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 5 = 7。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 7 得到 15，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 10，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "6"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 2 = 3。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 8 = 11。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 9 = -20。",
+      "answer": {
+        "var": "x",
+        "value": "-11"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 10 = -21。",
+      "answer": {
+        "var": "x",
+        "value": "-11"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 8 = 23。",
+      "answer": {
+        "var": "x",
+        "value": "15"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 1 = 4。",
+      "answer": {
+        "var": "x",
+        "value": "5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 15 = -29。",
+      "answer": {
+        "var": "x",
+        "value": "-14"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 12 = -6。",
+      "answer": {
+        "var": "x",
+        "value": "6"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 2 = 5。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 10 = -23。",
+      "answer": {
+        "var": "x",
+        "value": "-13"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再减少 7 得到 8，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "15"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再减少 3 得到 -15，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-12"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 8 = -8。",
+      "answer": {
+        "var": "x",
+        "value": "0"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-medium-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 14 = 4。",
+      "answer": {
+        "var": "x",
+        "value": "-10"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 16 = -24。",
+      "answer": {
+        "var": "x",
+        "value": "-8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 2 = -26。",
+      "answer": {
+        "var": "x",
+        "value": "-28"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 1 = 27。",
+      "answer": {
+        "var": "x",
+        "value": "26"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 10 = -20。",
+      "answer": {
+        "var": "x",
+        "value": "-30"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 15 = -2。",
+      "answer": {
+        "var": "x",
+        "value": "13"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 17 = -6。",
+      "answer": {
+        "var": "x",
+        "value": "11"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x - 24 = 0。",
+      "answer": {
+        "var": "x",
+        "value": "24"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 29 = 6。",
+      "answer": {
+        "var": "x",
+        "value": "-23"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 30 得到 2，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-28"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 1 得到 -3，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 19 = 41。",
+      "answer": {
+        "var": "x",
+        "value": "22"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.BALANCE-hard-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.BALANCE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.BALANCE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "understand",
+      "stem": "合成练习：解等式 x + 29 = 57。",
+      "answer": {
+        "var": "x",
+        "value": "28"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 1 = 4。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 6 = 13。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 9 = 11。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 1 = 7。",
+      "answer": {
+        "var": "x",
+        "value": "6"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 3 = 11。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 2 = 5。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 1 = 9。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 2 = 11。",
+      "answer": {
+        "var": "x",
+        "value": "9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 12，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 5 得到 13，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 9 = 12。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 x + 2 = 4。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 2x - 1 = 15。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 2x - 10 = -12。",
+      "answer": {
+        "var": "x",
+        "value": "-1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x - 7 = 5。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 2x + 13 = 21。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 2x + 7 = 3。",
+      "answer": {
+        "var": "x",
+        "value": "-2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x + 10 = -35。",
+      "answer": {
+        "var": "x",
+        "value": "-15"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 5x - 1 = -76。",
+      "answer": {
+        "var": "x",
+        "value": "-15"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 2x - 12 = -20。",
+      "answer": {
+        "var": "x",
+        "value": "-4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 5 倍再减少 13 得到 7，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 5 倍再减少 5 得到 -55，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-10"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 5x + 2 = -38。",
+      "answer": {
+        "var": "x",
+        "value": "-8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-medium-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 5x + 5 = 30。",
+      "answer": {
+        "var": "x",
+        "value": "5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 7x + 27 = -162。",
+      "answer": {
+        "var": "x",
+        "value": "-27"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 6x - 4 = 104。",
+      "answer": {
+        "var": "x",
+        "value": "18"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x - 2 = -53。",
+      "answer": {
+        "var": "x",
+        "value": "-17"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x + 5 = 26。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x + 12 = 93。",
+      "answer": {
+        "var": "x",
+        "value": "27"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 8x + 27 = 187。",
+      "answer": {
+        "var": "x",
+        "value": "20"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 6x + 25 = 73。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 9x - 23 = -50。",
+      "answer": {
+        "var": "x",
+        "value": "-3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 1 得到 57，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "28"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再减少 21 得到 -23，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 9x - 8 = -35。",
+      "answer": {
+        "var": "x",
+        "value": "-3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SOLVE-hard-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SOLVE",
+          "version": "1.0.0"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SOLVE-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成练习：解等式 3x + 16 = 58。",
+      "answer": {
+        "var": "x",
+        "value": "14"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 5 得到 8。请选择与数量关系一致的方程编号：1. x + 5 = 8；2. x - 5 = 8；3. x + 5 = 9。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 1 得到 8。请选择与数量关系一致的方程编号：1. x - 1 = 8；2. x + 1 = 9；3. x + 1 = 8。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 9 得到 17。请选择与数量关系一致的方程编号：1. x - 9 = 17；2. x + 9 = 18；3. x + 9 = 17。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 3 得到 12。请选择与数量关系一致的方程编号：1. x - 3 = 12；2. x + 3 = 12；3. x + 3 = 13。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 3 得到 5。请选择与数量关系一致的方程编号：1. x - 3 = 5；2. x + 3 = 6；3. x + 3 = 5。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 5 得到 6。请选择与数量关系一致的方程编号：1. x - 5 = 6；2. x + 5 = 6；3. x + 5 = 7。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 7 得到 11。请选择与数量关系一致的方程编号：1. x - 7 = 11；2. x + 7 = 12；3. x + 7 = 11。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 3 得到 9。请选择与数量关系一致的方程编号：1. x - 3 = 9；2. x + 3 = 9；3. x + 3 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 9 得到 13。请选择与数量关系一致的方程编号：1. x - 9 = 13；2. x + 9 = 13；3. x + 9 = 14。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 5 得到 9。请选择与数量关系一致的方程编号：1. x - 5 = 9；2. x + 5 = 9；3. x + 5 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 7 得到 16。请选择与数量关系一致的方程编号：1. x - 7 = 16；2. x + 7 = 16；3. x + 7 = 17。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 1 倍再增加 7 得到 9。请选择与数量关系一致的方程编号：1. x - 7 = 9；2. x + 7 = 9；3. x + 7 = 10。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 5 倍再增加 1 得到 -74。请选择与数量关系一致的方程编号：1. 5x - 1 = -74；2. 5x + 1 = -73；3. 5x + 1 = -74。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再增加 13 得到 -8。请选择与数量关系一致的方程编号：1. 3x - 13 = -8；2. 3x + 13 = -7；3. 3x + 13 = -8。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再增加 13 得到 16。请选择与数量关系一致的方程编号：1. 3x + 13 = 16；2. 3x - 13 = 16；3. 3x + 13 = 17。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再增加 3 得到 48。请选择与数量关系一致的方程编号：1. 3x + 3 = 48；2. 3x - 3 = 48；3. 3x + 3 = 49。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 5 倍再增加 15 得到 -20。请选择与数量关系一致的方程编号：1. 5x + 15 = -20；2. 5x - 15 = -20；3. 5x + 15 = -19。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 5 倍再增加 14 得到 89。请选择与数量关系一致的方程编号：1. 5x + 14 = 89；2. 5x - 14 = 89；3. 5x + 14 = 90。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再减少 3 得到 -9。请选择与数量关系一致的方程编号：1. 3x - 3 = -9；2. 3x + 3 = -9；3. 3x - 3 = -8。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再减少 12 得到 -14。请选择与数量关系一致的方程编号：1. 2x + 12 = -14；2. 2x - 12 = -13；3. 2x - 12 = -14。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 5 倍再减少 11 得到 49。请选择与数量关系一致的方程编号：1. 5x + 11 = 49；2. 5x - 11 = 50；3. 5x - 11 = 49。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再增加 8 得到 -2。请选择与数量关系一致的方程编号：1. 2x - 8 = -2；2. 2x + 8 = -2；3. 2x + 8 = -1。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再减少 9 得到 -37。请选择与数量关系一致的方程编号：1. 2x + 9 = -37；2. 2x - 9 = -36；3. 2x - 9 = -37。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-medium-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再减少 13 得到 -4。请选择与数量关系一致的方程编号：1. 3x - 13 = -4；2. 3x + 13 = -4；3. 3x - 13 = -3。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 4 倍再减少 7 得到 41。请选择与数量关系一致的方程编号：1. 4x + 7 = 41；2. 4x - 7 = 41；3. 4x - 7 = 42。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 4 倍再减少 5 得到 -81。请选择与数量关系一致的方程编号：1. 4x - 5 = -81；2. 4x + 5 = -81；3. 4x - 5 = -80。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再减少 18 得到 -6。请选择与数量关系一致的方程编号：1. 2x - 18 = -6；2. 2x + 18 = -6；3. 2x - 18 = -5。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再减少 6 得到 -52。请选择与数量关系一致的方程编号：1. 2x - 6 = -52；2. 2x + 6 = -52；3. 2x - 6 = -51。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 8 倍再减少 16 得到 -136。请选择与数量关系一致的方程编号：1. 8x + 16 = -136；2. 8x - 16 = -135；3. 8x - 16 = -136。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 3 倍再减少 2 得到 58。请选择与数量关系一致的方程编号：1. 3x - 2 = 58；2. 3x + 2 = 58；3. 3x - 2 = 59。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 6 倍再增加 11 得到 23。请选择与数量关系一致的方程编号：1. 6x - 11 = 23；2. 6x + 11 = 24；3. 6x + 11 = 23。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 8 倍再增加 10 得到 -46。请选择与数量关系一致的方程编号：1. 8x - 10 = -46；2. 8x + 10 = -46；3. 8x + 10 = -45。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 5 倍再增加 25 得到 110。请选择与数量关系一致的方程编号：1. 5x - 25 = 110；2. 5x + 25 = 110；3. 5x + 25 = 111。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 4 倍再增加 17 得到 29。请选择与数量关系一致的方程编号：1. 4x + 17 = 29；2. 4x - 17 = 29；3. 4x + 17 = 30。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 7 倍再减少 16 得到 -37。请选择与数量关系一致的方程编号：1. 7x - 16 = -37；2. 7x + 16 = -37；3. 7x - 16 = -36。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.SETUP-hard-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.SETUP",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.SETUP-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成列式练习：某数量 x 的 2 倍再减少 11 得到 -3。请选择与数量关系一致的方程编号：1. 2x - 11 = -3；2. 2x + 11 = -3；3. 2x - 11 = -2。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 1 得到 5，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 8，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 11，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 4 得到 9，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 9 得到 15，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "6"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 8 得到 10，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 8 得到 15，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 3 得到 8，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 5 得到 14，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 6 得到 8，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "2"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 8 得到 9，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-easy-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "easy",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-easy-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 1 倍再增加 2 得到 9，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "7"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 4 倍再减少 11 得到 5，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 7 得到 7，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "0"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 12 得到 40，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "14"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 4 倍再增加 13 得到 37，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "6"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 3 倍再增加 7 得到 -2，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 9 得到 1，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 1 得到 -19，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-10"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 5 倍再增加 6 得到 1，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-1"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 4 倍再增加 9 得到 -11，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-5"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 4 倍再减少 13 得到 -57，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-11"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 4 倍再增加 7 得到 39，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "8"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-medium-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "medium",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-medium-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再增加 8 得到 30，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "11"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-diagnostic-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 7 倍再减少 18 得到 -228，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-30"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-diagnostic-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "diagnostic",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 3 倍再减少 16 得到 -7，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-practice-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 3 倍再减少 22 得到 14，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "12"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-practice-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "practice",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 9 倍再减少 10 得到 -262，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-28"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-pretest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 7 倍再减少 26 得到 177，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "29"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-pretest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "pretest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 5 倍再减少 9 得到 -24，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-3"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-posttest-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 7 倍再增加 12 得到 215，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "29"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-posttest-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "posttest",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 5 倍再增加 12 得到 -33，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-9"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-transfer-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 8 倍再增加 8 得到 184，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "22"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-transfer-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "transfer",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 6 倍再增加 13 得到 -113，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-21"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-delayed-1",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 2 倍再减少 8 得到 0，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "4"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    },
+    {
+      "ref": {
+        "asset_id": "SYN-MATH.G7.EQ.APPLY-hard-delayed-2",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kc_refs": [
+        {
+          "asset_id": "MATH.G7.EQ.APPLY",
+          "version": "1.0.0-synthetic-85b13eac81a6"
+        }
+      ],
+      "rubric_ref": {
+        "asset_id": "synthetic-exact-equation",
+        "version": "1.0.0-synthetic-85b13eac81a6"
+      },
+      "kind": "delayed",
+      "difficulty_band": "hard",
+      "comparison_group": "synthetic-MATH.G7.EQ.APPLY-hard-1.0.0-synthetic-85b13eac81a6",
+      "bloom_level": "apply",
+      "stem": "合成迁移练习：某数量 x 的 8 倍再增加 9 得到 -143，求 x。",
+      "answer": {
+        "var": "x",
+        "value": "-19"
+      },
+      "calibration_status": "demo",
+      "provenance": "synthetic_ai_generated;not_real_evidence;synthetic-equation-v1;seed=20261006;manifest=85b13eac81a6c419aa31bee30428f9a43940288856a27483f2a8c4debebfc7f8"
+    }
+  ]
+}

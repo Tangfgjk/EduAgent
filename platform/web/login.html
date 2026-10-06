@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>桂子问津 · 登录</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#151718;color:#f2f4f5;font:16px system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{width:min(360px,calc(100% - 40px))}h1{font-size:28px;margin:0 0 8px}p{color:#aab4bd;margin:0 0 32px}label{display:block;margin-bottom:10px}input{display:block;width:100%;height:46px;padding:12px;background:#252a2d;border:1px solid #677178;border-radius:6px;color:white;font:inherit}button{width:100%;margin-top:20px;height:44px;border:0;border-radius:6px;background:#a7deb9;color:#102617;font:inherit;cursor:pointer}#error{min-height:24px;color:#ffb2b2;margin-top:16px;font-size:14px}
+</style>
+<main><h1>桂子问津</h1><p>学习工作台</p><form id="login"><label for="password">本地密码</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"><button type="submit">登录</button><div id="error" role="alert"></div></form></main>
+<script>
+const form=document.querySelector('#login'),error=document.querySelector('#error');
+form.addEventListener('submit',async event=>{event.preventDefault();const button=form.querySelector('button');button.disabled=true;error.textContent='';try{const response=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:form.password.value})});form.password.value='';if(response.ok)location.replace('/');else error.textContent=response.status===429?'登录尝试过于频繁，请稍后重试。':response.status===409?'本地登录尚未启用。':'密码不正确。';}catch{error.textContent='暂时无法连接，请稍后重试。';}finally{button.disabled=false;}});
+fetch('/api/auth/status').then(r=>r.json()).then(s=>{if(!s.enabled||s.authenticated)location.replace('/');});
+</script>
+</html>
