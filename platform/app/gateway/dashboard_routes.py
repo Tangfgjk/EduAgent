@@ -21,6 +21,11 @@ class ProjectIn(BaseModel):
     expected_revision: int = Field(default=0, ge=0)
 
 
+class ProjectDeleteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1)
+
+
 class ShareIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     audiences: list[Literal["teacher", "parent"]]
@@ -96,6 +101,18 @@ def install_dashboard_routes(app: FastAPI, store, settings, catalog) -> None:
         try:
             return workspace.project(learner_id, body.content, record_id=body.record_id,
                                     expected_revision=body.expected_revision)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except ConsentDenied as exc:
+            raise HTTPException(403, str(exc)) from exc
+
+    @app.delete("/api/learning/projects/{learner_id}/{project_id}")
+    def delete_empty_project(learner_id: str, project_id: str, body: ProjectDeleteIn):
+        local(learner_id)
+        try:
+            return workspace.delete_empty_project(learner_id, project_id, body.expected_revision)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
         except ConsentDenied as exc:

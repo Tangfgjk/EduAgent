@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from app.core.schema import utcnow
 from app.learning.mastery_port import observation_skip_reason, update_mastery
 from app.learning.schema import MasteryState
+from app.learning.project_scope import ProjectScopeError, project_evidence, require_project
+from app.learning.replay import replay
 from app.learning.service import ConsentDenied, LearningService
 
 WEB = Path(__file__).resolve().parents[2] / "web"
@@ -79,13 +81,23 @@ def install_workbench_routes(app, store, settings):
         return FileResponse(WEB / (request.url.path[1:] + ".html"), headers={"Cache-Control": "no-store"})
 
     @app.get("/api/learning/growth/{learner_id}")
-    def growth(learner_id: str):
+    def growth(learner_id: str, project_id: str | None = None):
         if learner_id != settings.learner_id:
             raise HTTPException(403, "Local single-user workspace only")
         try:
             with store.lock:
                 evidence = service.evidences(learner_id)
-                current = service.masteries(learner_id)
-                return growth_projection(evidence, current, learner_id, utcnow())
+                if project_id is not None:
+                    try:
+                        require_project(store, learner_id, project_id)
+                    except ProjectScopeError as exc:
+                        raise HTTPException(404, str(exc)) from exc
+                    evidence = project_evidence(evidence, project_id)
+                    current = replay(evidence, learner_id, utcnow()).mastery.values()
+                else:
+                    current = service.masteries(learner_id)
+                result = growth_projection(evidence, current, learner_id, utcnow())
+                result["project_id"] = project_id
+                return result
         except ConsentDenied as exc:
             raise HTTPException(403, str(exc)) from exc

@@ -196,6 +196,7 @@ class GoalStatement(_Forbidden):
 
 class SuccessCriterion(_Forbidden):
     criterion_id: str = Field(default_factory=new_id)
+    description: str = ""
     kind: Literal["post_test", "teach_back", "self_made_set"] = "post_test"
     threshold: float = Field(default=0.8, ge=0, le=1)
     kc_refs: list[str] = Field(default_factory=list)
@@ -211,6 +212,7 @@ class ExternalDeadline(_Forbidden):
 class GoalContract(_Forbidden):
     goal_contract_id: str = Field(default_factory=new_id)
     learner_id: str
+    project_id: str | None = None
     goal_statement: GoalStatement
     success_criteria: list[SuccessCriterion] = Field(default_factory=list)
     difficulty_band: dict = Field(default_factory=lambda: {"min": 0.4, "max": 0.7})
@@ -260,6 +262,7 @@ class InteractionEvent(_Forbidden):
     event_id: str = Field(default_factory=new_id)
     learner_pseudo_id: str
     session_id: str = ""
+    project_id: str | None = None
     ts: datetime = Field(default_factory=utcnow)
     actor: ActorRef = Field(default_factory=lambda: ActorRef(kind="companion"))
     action_ref: str | None = None

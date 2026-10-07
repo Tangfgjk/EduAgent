@@ -15,6 +15,8 @@ from app.learning.assets import load_catalog
 from app.learning.qualitative import RubricReview, score_review
 from app.learning.service import ConsentDenied, EvidenceConflict, LearningService
 from app.learning.schema import LearningEvidence
+from app.learning.project_scope import ProjectScopeError, require_project
+from app.learning.workspace import WorkspaceService
 from app.core.schema import utcnow
 
 
@@ -39,6 +41,8 @@ class ArtifactIn(BaseModel):
     assistance_mode: Literal["none", "hint", "answer"] = "none"
     hint_level: int = Field(default=0, ge=0, le=3)
     answer_exposed: bool = False
+    project_id: str | None = None
+    task_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 def install_qualitative_routes(app: FastAPI, store, settings) -> None:
@@ -63,6 +67,19 @@ def install_qualitative_routes(app: FastAPI, store, settings) -> None:
             raise HTTPException(400, "A configured explanation assessment is required")
         with store.lock:
             service._authorize(learner_id)
+            try:
+                require_project(store, learner_id, body.project_id, writable=True)
+            except ProjectScopeError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            if body.task_id:
+                if not body.project_id:
+                    raise HTTPException(400, "Project task artifacts require project_id")
+                try:
+                    task = WorkspaceService(store, catalog).task_for_project(learner_id, body.project_id, body.task_id)
+                except ValueError as exc:
+                    raise HTTPException(404, str(exc)) from exc
+                if task.status in {"done", "skipped"}:
+                    raise HTTPException(409, "This project task is already closed")
             fingerprint = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
             key = "qualitative-artifact:" + body.attempt_id
             old = store.conn.execute("SELECT content_hash,payload FROM learning_api_receipts WHERE learner_id=? AND attempt_id=?",(learner_id,key)).fetchone()
@@ -72,6 +89,7 @@ def install_qualitative_routes(app: FastAPI, store, settings) -> None:
             identity = hashlib.sha256(f"{learner_id}:{key}".encode()).hexdigest()
             consent = service.consent(learner_id)
             evidence = LearningEvidence(evidence_id="qualitative-artifact:"+identity,learner_id=learner_id,
+                project_id=body.project_id,project_task_id=body.task_id,
                 session_id="qualitative-workspace",kc_refs=[ref.asset_id for ref in asset.kc_refs],attempt_id=key,
                 artifact_ref="artifact:"+identity,verdict_ref="pending-review:"+identity,verdict_status="unverifiable",
                 verifier_version="teacher-review-pending-v1",confidence=0,occurred_at=utcnow(),consent_scope=consent["scopes"],

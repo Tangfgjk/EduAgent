@@ -39,7 +39,10 @@ def test_accept_creates_draft_and_only_signing_activates():
 def test_modification_is_new_draft_and_previous_active_is_superseded_only_on_signature():
     store, service, contract = setup()
     first = service.propose("learner", contract.goal_contract_id, {"days": 3, "kc_refs": ["a"]}, NOW)
-    service.accept("learner", first.version_id, NOW)
+    proposed_first_id = first.version_id
+    first = service.accept("learner", first.version_id, NOW)
+    assert first.version_id != proposed_first_id
+    assert service.get("learner", proposed_first_id).status == "superseded"
     first = service.sign("learner", first.version_id, NOW)
     second = service.propose("learner", contract.goal_contract_id, {"days": 5, "kc_refs": ["a"]}, NOW)
     second = service.accept("learner", second.version_id, NOW)
@@ -53,6 +56,23 @@ def test_modification_is_new_draft_and_previous_active_is_superseded_only_on_sig
     assert service.get("learner", first.version_id).status == "superseded"
     logs = [json.loads(row[0]) for row in store.conn.execute("SELECT payload FROM learning_audit")]
     assert {"plan_modified", "plan_signed", "plan_superseded"} <= {log["action"] for log in logs}
+
+
+def test_confirmed_plan_is_immutable_and_revision_keeps_it_active_until_resigned():
+    store, service, contract = setup()
+    draft = service.accept("learner", service.propose(
+        "learner", contract.goal_contract_id, {"cadence": "每天两题"}, NOW
+    ).version_id, NOW)
+    confirmed = service.sign("learner", draft.version_id, NOW)
+    revision = service.modify("learner", confirmed.version_id,
+                              {"cadence": "每天一题，周末复习"}, "调整学习负荷", NOW)
+    assert revision.status == "draft"
+    assert revision.prior_version_id == confirmed.version_id
+    assert service.get("learner", confirmed.version_id).status == "confirmed"
+    assert service.active("learner", contract.goal_contract_id).version_id == confirmed.version_id
+    signed = service.sign("learner", revision.version_id, NOW)
+    assert signed.status == "confirmed"
+    assert service.get("learner", confirmed.version_id).status == "superseded"
 
 
 def test_rejection_cannot_activate_and_cross_learner_access_is_denied():

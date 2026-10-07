@@ -65,6 +65,8 @@ class TutorSession:
     contract: object | None = None
     session_type: str = "explore"          # explore | checkpoint
     bank: list[QuestionItem] = field(default_factory=list)
+    project_id: str | None = None
+    task_id: str | None = None
 
     def __post_init__(self) -> None:
         self.bank = self.bank or load_bank()
@@ -119,6 +121,7 @@ class TutorSession:
         return {
             "schema_version": "tutor-runtime-v1", "session_id": self.session_id,
             "learner_id": self.learner_id, "session_type": self.session_type,
+            "project_id": self.project_id, "task_id": self.task_id,
             "contract": self.contract.model_dump(mode="json") if self.contract else None,
             "bank": [q.model_dump(mode="json") for q in self.bank],
             "snapshot": self.snapshot.model_dump(mode="json"),
@@ -147,6 +150,8 @@ class TutorSession:
                      "wrong_streak", "correct_streak", "frustration_streak", "turn_count", "last_action_id"):
             setattr(session, name, state[name])
         session.contract = GoalContract.model_validate(state["contract"]) if state["contract"] else None
+        session.project_id = state.get("project_id")
+        session.task_id = state.get("task_id")
         session.bank = [QuestionItem.model_validate(q) for q in state["bank"]]
         items = {q.item_id: q for q in session.bank}
         session.current_item = items.get(state["current_item"])
@@ -247,6 +252,7 @@ class TutorSession:
                verdict_ref: str | None = None) -> InteractionEvent:
         return InteractionEvent(
             learner_pseudo_id=self.learner_id, session_id=self.session_id,
+            project_id=self.project_id,
             actor=ActorRef(kind=actor.value), action_ref=action_ref,
             observation=Observation(kind=kind, text=text, payload=payload or {}),
             verdict_ref=verdict_ref,
@@ -382,7 +388,8 @@ class TutorSession:
                            answer_exposed=self.current_item.item_id in self.exposed_answers,
                            assessment_kind="post" if self.session_type == "checkpoint"
                            else self.assessment_kinds.get(self.current_item.item_id, "practice"),
-                           action_ref=self.last_action_id, occurred_at=self._now())
+                           action_ref=self.last_action_id, occurred_at=self._now(),
+                           project_id=self.project_id)
             refresh_projection(self.store, self.snapshot)
             if correct:
                 self.wrong_streak = 0

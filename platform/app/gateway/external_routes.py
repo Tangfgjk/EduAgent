@@ -21,6 +21,7 @@ from app.learning.retrieval import (
     LocalOCR, LocalRetrieval, ParseError, RetrievalContext,
 )
 from app.learning.service import ConsentDenied, LearningService
+from app.learning.project_scope import ProjectScopeError, require_project
 from app.learning.strategies import DEFAULT_STRATEGIES
 from app.llm.client import BaseLLM, FakeLLM, OpenAICompatClient
 from app.llm.registry import ProviderConfig, ProviderRegistry
@@ -50,6 +51,7 @@ class RoleReviewIn(BaseModel):
     max_tokens: int = Field(default=2000, ge=1, le=4000)
     deadline_ms: int = Field(default=3000, ge=1, le=3000)
     provider_id: Literal["offline", "configured"] = "offline"
+    project_id: str | None = None
 
     @model_validator(mode="after")
     def unique_evidence_ids(self):
@@ -115,10 +117,17 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
 
     def selected_evidence(body):
         learner_id, evidences = authorized(body.learner_id)
+        if body.project_id is not None:
+            try:
+                require_project(store, learner_id, body.project_id)
+            except ProjectScopeError as exc:
+                raise HTTPException(404, str(exc)) from exc
         lookup = {evidence.evidence_id: evidence for evidence in evidences}
         if any(ref not in lookup for ref in body.evidence_ids):
             raise HTTPException(403, "Evidence is unavailable or unauthorized")
         selected = [lookup[ref] for ref in body.evidence_ids]
+        if body.project_id is not None and any(item.project_id != body.project_id for item in selected):
+            raise HTTPException(403, "Evidence is outside the selected project")
         replaced = {evidence.supersedes for evidence in evidences if evidence.supersedes}
         if any(evidence.evidence_id in replaced for evidence in selected):
             raise HTTPException(409, "Use the effective evidence revision")
@@ -260,7 +269,8 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
         for action in report.actions:
             action.policy_provenance.update(provenance, source_refs=source_refs,
                 source_usage="contextual_reference_only", execution_mode=execution_mode)
-        response = dict(report_id=report_id, report=report.model_dump(mode="json"),
+        response = dict(report_id=report_id, project_id=body.project_id,
+                        report=report.model_dump(mode="json"),
                         provenance=provenance, source_refs=source_refs, source_usage="contextual_reference_only",
                         governor_budget_scope="learner_day", budget_day=day,
                         execution_mode=execution_mode, external_model_smoke="not_executed")

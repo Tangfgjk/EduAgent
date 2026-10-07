@@ -12,6 +12,7 @@ from app.learning.memory import MemoryService
 from app.learning.recovery import RecoveryJobs
 from app.learning.service import ConsentDenied, LearningService
 from app.learning.assets import load_catalog
+from app.learning.project_scope import ProjectScopeError, require_project
 
 
 class AppealIn(BaseModel):
@@ -47,15 +48,23 @@ def install_extended_routes(app: FastAPI, store, settings) -> None:
             raise HTTPException(403, str(exc)) from exc
 
     @app.post("/api/learning/memory/{learner_id}/rebuild")
-    def rebuild_memory(learner_id: str, as_of: AwareDatetime | None = None):
-        authorize(learner_id)
-        return memory.rebuild(learner_id, as_of or utcnow())
-
-    @app.get("/api/learning/memory/{learner_id}/{view_id}")
-    def get_memory(learner_id: str, view_id: str):
+    def rebuild_memory(learner_id: str, as_of: AwareDatetime | None = None,
+                       project_id: str | None = None):
         authorize(learner_id)
         try:
-            return memory.get(learner_id, view_id)
+            require_project(store, learner_id, project_id)
+        except ProjectScopeError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return memory.rebuild(learner_id, as_of or utcnow(), project_id)
+
+    @app.get("/api/learning/memory/{learner_id}/{view_id}")
+    def get_memory(learner_id: str, view_id: str, project_id: str | None = None):
+        authorize(learner_id)
+        try:
+            require_project(store, learner_id, project_id)
+            return memory.get(learner_id, view_id, project_id)
+        except ProjectScopeError as exc:
+            raise HTTPException(404, str(exc)) from exc
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
         except ValueError as exc:
@@ -72,12 +81,17 @@ def install_extended_routes(app: FastAPI, store, settings) -> None:
         return dict(jobs=jobs.reconcile(learner_id))
 
     @app.get("/api/learning/metrics/development/{learner_id}")
-    def development_metrics(learner_id: str, split_at: AwareDatetime, as_of: AwareDatetime | None = None):
+    def development_metrics(learner_id: str, split_at: AwareDatetime,
+                            as_of: AwareDatetime | None = None, project_id: str | None = None):
         authorize(learner_id)
+        try:
+            require_project(store, learner_id, project_id)
+        except ProjectScopeError as exc:
+            raise HTTPException(404, str(exc)) from exc
         as_of = as_of or utcnow()
         if split_at >= as_of:
             raise HTTPException(400, "split_at must precede as_of")
-        evidence, events = memory.sources(learner_id, as_of)
+        evidence, events = memory.sources(learner_id, as_of, project_id)
         return dict(cognitive=cognitive_change(evidence, learner_id=learner_id, as_of=as_of, split_at=split_at),
                     autonomy=autonomy_behaviors(evidence, events, learner_id=learner_id, as_of=as_of),
                     source_refs=dict(evidence=[e.evidence_id for e in evidence], events=[e["event_id"] for e in events]),

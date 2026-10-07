@@ -99,7 +99,8 @@ class PlanService:
         with self._transaction(as_of):
             contract = self._contract(learner_id, contract_id)
             baseline = self._active(contract_id)
-            plan = PlanVersion(goal_contract_id=contract_id, status="proposed", content=deepcopy(content),
+            plan = PlanVersion(goal_contract_id=contract_id, project_id=contract.project_id or "default",
+                status="proposed", content=deepcopy(content),
                 prior_version_id=baseline.version_id if baseline else None,
                 diff=content_diff(baseline.content if baseline else {}, content), change_reason="路径推荐提案")
             self._save(plan)
@@ -112,7 +113,8 @@ class PlanService:
         with self._transaction(as_of):
             contract = self._contract(learner_id, contract_id)
             baseline = self._active(contract_id)
-            plan = PlanVersion(goal_contract_id=contract_id, status="draft", content=deepcopy(content),
+            plan = PlanVersion(goal_contract_id=contract_id, project_id=contract.project_id or "default",
+                status="draft", content=deepcopy(content),
                 prior_version_id=baseline.version_id if baseline else None,
                 diff=content_diff(baseline.content if baseline else {}, content), change_reason="学习计划草案")
             self._save(plan)
@@ -127,8 +129,18 @@ class PlanService:
                 return plan
             if plan.status != "proposed":
                 raise PlanConflict("Only a proposed plan can be accepted as a draft")
-            draft = plan.model_copy(update={"status": "draft"})
+            # A system proposal is evidence of what was suggested.  Do not turn
+            # it into a mutable learner draft in place: preserve it in history
+            # and create a distinct learner-owned draft instead.
+            draft = PlanVersion(goal_contract_id=plan.goal_contract_id, project_id=plan.project_id,
+                                status="draft", change_reason="学习者采纳系统建议后形成草案",
+                                content=deepcopy(plan.content), prior_version_id=plan.prior_version_id,
+                                diff=deepcopy(plan.diff))
+            superseded = plan.model_copy(update={"status": "superseded"})
+            self._save(superseded)
             self._save(draft)
+            self._register(self._contract(learner_id, plan.goal_contract_id), draft)
+            self._audit(learner_id, superseded, "plan_superseded", as_of, "Proposal accepted into learner draft")
             self._audit(learner_id, draft, "plan_accepted", as_of)
             return draft
 
@@ -136,18 +148,23 @@ class PlanService:
                as_of: datetime) -> PlanVersion:
         with self._transaction(as_of):
             plan = self._get(learner_id, version_id)
-            if plan.status != "draft":
-                raise PlanConflict("Only a draft can be revised")
-            baseline = self._get(learner_id, plan.prior_version_id) if plan.prior_version_id else None
+            if plan.status not in ("draft", "confirmed"):
+                raise PlanConflict("Only a draft or confirmed plan can be revised")
+            # Confirmed versions are immutable.  Revising one starts a new
+            # unsigned draft while the confirmed baseline remains active.
+            baseline = (plan if plan.status == "confirmed" else
+                        self._get(learner_id, plan.prior_version_id) if plan.prior_version_id else None)
             revision = PlanVersion(goal_contract_id=plan.goal_contract_id, project_id=plan.project_id,
                 status="draft", change_reason=reason, content=deepcopy(content),
-                prior_version_id=plan.prior_version_id,
+                prior_version_id=baseline.version_id if baseline else None,
                 diff=content_diff(baseline.content if baseline else {}, content))
-            superseded = plan.model_copy(update={"status": "superseded"})
-            self._save(superseded)
+            if plan.status == "draft":
+                superseded = plan.model_copy(update={"status": "superseded"})
+                self._save(superseded)
+                self._audit(learner_id, superseded, "plan_superseded", as_of,
+                            "Draft replaced by learner revision")
             self._save(revision)
             self._register(self._contract(learner_id, plan.goal_contract_id), revision)
-            self._audit(learner_id, superseded, "plan_superseded", as_of, "Draft replaced by learner revision")
             self._audit(learner_id, revision, "plan_modified", as_of, reason)
             return revision
 
@@ -158,6 +175,8 @@ class PlanService:
                 return plan
             if plan.status not in ("proposed", "draft"):
                 raise PlanConflict("Only a proposal or draft can be rejected")
+            if not reason.strip():
+                raise PlanConflict("A learner rejection reason is required")
             rejected = plan.model_copy(update={"status": "rejected", "change_reason": reason})
             self._save(rejected)
             self._audit(learner_id, rejected, "plan_rejected", as_of, reason)

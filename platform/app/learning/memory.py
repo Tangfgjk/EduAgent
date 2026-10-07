@@ -42,16 +42,20 @@ class MemoryService:
             store.conn.commit()
 
     @source_snapshot
-    def sources(self, learner_id: str, as_of: datetime):
+    def sources(self, learner_id: str, as_of: datetime, project_id: str | None = None):
         require_aware(as_of)
         with self.store.lock:
-            evidence = [e for e in self.learning.evidences(learner_id) if e.occurred_at <= as_of]
+            evidence = [e for e in self.learning.evidences(learner_id)
+                        if e.occurred_at <= as_of and
+                        (project_id is None or e.project_id == project_id)]
             replaced = {e.supersedes for e in evidence if e.supersedes}
             evidence = [e for e in evidence if e.evidence_id not in replaced]
             events = []
             for row in self.store.conn.execute("SELECT payload FROM events WHERE learner_pseudo_id=? ORDER BY event_seq", (learner_id,)):
                 event = json.loads(row[0])
-                if datetime.fromisoformat(event["ts"]) > as_of or event.get("consent_scope") != "teaching":
+                if (datetime.fromisoformat(event["ts"]) > as_of
+                        or event.get("consent_scope") != "teaching"
+                        or (project_id is not None and event.get("project_id") != project_id)):
                     continue
                 consent = self.store.conn.execute("SELECT payload FROM consent_records WHERE learner_id=? AND version=?", (learner_id,event.get("consent_version"))).fetchone()
                 collected = json.loads(consent[0]) if consent else {}
@@ -60,9 +64,9 @@ class MemoryService:
             return evidence, events
 
     @source_snapshot
-    def rebuild(self, learner_id: str, as_of: datetime) -> dict:
+    def rebuild(self, learner_id: str, as_of: datetime, project_id: str | None = None) -> dict:
         with self.store.lock:
-            evidence, events = self.sources(learner_id, as_of)
+            evidence, events = self.sources(learner_id, as_of, project_id)
             l2 = []
             sessions = sorted({e.session_id for e in evidence} | {e["session_id"] for e in events})
             for session_id in sessions:
@@ -79,12 +83,19 @@ class MemoryService:
                 evidence_refs=[e.evidence_id for e in evidence], event_refs=[e["event_id"] for e in events],
                 state_refs=[])
             if evidence:
-                rebuilt = self.learning.rebuild(learner_id, as_of=as_of)
-                l3["state_refs"] = [dict(kc_id=s["kc_id"],state_version=s["state_version"],consumer="mastery",replayed=True)
-                                    for s in rebuilt["mastery"]]
+                if project_id is None:
+                    rebuilt = self.learning.rebuild(learner_id, as_of=as_of)
+                    mastery = rebuilt["mastery"]
+                else:
+                    from app.learning.replay import replay
+                    mastery = [state.model_dump(mode="json") for state in
+                               replay(evidence, learner_id, as_of).mastery.values()]
+                l3["state_refs"] = [dict(kc_id=s["kc_id"],state_version=s["state_version"],
+                                         consumer="mastery",replayed=True) for s in mastery]
             else:
                 l3["state_refs"] = []
-            body = dict(learner_id=learner_id, as_of=as_of.isoformat(), version=self.version,
+            body = dict(learner_id=learner_id, project_id=project_id,
+                as_of=as_of.isoformat(), version=self.version,
                 purpose="teaching", l1=dict(evidence_refs=[e.evidence_id for e in evidence],
                     event_refs=[e["event_id"] for e in events]), l2=l2, l3=l3)
             fingerprint = hashlib.sha256(json.dumps(body,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
@@ -97,14 +108,17 @@ class MemoryService:
             return result
 
     @source_snapshot
-    def get(self, learner_id: str, view_id: str) -> dict:
+    def get(self, learner_id: str, view_id: str, project_id: str | None = None) -> dict:
         with self.store.lock:
             self.learning._authorize(learner_id)
             row = self.store.conn.execute("SELECT payload FROM memory_views WHERE learner_id=? AND view_id=?",(learner_id,view_id)).fetchone()
             if row is None:
                 raise KeyError("Unknown memory view")
             result = json.loads(row[0])
-            evidence, events = self.sources(learner_id,datetime.fromisoformat(result["as_of"]))
+            if project_id is not None and result.get("project_id") != project_id:
+                raise KeyError("Memory view is outside the selected project")
+            evidence, events = self.sources(learner_id,datetime.fromisoformat(result["as_of"]),
+                                            result.get("project_id"))
             if set(result["l1"]["evidence_refs"]) != {e.evidence_id for e in evidence} or set(result["l1"]["event_refs"]) != {e["event_id"] for e in events}:
                 raise ValueError("Memory source revisions changed; rebuild required")
             return result

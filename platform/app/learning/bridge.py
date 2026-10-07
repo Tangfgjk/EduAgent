@@ -6,12 +6,13 @@ from app.learning.service import LearningService
 
 def record_attempt(store, learner_id, session_id, item, verdict, attempt_id, *,
                    hint_level=0, answer_exposed=False, assessment_kind="practice",
-                   action_ref=None, policy_version="policy_v1", occurred_at=None):
+                   action_ref=None, policy_version="policy_v1", occurred_at=None, project_id=None):
     service = LearningService(store)
     service._authorize(learner_id, "teaching")
     consent = service.consent(learner_id)
     evidence = LearningEvidence(
         evidence_id=f"evidence:{learner_id}:{attempt_id}", learner_id=learner_id,
+        project_id=project_id,
         session_id=session_id, kc_refs=[item.kc_id], attempt_id=attempt_id,
         artifact_ref=verdict.artifact_id, verdict_ref=verdict.artifact_id,
         verdict_status=verdict.status, verifier_version=verdict.verifier_id,

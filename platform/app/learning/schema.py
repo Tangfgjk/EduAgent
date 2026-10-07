@@ -15,6 +15,11 @@ class LearningEvidence(Contract):
     schema_version: Literal["1.0"] = "1.0"
     evidence_id: str = Field(min_length=1)
     learner_id: str = Field(min_length=1)
+    project_id: str | None = None
+    # When an answer was launched from a project task, retain that ownership on
+    # the immutable evidence fact.  Free exploration intentionally leaves it
+    # empty and therefore cannot complete a planned task.
+    project_task_id: str | None = Field(default=None, min_length=1, max_length=100)
     session_id: str
     kc_refs: list[KCId] = Field(min_length=1)
     attempt_id: str = Field(min_length=1)

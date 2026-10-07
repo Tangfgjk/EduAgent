@@ -107,8 +107,21 @@ class SessionRuntime:
 
     def public_state(self, sid, learner_id):
         session = self.load(sid, learner_id)
+        with self.store.lock:
+            rows = self.store.conn.execute(
+                "SELECT payload FROM events WHERE session_id=? AND learner_pseudo_id=? "
+                "ORDER BY event_seq", (sid, learner_id)
+            ).fetchall()
+        messages = []
+        for row in rows:
+            event = json.loads(row[0])
+            value = event.get("observation", {}).get("text")
+            if value and event.get("observation", {}).get("kind") in {"utterance", "answer", "help_seeking"}:
+                messages.append(dict(who="我" if event.get("actor", {}).get("kind") == "student"
+                                     else "桂子问津", text=value))
         return dict(session_id=sid, learner_id=learner_id, session_type=session.session_type,
-                    ui=session._ui_state(None), turn_count=session.turn_count)
+                    project_id=session.project_id, task_id=session.task_id, ui=session._ui_state(None),
+                    turn_count=session.turn_count, messages=messages)
 
     def _receipt(self, sid, learner_id, key, content_hash):
         with self.store.lock:
@@ -159,11 +172,12 @@ class SessionRuntime:
                 conn.rollback()
                 raise
 
-    def create(self, learner_id, contract=None, session_type="explore", *, fault: Callable | None = None):
+    def create(self, learner_id, contract=None, session_type="explore", *,
+               project_id=None, task_id=None, fault: Callable | None = None):
         replica, baseline, token = self._capture(learner_id)
         try:
             session = TutorSession(replica, self.llm, learner_id, contract=contract, session_type=session_type,
-                                   bank=self.bank_factory())
+                                   bank=self.bank_factory(), project_id=project_id, task_id=task_id)
             if self.policy_factory:
                 session.policy = self.policy_factory()
             if self.clock:

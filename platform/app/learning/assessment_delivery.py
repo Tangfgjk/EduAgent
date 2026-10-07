@@ -26,9 +26,12 @@ class AssessmentDelivery:
                 UNIQUE(learner_id,issuance_id))""")
             store.conn.commit()
 
-    def issue(self, learner_id, asset, issuance_id, requested_at, now, consent_version):
-        fingerprint = hashlib.sha256(json.dumps([asset.ref.key, assessment_hash(asset), requested_at.isoformat() if requested_at else None,
-            consent_version], separators=(",", ":")).encode()).hexdigest()
+    def issue(self, learner_id, asset, issuance_id, requested_at, now, consent_version, project_id=None):
+        identity = [asset.ref.key, assessment_hash(asset),
+                    requested_at.isoformat() if requested_at else None, consent_version]
+        if project_id is not None:
+            identity.append(project_id)
+        fingerprint = hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
         with self._write(learner_id, consent_version):
             row = self.store.conn.execute("SELECT content_hash,payload FROM assessment_deliveries WHERE learner_id=? AND issuance_id=?",
                 (learner_id, issuance_id)).fetchone()
@@ -44,7 +47,8 @@ class AssessmentDelivery:
                 if e.assessment_id == asset.ref.asset_id]
             payload = dict(delivery_ref="delivery:" + secrets.token_hex(24), assessment_ref=asset.ref.key,
                 assessment_sha256=assessment_hash(asset),
-                learner_id=learner_id, issued_at=now.isoformat(), expires_at=(now + timedelta(hours=24)).isoformat(),
+                learner_id=learner_id, project_id=project_id, issued_at=now.isoformat(),
+                expires_at=(now + timedelta(hours=24)).isoformat(),
                 consent_version=consent_version, first_exposure=not prior and not prior_evidence,
                 attempt_number=max(len(prior), len(prior_evidence)) + 1,
                 previous_delivery_refs=[r[0] for r in prior], previous_evidence_refs=prior_evidence,
@@ -66,9 +70,11 @@ class AssessmentDelivery:
             raise EvidenceConflict("Delivery outside validity window")
         return payload
 
-    def hint(self, learner_id, delivery_ref, asset, at, consent_version, level):
+    def hint(self, learner_id, delivery_ref, asset, at, consent_version, level, project_id=None):
         with self._write(learner_id, consent_version):
             payload = self.get(learner_id, delivery_ref, asset, at, consent_version)
+            if payload.get("project_id") != project_id:
+                raise EvidenceConflict("Delivery belongs to another project")
             if payload["submitted_attempt"]:
                 raise EvidenceConflict("Submitted delivery cannot receive new help")
             payload["hint_level"] = max(payload["hint_level"], level)
@@ -84,6 +90,8 @@ class AssessmentDelivery:
             return dict(independence_verified=False, delivery_history_verified=False,
                 history_scope="legacy_client_report_unverified"), body.hint_level, body.assistance_mode, body.answer_exposed
         payload = self.get(learner_id, body.delivery_ref, asset, body.occurred_at, consent_version)
+        if payload.get("project_id") != getattr(body, "project_id", None):
+            raise EvidenceConflict("Delivery belongs to another project")
         if payload["submitted_attempt"] not in {None, body.attempt_id}:
             raise EvidenceConflict("Delivery already consumed by a different attempt")
         hint = max(payload["hint_level"], body.hint_level)

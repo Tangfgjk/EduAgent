@@ -161,11 +161,18 @@ class Store:
         return GoalContract.model_validate_json(row["payload"]) if row else None
 
     @_synchronized
-    def latest_contract(self, learner_id: str) -> GoalContract | None:
-        row = self.conn.execute(
-            "SELECT payload FROM goal_contracts WHERE learner_id=? ORDER BY rowid DESC LIMIT 1",
-            (learner_id,),
-        ).fetchone()
+    def latest_contract(self, learner_id: str, project_id: str | None = None) -> GoalContract | None:
+        if project_id is None:
+            row = self.conn.execute(
+                "SELECT payload FROM goal_contracts WHERE learner_id=? ORDER BY rowid DESC LIMIT 1",
+                (learner_id,),
+            ).fetchone()
+        else:
+            row = self.conn.execute(
+                "SELECT payload FROM goal_contracts WHERE learner_id=? "
+                "AND json_extract(payload,'$.project_id')=? ORDER BY rowid DESC LIMIT 1",
+                (learner_id, project_id),
+            ).fetchone()
         return GoalContract.model_validate_json(row["payload"]) if row else None
 
     @_synchronized

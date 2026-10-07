@@ -91,7 +91,8 @@ def test_projects_sharing_qualitative_and_local_auth_have_real_controls():
     document = Elements()
     content = content_with_scripts()
     document.feed(PAGE.read_text(encoding="utf-8") + (PAGE.parent / "teacher.html").read_text(encoding="utf-8"))
-    for control in ("project-title", "add-project-task", "project-evidence-refs", "new-project", "save-project",
+    for control in ("sidebar-new-project", "sidebar-project-title", "sidebar-project-save", "project-title", "add-project-task", "project-evidence-refs", "save-project",
+                    "delete-project", "delete-project-dialog", "delete-project-confirm-title", "delete-project-confirm",
                     "share-audience", "save-sharing", "staff-token", "load-dashboard",
                     "qualitative-rubric", "rubric-dimensions", "read-artifact", "qualitative-review",
                     "session-recovery-id", "restore-session", "logout"):
@@ -101,8 +102,21 @@ def test_projects_sharing_qualitative_and_local_auth_have_real_controls():
         assert route in content
     assert document.by_id["staff-token"][1]["type"] == "password"
     assert "expected_revision:" in content
+    assert "'/api/learning/projects/'+learner+'/'+encodeURIComponent(project.record_id)" in content
     assert "response.status===401" in content and "location.assign('/login')" in content
     assert "localStorage" not in content and "sessionStorage" not in content
+
+
+def test_project_arrangement_save_cannot_create_a_new_project():
+    content = content_with_scripts()
+    document = Elements()
+    document.feed(PAGE.read_text(encoding="utf-8"))
+    save = content.split("$('save-project').onclick", 1)[1].split("async function sharingRecord", 1)[0]
+    assert "project-list" not in document.by_id
+    assert "projectCreateId" not in content
+    assert "record_id:projectEdit.record_id" in save
+    assert "保存项目安排不会创建项目" in save
+    assert "openCurrentProjectEditor" in content
 
 
 def test_revoke_clears_new_private_extension_data_and_inputs():

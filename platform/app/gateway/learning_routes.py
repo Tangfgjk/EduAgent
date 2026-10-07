@@ -16,10 +16,13 @@ from app.core.schema import QuestionItem, utcnow
 from app.learning.assets import VersionedRef, load_catalog
 from app.learning.diagnosis import DiagnosticObservation, next_task
 from app.learning.metrics import observation_from_evidence, performance_gain
+from app.learning.project_scope import ProjectScopeError, project_evidence, require_project
+from app.learning.replay import replay
 from app.learning.review_port import review_task
 from app.learning.schema import LearningEvidence
 from app.learning.service import ConsentDenied, EvidenceConflict, LearningService
 from app.learning.verifier import verify_item
+from app.learning.workspace import WorkspaceService
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -37,6 +40,7 @@ class ConsentIn(RequestModel):
 class DiagnosisIn(RequestModel):
     target_kc_id: str = "MATH.G7.EQ.SOLVE"
     max_tasks: int = 8
+    project_id: str | None = None
 
 
 class AssessmentIn(RequestModel):
@@ -50,6 +54,8 @@ class AssessmentIn(RequestModel):
     answer_exposed: bool = False
     self_report: Literal["answered", "skipped", "dont_know", "guessed"] = "answered"
     delivery_ref: str | None = Field(default=None, min_length=1, max_length=100)
+    project_id: str | None = None
+    task_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class DeliveryIn(RequestModel):
@@ -57,6 +63,7 @@ class DeliveryIn(RequestModel):
     assessment_version: str = "1.0.0"
     issuance_id: str = Field(min_length=1, max_length=200)
     occurred_at: AwareDatetime | None = None
+    project_id: str | None = None
 
 
 class HintIn(RequestModel):
@@ -65,10 +72,19 @@ class HintIn(RequestModel):
     assessment_version: str = "1.0.0"
     level: int = Field(ge=1, le=2)
     occurred_at: AwareDatetime | None = None
+    project_id: str | None = None
 
 
 class ReviewIn(AssessmentIn):
-    task_id: str = Field(min_length=1)
+    task_id: str = Field(min_length=1, max_length=100)
+
+
+class ReviewSyncIn(RequestModel):
+    project_id: str
+
+
+class PlanAcceptIn(RequestModel):
+    project_id: str
 
 
 class CorrectionIn(RequestModel):
@@ -84,6 +100,7 @@ class CorrectionIn(RequestModel):
 def install_learning_routes(app: FastAPI, store, settings):
     service = LearningService(store)
     catalog = load_catalog(settings)
+    workspace = WorkspaceService(store, catalog)
     from app.learning.assessment_delivery import AssessmentDelivery
     delivery = AssessmentDelivery(store)
     with store.lock:
@@ -100,6 +117,15 @@ def install_learning_routes(app: FastAPI, store, settings):
             return service.evidences(learner_id)
         except ConsentDenied as exc:
             raise HTTPException(403, str(exc)) from exc
+
+    def scoped(learner_id, project_id, *, writable=False):
+        evidences = authorized(learner_id)
+        if project_id is not None:
+            try:
+                require_project(store, learner_id, project_id, writable=writable)
+            except ProjectScopeError as exc:
+                raise HTTPException(404, str(exc)) from exc
+        return project_evidence(evidences, project_id)
 
     def effective(evidences):
         replaced = {item.supersedes for item in evidences if item.supersedes}
@@ -130,6 +156,15 @@ def install_learning_routes(app: FastAPI, store, settings):
 
     def submit(learner_id, body, *, review=False):
         authorized(learner_id)
+        scoped(learner_id, body.project_id, writable=True)
+        task = None
+        if body.task_id and body.project_id:
+            try:
+                task = workspace.task_for_project(learner_id, body.project_id, body.task_id)
+            except ValueError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            if task.status in {"done", "skipped"}:
+                raise HTTPException(409, "This project task is already closed")
         if not settings.allow_simulated_time and body.occurred_at > utcnow() + timedelta(minutes=5):
             raise HTTPException(400, "Future learning events require explicit simulated-time mode")
         fingerprint = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
@@ -149,7 +184,10 @@ def install_learning_routes(app: FastAPI, store, settings):
                 raise HTTPException(400, "This assessment kind requires its configured verifier adapter")
             if review:
                 try:
-                    tasks = [review_task(state, body.occurred_at) for state in service.retentions(learner_id)]
+                    retentions = (replay(scoped(learner_id, body.project_id), learner_id,
+                                         body.occurred_at).retention.values()
+                                  if body.project_id else service.retentions(learner_id))
+                    tasks = [review_task(state, body.occurred_at) for state in retentions]
                 except ValueError as exc:
                     raise HTTPException(400, str(exc)) from exc
                 task = next((task for task in tasks if task and task.task_id == body.task_id), None)
@@ -172,7 +210,8 @@ def install_learning_routes(app: FastAPI, store, settings):
                 verdict = verify_item(body.answer, item)
             digest = hashlib.sha256(f"{learner_id}:{key}".encode()).hexdigest()
             evidence = LearningEvidence(
-                evidence_id="assessment:" + digest, learner_id=learner_id, session_id="assessment-workspace",
+                evidence_id="assessment:" + digest, learner_id=learner_id,
+                project_id=body.project_id, project_task_id=body.task_id if task else None, session_id="assessment-workspace",
                 kc_refs=[ref.asset_id for ref in asset.kc_refs], attempt_id=key,
                 artifact_ref="answer-sha256:" + hashlib.sha256(body.answer.encode()).hexdigest(),
                 verdict_ref="verdict:" + digest, verdict_status=verdict.status,
@@ -202,11 +241,37 @@ def install_learning_routes(app: FastAPI, store, settings):
                 raise HTTPException(403, str(exc)) from exc
             except EvidenceConflict as exc:
                 raise HTTPException(409, str(exc)) from exc
-            return result_for(transition)
+            completed = workspace.complete_tasks_for_evidence(
+                learner_id, evidence, review_task_id=body.task_id if review else None,
+                project_task_id=body.task_id if task else None,
+            )
+            response = result_for(transition) | {"completed_task_ids": completed}
+            # The learning fact and its delivery receipt are committed together
+            # by LearningService.  Task status follows that immutable fact, so
+            # replace the response payload after the task update to preserve
+            # idempotent retries without pretending the task update happened
+            # before the evidence existed.
+            with store.lock:
+                store.conn.execute("UPDATE learning_api_receipts SET payload=? WHERE learner_id=? AND attempt_id=?",
+                                   (json.dumps(response), learner_id, key))
+                store.conn.commit()
+            return response
+
+    @app.post("/api/learning/projects/{learner_id}/tasks/{task_id}/complete")
+    def complete_manual_project_task(learner_id: str, task_id: str, project_id: str):
+        local(learner_id)
+        try:
+            scoped(learner_id, project_id, writable=True)
+            completed = workspace.complete_manual_task(learner_id, project_id, task_id)
+        except (ValueError, EvidenceConflict) as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return {"completed_task_ids": completed}
 
     @app.get("/learning")
     def learning_page():
-        return FileResponse(ROOT / "web" / "learning.html")
+        # The workbench evolves locally and its HTML wires versioned scripts together.
+        # Avoid retaining an old shell that points at a stale interaction handler.
+        return FileResponse(ROOT / "web" / "learning.html", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/learning/config")
     def local_config():
@@ -246,18 +311,23 @@ def install_learning_routes(app: FastAPI, store, settings):
         return service.set_consent(learner_id, [], "withdrawal:" + uuid4().hex, "local-learner-withdrawal", utcnow())
 
     @app.get("/api/learning/state/{learner_id}")
-    def state(learner_id: str):
-        authorized(learner_id)
+    def state(learner_id: str, project_id: str | None = None):
+        evidences = scoped(learner_id, project_id)
+        if project_id is not None:
+            projection = replay(evidences, learner_id, utcnow())
+            return dict(mastery=[item.model_dump(mode="json") for item in projection.mastery.values()],
+                        retention=[item.model_dump(mode="json") for item in projection.retention.values()],
+                        transitions=[], project_id=project_id, projection_scope="project_effective_evidence")
         return dict(mastery=[item.model_dump(mode="json") for item in service.masteries(learner_id)],
                     retention=[item.model_dump(mode="json") for item in service.retentions(learner_id)], transitions=service.transitions(learner_id))
 
     @app.get("/api/learning/plans/{learner_id}/workspace")
-    def plan_workspace(learner_id: str):
-        authorized(learner_id)
+    def plan_workspace(learner_id: str, project_id: str | None = None):
+        scoped(learner_id, project_id)
         from app.learning.plans import PlanConflict, PlanService
         plans = PlanService(store)
         with store.lock:
-            contract = store.latest_contract(learner_id)
+            contract = store.latest_contract(learner_id, project_id)
             if contract is None:
                 return dict(contract=None, active=None, drafts=[], proposals=[])
             try:
@@ -267,17 +337,22 @@ def install_learning_routes(app: FastAPI, store, settings):
             rows = store.conn.execute("SELECT payload FROM plan_versions WHERE goal_contract_id=? ORDER BY rowid DESC", (contract.goal_contract_id,)).fetchall()
             versions = [json.loads(row[0]) for row in rows]
             baseline = active.version_id if active else None
-            drafts = [version for version in versions if version["status"] == "draft" and version.get("prior_version_id") == baseline]
-            proposals = [version for version in versions if version["status"] == "proposed" and version.get("prior_version_id") == baseline]
+            drafts = [version for version in versions if version["status"] == "draft"]
+            proposals = [version for version in versions if version["status"] == "proposed"]
             return dict(contract=contract.model_dump(mode="json"), active=active.model_dump(mode="json") if active else None,
-                        drafts=drafts, proposals=proposals)
+                        drafts=drafts, proposals=proposals, history=versions)
 
     @app.post("/api/learning/plans/{learner_id}/{version_id}/accept")
-    def accept_saved_proposal(learner_id: str, version_id: str):
-        authorized(learner_id)
+    def accept_saved_proposal(learner_id: str, version_id: str, body: PlanAcceptIn):
+        scoped(learner_id, body.project_id, writable=True)
         from app.learning.plans import PlanConflict, PlanService
         try:
-            return PlanService(store).accept(learner_id, version_id, utcnow()).model_dump(mode="json")
+            proposed = PlanService(store).get(learner_id, version_id)
+            if proposed.project_id != body.project_id:
+                raise HTTPException(404, "Plan is not in the selected project")
+            draft = PlanService(store).accept(learner_id, version_id, utcnow())
+            generated = workspace.add_plan_tasks(learner_id, body.project_id, draft.content.get("path", {}))
+            return draft.model_dump(mode="json") | {"generated_task_ids": generated}
         except KeyError as exc:
             raise HTTPException(404, str(exc)) from exc
         except PermissionError as exc:
@@ -286,15 +361,15 @@ def install_learning_routes(app: FastAPI, store, settings):
             raise HTTPException(409, str(exc)) from exc
 
     @app.get("/api/learning/evidence/{learner_id}")
-    def evidence_list(learner_id: str):
-        return [item.model_dump(mode="json") for item in authorized(learner_id)]
+    def evidence_list(learner_id: str, project_id: str | None = None):
+        return [item.model_dump(mode="json") for item in scoped(learner_id, project_id)]
 
     @app.post("/api/learning/diagnosis/{learner_id}/next")
     def diagnose(learner_id: str, body: DiagnosisIn):
         if not 1 <= body.max_tasks <= 30:
             raise HTTPException(400, "Diagnosis task budget must be between 1 and 30")
         observations = []
-        for evidence in effective(authorized(learner_id)):
+        for evidence in effective(scoped(learner_id, body.project_id)):
             if evidence.assessment_kind == "diagnostic":
                 observations.append(DiagnosticObservation(evidence_id=evidence.evidence_id, learner_id=learner_id,
                     event_seq=evidence.event_seq,
@@ -317,12 +392,13 @@ def install_learning_routes(app: FastAPI, store, settings):
 
     @app.post("/api/learning/assessment/{learner_id}/issue")
     def issue_assessment(learner_id: str, body: DeliveryIn):
-        authorized(learner_id)
+        scoped(learner_id, body.project_id, writable=True)
         asset = asset_for(body.assessment_id, body.assessment_version)
         try:
             with store.lock:
                 result = delivery.issue(learner_id, asset, body.issuance_id, body.occurred_at,
-                    delivery_time(body.occurred_at), service.consent(learner_id)["version"])
+                    delivery_time(body.occurred_at), service.consent(learner_id)["version"],
+                    body.project_id)
                 return dict(**{k: v for k, v in result.items() if k != "assessment_sha256"}, assessment=public_asset(asset))
         except ConsentDenied as exc:
             raise HTTPException(403, str(exc)) from exc
@@ -331,10 +407,11 @@ def install_learning_routes(app: FastAPI, store, settings):
 
     @app.post("/api/learning/assessment/{learner_id}/hint")
     def assessment_hint(learner_id: str, body: HintIn):
-        authorized(learner_id)
+        scoped(learner_id, body.project_id, writable=True)
         try:
             return delivery.hint(learner_id, body.delivery_ref, asset_for(body.assessment_id, body.assessment_version),
-                delivery_time(body.occurred_at), service.consent(learner_id)["version"], body.level)
+                delivery_time(body.occurred_at), service.consent(learner_id)["version"], body.level,
+                body.project_id)
         except ConsentDenied as exc:
             raise HTTPException(403, str(exc)) from exc
         except EvidenceConflict as exc:
@@ -345,25 +422,43 @@ def install_learning_routes(app: FastAPI, store, settings):
         return submit(learner_id, body)
 
     @app.get("/api/learning/reviews/{learner_id}")
-    def reviews(learner_id: str, as_of: AwareDatetime | None = None):
-        authorized(learner_id)
+    def reviews(learner_id: str, as_of: AwareDatetime | None = None, project_id: str | None = None):
+        evidences = scoped(learner_id, project_id)
         as_of = as_of or utcnow()
         try:
-            tasks = [review_task(item, as_of) for item in service.retentions(learner_id)]
+            retentions = (replay(evidences, learner_id, as_of).retention.values()
+                          if project_id is not None else service.retentions(learner_id))
+            tasks = [review_task(item, as_of) for item in retentions]
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
-        return dict(as_of=as_of.isoformat(), tasks=[task.model_dump(mode="json") for task in tasks if task])
+        return dict(as_of=as_of.isoformat(), project_id=project_id,
+                    tasks=[task.model_dump(mode="json") for task in tasks if task])
+
+    @app.post("/api/learning/reviews/{learner_id}/sync")
+    def sync_reviews(learner_id: str, body: ReviewSyncIn):
+        evidences = scoped(learner_id, body.project_id, writable=True)
+        as_of = utcnow()
+        try:
+            retentions = replay(evidences, learner_id, as_of).retention.values()
+            due = [task for task in (review_task(item, as_of) for item in retentions) if task]
+            added = workspace.sync_review_tasks(learner_id, body.project_id, due)
+            project = workspace.latest(learner_id, "project", body.project_id)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return {"project": project, "added_task_ids": added,
+                "review_task_ids": [task.task_id for task in due]}
 
     @app.post("/api/learning/reviews/{learner_id}/submit")
     def review_submit(learner_id: str, body: ReviewIn):
         return submit(learner_id, body, review=True)
 
     @app.get("/api/learning/metrics/{learner_id}")
-    def metrics(learner_id: str, kc_id: str = "MATH.G7.EQ.SOLVE", as_of: AwareDatetime | None = None, post_kind: str = "posttest"):
+    def metrics(learner_id: str, kc_id: str = "MATH.G7.EQ.SOLVE", as_of: AwareDatetime | None = None,
+                post_kind: str = "posttest", project_id: str | None = None):
         if post_kind not in {"posttest", "transfer", "delayed"}:
             raise HTTPException(400, "Invalid comparison kind")
         ref = kc_for(kc_id)
-        projected = [observation_from_evidence(item, catalog, ref) for item in effective(authorized(learner_id))]
+        projected = [observation_from_evidence(item, catalog, ref) for item in effective(scoped(learner_id, project_id))]
         return performance_gain(tuple(item for item in projected if item), learner_id=learner_id,
                                 kc_ref=ref, as_of=as_of or utcnow(), post_kind=post_kind).model_dump(mode="json")
 
@@ -403,4 +498,9 @@ def install_learning_routes(app: FastAPI, store, settings):
                 transition = service.consume(correction, receipt=(key, fingerprint, result_for), fault=audit_hook)
             except EvidenceConflict as exc:
                 raise HTTPException(409, str(exc)) from exc
-            return result_for(transition)
+            completed = workspace.complete_tasks_for_evidence(learner_id, correction)
+            response = result_for(transition) | {"completed_task_ids": completed}
+            store.conn.execute("UPDATE learning_api_receipts SET payload=? WHERE learner_id=? AND attempt_id=?",
+                               (json.dumps(response), learner_id, key))
+            store.conn.commit()
+            return response
