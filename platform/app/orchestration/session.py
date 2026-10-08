@@ -24,7 +24,7 @@ from app.learning.perception import (
 )
 from app.learning.bridge import record_attempt, refresh_projection
 from app.learning.verifier import verify_item
-from app.orchestration.policy import BuiltInPolicyV1, TurnContext
+from app.orchestration.policy import ANSWER_SEEK, BuiltInPolicyV1, TurnContext
 from app.orchestration.trigger import TriggerEngine
 
 BANK_PATH = Path(__file__).resolve().parent.parent.parent / "seeds" / "question_bank.json"
@@ -273,7 +273,7 @@ class TutorSession:
 
     def _turn_ctx(self, cand, proposals: list, text: str) -> TurnContext:
         help_asked = cand.current_intention == "ask_help" or bool(HELP_TEXT_RE.search(text or ""))
-        next_item = None if help_asked else self._peek_next()
+        next_item = None if help_asked or self.current_item is not None else self._peek_next()
         if next_item:
             self._seed_spaces_for(next_item)
         if self.session_type == "checkpoint":
@@ -409,6 +409,16 @@ class TutorSession:
 
         apply_candidate(self.snapshot, cand, action_ref=self.last_action_id)
 
+        # A second explicit help request should offer a more concrete step.
+        # Without a submitted attempt, stop at a partial example; R-01 still
+        # guards full worked answers.
+        if (self.session_type == "explore" and self.current_item and text and not answer
+                and HELP_TEXT_RE.search(text) and not ANSWER_SEEK.search(text)
+                and cand.current_intention != "want_answer"
+                and self.ladder.pos < 2
+                and self.assistance_levels.get(self.current_item.item_id, 0) >= self.ladder.pos):
+            self.ladder.advance()
+
         # step0 触发（反馈回合不需要触发器，且不消耗冷却窗口）
         learning_signals = self._learning_signals()
         proposals = [] if self.pending_feedback is not None \
@@ -460,6 +470,9 @@ class TutorSession:
             verdict_ref=(verdict.artifact_id if verdict and verdict.artifact_id else None),
         ))
         self.last_action_id = env.action_id
+        if (self.session_type == "explore" and verdict is not None
+                and verdict.status == "passed" and env.type == ActionType.FEEDBACK):
+            self.current_item = None
         self.pending_feedback = None
         self.store.append_events(events)
         self._persist_snapshot()

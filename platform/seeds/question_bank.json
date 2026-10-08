@@ -192,6 +192,38 @@
         {"level": 2, "form": "worked_partial", "text": "方程：2(x + x + 3) = 18。解交给你。"},
         {"level": 3, "form": "worked_full", "text": "2(2x+3)=18 → 4x+6=18 → 4x=12 → x=3。宽 3，长 6。验算：2×(3+6)=18 ✓"}
       ]
+    },
+    {
+      "item_id": "EQ-BALANCE-001",
+      "kc_id": "MATH.G7.EQ.BALANCE",
+      "difficulty": 0.36,
+      "taxonomy_level": "understand",
+      "pattern": "quiz",
+      "stem": "已知 a + 3 = 7，求 a 的值。",
+      "answer": {"var": "a", "value": "4"},
+      "misconception_links": ["MC.EQ.REVERSE_OPS"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "想一想：等式两边同时做什么运算，可以去掉左边的 +3？"},
+        {"level": 1, "form": "directive", "text": "等式两边同时减去 3。"},
+        {"level": 2, "form": "worked_partial", "text": "a + 3 - 3 = 7 - 3，接下来求 a。"},
+        {"level": 3, "form": "worked_full", "text": "等式两边同时减去 3，得到 a = 4；代回原式，4 + 3 = 7。"}
+      ]
+    },
+    {
+      "item_id": "EQ-BALANCE-002",
+      "kc_id": "MATH.G7.EQ.BALANCE",
+      "difficulty": 0.37,
+      "taxonomy_level": "understand",
+      "pattern": "quiz",
+      "stem": "已知 b - 2 = 5，求 b 的值。",
+      "answer": {"var": "b", "value": "7"},
+      "misconception_links": ["MC.EQ.REVERSE_OPS"],
+      "hints": [
+        {"level": 0, "form": "nudge", "text": "想一想：等式两边同时做什么运算，可以去掉左边的 -2？"},
+        {"level": 1, "form": "directive", "text": "等式两边同时加上 2。"},
+        {"level": 2, "form": "worked_partial", "text": "b - 2 + 2 = 5 + 2，接下来求 b。"},
+        {"level": 3, "form": "worked_full", "text": "等式两边同时加上 2，得到 b = 7；代回原式，7 - 2 = 5。"}
+      ]
     }
   ]
 }

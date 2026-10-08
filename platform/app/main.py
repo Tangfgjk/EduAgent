@@ -11,7 +11,7 @@ def main() -> None:
     settings = Settings.load()
     port = settings.port
     app = create_app(settings)
-    llm_kind = "GLM(OpenAI兼容)" if settings.llm_api_key else "FakeLLM（未配置 API Key）"
+    llm_kind = f"外部模型 {settings.llm_model}（OpenAI 兼容）" if settings.llm_api_key else "FakeLLM（未配置 API Key）"
     print(f"桂子问津 Wenjin V4 | LLM: {llm_kind} | http://127.0.0.1:{port}")
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
 

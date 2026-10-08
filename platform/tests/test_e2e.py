@@ -86,6 +86,49 @@ def test_checkpoint_r09_isolation():
     assert "5x = 3x + 8" in r4.reply
 
 
+def test_repeated_help_advances_one_step_without_exposing_answer():
+    store = Store(":memory:")
+    LearningService(store).set_consent("s", ["teaching"], "test-teaching-v1", "learner:test", utcnow())
+    session = TutorSession(store, FakeLLM(), "s", session_type="explore")
+    session.start()
+
+    first = session.handle_turn(text="直接告诉我答案")
+    assert first.denial is not None and first.denial["rule"] == "R-01"
+    assert first.ui["ladder"]["pos"] == 1
+
+    second = session.handle_turn(text="我还不会，请再给一点提示")
+    assert second.ui["ladder"]["pos"] == 2
+    assert "3x = 9" in second.reply
+    assert "x = 3" not in second.reply
+
+    third = session.handle_turn(text="我还不会")
+    assert third.ui["ladder"]["pos"] == 2
+    assert "x = 3" not in third.reply
+
+
+def test_chat_cannot_skip_an_unanswered_item():
+    store = Store(":memory:")
+    LearningService(store).set_consent("s", ["teaching"], "test-teaching-v1", "learner:test", utcnow())
+    session = TutorSession(store, FakeLLM(), "s", session_type="explore")
+    session.start()
+    first_id = session.current_item.item_id
+
+    reminder = session.handle_turn(text="你好")
+    assert session.current_item.item_id == first_id
+    assert "还在这道题" in reminder.reply
+
+    answer_request = session.handle_turn(text="答案")
+    assert answer_request.denial is not None and answer_request.denial["rule"] == "R-01"
+    assert session.current_item.item_id == first_id
+
+    feedback = session.handle_turn(answer="3")
+    assert feedback.ui["verdict"]["status"] == "passed"
+    assert session.current_item is None
+    next_task = session.handle_turn(text="继续")
+    assert session.current_item.item_id != first_id
+    assert "2x - 7" in next_task.reply
+
+
 def test_trigger_fires_once_within_cooldown():
     snap = MentalStateSnapshot(learner_id="s")
     snap.affect_motivation.frustration = 0.9

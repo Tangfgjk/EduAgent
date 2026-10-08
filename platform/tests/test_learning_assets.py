@@ -5,6 +5,7 @@ import pytest
 from app.learning.assets import AssetCatalog, VersionedRef, load_catalog, merge_catalog_overlays
 from app.config import Settings
 from app.learning.diagnosis import DiagnosticObservation, next_task
+from app.orchestration.session import load_bank
 
 
 SEED = Path(__file__).parents[1] / "seeds" / "learning_assets_v1.json"
@@ -118,7 +119,7 @@ def test_default_overlay_maps_all_original_bank_kcs_without_changing_base_catalo
     assert {item.ref.asset_id for item in merged.knowledge} >= {
         "MATH.G7.EQ.BALANCE", "MATH.G7.EQ.SOLVE", "MATH.G7.EQ.SETUP", "MATH.G7.EQ.APPLY"}
     mapped = [item for item in merged.assessments if item.ref.asset_id.startswith("EQ-")]
-    assert len(mapped) == 12
+    assert {item.ref.asset_id for item in mapped} == {item.item_id for item in load_bank()}
     assert all("original_local_question_bank" in item.provenance and "synthetic_ai_generated" not in item.provenance for item in mapped)
     assert merged.topological_order()
 

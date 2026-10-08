@@ -205,11 +205,23 @@ def test_derived_batch_hints_consume_shared_governor_budget():
     result = run_role("prompter", '{"actions": [{"kind": "hint", "text": "Check one side"}, {"kind": "hint", "text": "Check the other"}]}', hint_budget=1)
     assert len(result.actions) == 1
     assert result.reviews[1].rule_id == "R-07"
+    assert "R-07" in result.reason
 
 
 def test_derived_role_action_capability_enforced():
     result = run_role("skeptic", '{"actions": [{"kind": "hint", "text": "Subtract 2"}]}')
     assert result.exit_status == "constraint_violation" and not result.actions
+
+
+def test_reviewer_prompt_only_offers_actions_it_can_use():
+    def reviewer_response(messages):
+        contract = messages[0]["content"]
+        assert "'enum': ['feedback', 'question']" in contract
+        return '{"actions": [{"kind": "feedback", "text": "请写出验算依据。"}]}'
+
+    result = run_role("reviewer", reviewer_response)
+    assert result.exit_status == "report_ready"
+    assert result.actions[0].type == ActionType.FEEDBACK
 
 
 def test_derived_output_budget_exhaustion():

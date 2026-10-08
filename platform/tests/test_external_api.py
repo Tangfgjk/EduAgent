@@ -148,13 +148,22 @@ def test_role_rejects_evidence_kc_outside_catalog(workspace):
     assert client.post("/api/roles/skeptic/review", json={"evidence_ids": ["outside"]}).status_code == 403
 
 
-def test_roles_share_proactive_hint_budget_across_reports(workspace):
+def test_roles_keep_hint_rules_per_report_without_daily_cap(workspace):
     client, _, _ = workspace
     reports = [client.post("/api/roles/prompter/review", json={"evidence_ids": ["e1"]}).json() for _ in range(4)]
-    assert reports[0]["report"]["exit_status"] == "report_ready"
-    assert reports[-1]["report"]["exit_status"] == "constraint_violation"
-    assert reports[-1]["report"]["reviews"][0]["rule_id"] == "R-07"
-    assert reports[-1]["governor_budget_scope"] == "learner_day"
+    assert all(report["report"]["exit_status"] == "report_ready" for report in reports)
+    assert all(report["governor_budget_scope"] == "per_report" for report in reports)
+
+
+def test_prior_daily_usage_does_not_block_role_or_roundtable(workspace):
+    client, store, _ = workspace
+    day = datetime.now(timezone.utc).date().isoformat()
+    store.conn.execute("INSERT INTO derived_daily_budget VALUES (?,?,?,?,?)", ("local", day, 30, 32000, 3))
+    store.conn.commit()
+    assert client.post("/api/roles/skeptic/review", json={"evidence_ids": ["e1"]}).status_code == 200
+    assert client.post("/api/roundtable/review", json={"evidence_ids": ["e1"]}).status_code == 200
+    turns, tokens = store.conn.execute("SELECT turns,tokens FROM derived_daily_budget WHERE learner_id=? AND day=?", ("local", day)).fetchone()
+    assert turns == 34 and tokens == 40000
 
 
 def test_roundtable_returns_three_governed_candidate_reports(workspace):

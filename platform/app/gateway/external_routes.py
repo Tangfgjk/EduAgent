@@ -48,7 +48,7 @@ class RoleReviewIn(BaseModel):
     learner_id: str | None = None
     max_turns: int = Field(default=1, ge=1, le=1)
     max_tokens: int = Field(default=2000, ge=1, le=4000)
-    deadline_ms: int = Field(default=3000, ge=1, le=3000)
+    deadline_ms: int = Field(default=3000, ge=1, le=30000)
     provider_id: Literal["offline", "configured"] = "offline"
 
     @model_validator(mode="after")
@@ -92,7 +92,15 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
         store.conn.execute("CREATE TABLE IF NOT EXISTS derived_daily_budget(learner_id TEXT,day TEXT,turns INTEGER,tokens INTEGER,hints INTEGER,PRIMARY KEY(learner_id,day))")
         store.conn.commit()
     public_configs = [ProviderConfig(provider_id="offline", kind="fake", model="educational-template-v1")]
+    configured_extra_body: dict = {}
     if settings.llm_api_key:
+        if settings.llm_extra_body_json:
+            try:
+                parsed_extra_body = json.loads(settings.llm_extra_body_json)
+                if isinstance(parsed_extra_body, dict):
+                    configured_extra_body = parsed_extra_body
+            except ValueError:
+                pass
         public_configs.append(ProviderConfig(provider_id="configured", model=settings.llm_model,
             base_url=settings.llm_base_url, api_key_env="RSI_LLM_API_KEY", timeout_seconds=30,
             fallback_provider="offline"))
@@ -129,7 +137,7 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
             raise HTTPException(503, "Configured provider unavailable; choose offline explicitly")
         return learner_id,selected,kc_refs
 
-    def reserve_budget(learner_id,body,reserve_hint=False):
+    def record_usage(learner_id,body,reserve_hint=False):
         day = utcnow().date().isoformat()
         with store.lock:
             authorized(learner_id)
@@ -137,15 +145,12 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
             try:
                 current = store.conn.execute("SELECT turns,tokens,hints FROM derived_daily_budget WHERE learner_id=? AND day=?",(learner_id,day)).fetchone()
                 turns,tokens,hints = tuple(current) if current else (0,0,0)
-                if turns + body.max_turns > 30 or tokens + body.max_tokens > 32000:
-                    raise HTTPException(429, "Learner daily derived budget exhausted")
-                reserved_hints = int(reserve_hint and hints < 3)
-                store.conn.execute("INSERT INTO derived_daily_budget VALUES (?,?,?,?,?) ON CONFLICT(learner_id,day) DO UPDATE SET turns=excluded.turns,tokens=excluded.tokens,hints=excluded.hints",(learner_id,day,turns+body.max_turns,tokens+body.max_tokens,hints+reserved_hints))
+                store.conn.execute("INSERT INTO derived_daily_budget VALUES (?,?,?,?,?) ON CONFLICT(learner_id,day) DO UPDATE SET turns=excluded.turns,tokens=excluded.tokens,hints=excluded.hints",(learner_id,day,turns+body.max_turns,tokens+body.max_tokens,hints+int(reserve_hint)))
                 store.conn.commit()
             except Exception:
                 store.conn.rollback()
                 raise
-        return day,hints
+        return day
 
     def governed_client(body,context,report_id,demo_response):
         registry = ProviderRegistry()
@@ -153,7 +158,7 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
         if body.provider_id == "configured":
             registry.register(public_configs[1], client=OpenAICompatClient(settings.llm_base_url, settings.llm_api_key,
                               settings.llm_model, timeout=min(30,body.deadline_ms / 1000),
-                              extra_body={"max_tokens":body.max_tokens}))
+                              extra_body={**configured_extra_body, "max_tokens":body.max_tokens}))
         class RoleClient(BaseLLM):
             last_result = None
             def complete(self,messages,temperature=.2):
@@ -242,10 +247,10 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
     @app.post("/api/roles/{role}/review")
     def role_review(role: Literal["prompter", "skeptic", "reviewer"], body: RoleReviewIn):
         learner_id,selected,kc_refs=selected_evidence(body)
-        day,hints=reserve_budget(learner_id,body,reserve_hint=role == "prompter")
+        day=record_usage(learner_id,body,reserve_hint=role == "prompter")
         snapshot = store.latest_snapshot(learner_id) or MentalStateSnapshot(learner_id=learner_id)
-        context = GovernorContext(snapshot=snapshot, ladder_pos=0, hints_used=hints,
-                                  hint_budget=min(hints+1,3), frustration_streak=0, artifact_present=True)
+        context = GovernorContext(snapshot=snapshot, ladder_pos=0, hints_used=0,
+                                  hint_budget=3, frustration_streak=0, artifact_present=True)
         report_id = uuid4().hex
         registry,role_client=governed_client(body,context,report_id,_DEMO_RESPONSES[role])
         report = DerivedRunner(role_client).run(role, session_id="external-role-review",
@@ -262,7 +267,7 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
                 source_usage="contextual_reference_only", execution_mode=execution_mode)
         response = dict(report_id=report_id, report=report.model_dump(mode="json"),
                         provenance=provenance, source_refs=source_refs, source_usage="contextual_reference_only",
-                        governor_budget_scope="learner_day", budget_day=day,
+                        governor_budget_scope="per_report", budget_day=day,
                         execution_mode=execution_mode, external_model_smoke="not_executed")
         audit(learner_id, dict(kind="derived_role_report", learner_id=learner_id, evidence_refs=body.evidence_ids,
                               kc_refs=kc_refs, at=utcnow().isoformat(), **response))
@@ -279,9 +284,9 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
     @app.post("/api/teach-student/lesson")
     def teach_student(body: TeachLessonIn):
         learner_id,selected,kc_refs=selected_evidence(body)
-        day,hints=reserve_budget(learner_id,body)
+        day=record_usage(learner_id,body)
         snapshot=store.latest_snapshot(learner_id) or MentalStateSnapshot(learner_id=learner_id)
-        context=GovernorContext(snapshot=snapshot,ladder_pos=0,hints_used=hints,hint_budget=3,
+        context=GovernorContext(snapshot=snapshot,ladder_pos=0,hints_used=0,hint_budget=3,
                                  frustration_streak=0,artifact_present=True)
         report_id=uuid4().hex
         demo=dict(misconception="固定虚拟学生模板：只在等式一边运算。",rationale="此为待学习者检验的模拟误区，不是模型评分。",
@@ -299,7 +304,7 @@ def install_external_routes(app: FastAPI, store, settings) -> None:
         for action in report.actions:
             action.policy_provenance.update(provenance,execution_mode=mode,evidence_refs=body.evidence_ids)
         response=dict(report_id=report_id,report=report.model_dump(mode="json"),provenance=provenance,
-            execution_mode=mode,external_model_smoke="not_executed",governor_budget_scope="learner_day",budget_day=day,
+            execution_mode=mode,external_model_smoke="not_executed",governor_budget_scope="per_report",budget_day=day,
             no_learning_state_write=True)
         audit(learner_id,dict(kind="teach_virtual_student_report",evidence_refs=body.evidence_ids,kc_refs=kc_refs,
                               at=utcnow().isoformat(),**response))

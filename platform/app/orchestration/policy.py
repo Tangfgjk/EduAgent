@@ -13,7 +13,7 @@ from app.core.schema import QuestionItem, Verdict
 from app.learning.perception import PerceptionCandidate
 from app.orchestration.trigger import TriggerProposal
 
-ANSWER_SEEK = re.compile(r"直接(告诉|给|说)|答案是什么|到底(等于|是)几|我不想(想|做)了|算了.{0,6}告诉我")
+ANSWER_SEEK = re.compile(r"直接(告诉|给|说)|答案是什么|到底(等于|是)几|我不想(想|做)了|算了.{0,6}告诉我|^(?:我想要|我要|给我)?答案[！!。?？]?$|^给我答案$")
 HELP_SEEK = re.compile(r"怎么(做|解|办)|提示|思路|卡住|不会|帮(帮)?我|从哪(里|儿)开始")
 
 
@@ -146,6 +146,14 @@ class BuiltInPolicyV1:
                       "worked_partial" if level == 2 else "worked_full"),
                 text=text, proactive=not help_asked,
                 scaffold_type=choose_scaffold_type(ctx.student_text, ctx.proposals),
+            )
+
+        # An active item remains the student's current task until a verified
+        # answer completes it. Free-form chat must not silently issue another.
+        if ctx.item:
+            return ActionEnvelope.feedback(
+                session_id=session_id, kc_id=ctx.item.kc_id, kind="process",
+                text=f"我们还在这道题：{ctx.item.stem}。先尝试作答，或者请求提示。",
             )
 
         if any(p.rule_id == "TR_UNKNOWN_EVIDENCE" for p in ctx.proposals) and ctx.next_item:

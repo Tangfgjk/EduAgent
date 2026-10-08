@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import sys
 from uuid import uuid4
 
@@ -55,12 +56,18 @@ def ensure_teaching_consent(store: Store, learner_id: str, input_fn=None) -> boo
 
 def main() -> None:
     settings = Settings.load()
-    llm = (OpenAICompatClient(settings.llm_base_url, settings.llm_api_key, settings.llm_model)
+    try:
+        extra_body = json.loads(settings.llm_extra_body_json) if settings.llm_extra_body_json else None
+    except ValueError:
+        extra_body = None
+    llm = (OpenAICompatClient(settings.llm_base_url, settings.llm_api_key, settings.llm_model,
+                              extra_body=extra_body if isinstance(extra_body, dict) else None)
            if settings.llm_api_key else FakeLLM())
     store = Store(settings.db_path)
     color = sys.stdout.isatty()
     print(BANNER)
-    print(f"LLM: {'GLM(OpenAI兼容)' if settings.llm_api_key else 'FakeLLM（未配置 Key）'}")
+    llm_kind = f"外部模型 {settings.llm_model}（OpenAI 兼容）" if settings.llm_api_key else "FakeLLM（未配置 Key）"
+    print(f"LLM: {llm_kind}")
     if not ensure_teaching_consent(store, settings.learner_id):
         print("尚未授予教学记录授权，已退出。")
         store.close()
