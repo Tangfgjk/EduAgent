@@ -105,7 +105,7 @@ def test_legacy_prototype_url_no_longer_serves_hard_coded_results():
     store = Store()
     with TestClient(create_app(Settings(), store=store)) as client:
         response = client.get("/prototype")
-        assert "Wenjin V4" in response.text
+        assert "Wenjin 学习工作台" in response.text
         assert "0.41 → 0.68" not in response.text
     store.close()
 

@@ -40,6 +40,7 @@ class DiagnosisIn(RequestModel):
 
 
 class AssessmentIn(RequestModel):
+    project_id: str | None = None
     assessment_id: str
     assessment_version: str = "1.0.0"
     attempt_id: str = Field(min_length=1)
@@ -84,6 +85,8 @@ class CorrectionIn(RequestModel):
 def install_learning_routes(app: FastAPI, store, settings):
     service = LearningService(store)
     catalog = load_catalog(settings)
+    from app.learning.workspace import WorkspaceService
+    workspace = WorkspaceService(store, catalog)
     from app.learning.assessment_delivery import AssessmentDelivery
     delivery = AssessmentDelivery(store)
     with store.lock:
@@ -139,6 +142,13 @@ def install_learning_routes(app: FastAPI, store, settings):
             if old is not None:
                 return old
             asset = asset_for(body.assessment_id, body.assessment_version)
+            if body.project_id:
+                try:
+                    project = workspace.latest(learner_id, "project", body.project_id)
+                except KeyError as exc:
+                    raise HTTPException(404, "Unknown project") from exc
+                if project["content"]["archived"]:
+                    raise HTTPException(409, "Archived project")
             consent = service.consent(learner_id)
             try:
                 delivery_details, hint_level, assistance_mode, answer_exposed = delivery.observation(
@@ -197,6 +207,8 @@ def install_learning_routes(app: FastAPI, store, settings):
                     if checkpoint == "receipt":
                         delivery.consume_in_transaction(learner_id, body, asset, consent["version"], evidence.evidence_id,
                             (delivery_details, hint_level, assistance_mode, answer_exposed))
+                        if body.project_id:
+                            workspace.attach_evidence_in_transaction(learner_id, body.project_id, evidence.evidence_id)
                 transition = service.consume(evidence, receipt=(key, fingerprint, result_for), fault=delivery_hook)
             except ConsentDenied as exc:
                 raise HTTPException(403, str(exc)) from exc
@@ -254,6 +266,7 @@ def install_learning_routes(app: FastAPI, store, settings):
     @app.get("/api/learning/plans/{learner_id}/workspace")
     def plan_workspace(learner_id: str):
         authorized(learner_id)
+        from app.learning.goal_scope import goal_supported
         from app.learning.plans import PlanConflict, PlanService
         plans = PlanService(store)
         with store.lock:
@@ -270,12 +283,25 @@ def install_learning_routes(app: FastAPI, store, settings):
             drafts = [version for version in versions if version["status"] == "draft" and version.get("prior_version_id") == baseline]
             proposals = [version for version in versions if version["status"] == "proposed" and version.get("prior_version_id") == baseline]
             return dict(contract=contract.model_dump(mode="json"), active=active.model_dump(mode="json") if active else None,
-                        drafts=drafts, proposals=proposals)
+                        drafts=drafts, proposals=proposals,
+                        goal_supported=goal_supported(contract.goal_statement.text, catalog))
 
     @app.post("/api/learning/plans/{learner_id}/{version_id}/accept")
     def accept_saved_proposal(learner_id: str, version_id: str):
         authorized(learner_id)
+        from app.learning.goal_scope import goal_supported, plan_has_curriculum_scope, unsupported_goal_message
         from app.learning.plans import PlanConflict, PlanService
+        contract = store.latest_contract(learner_id)
+        try:
+            proposal = PlanService(store).get(learner_id, version_id)
+        except KeyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+        except PermissionError as exc:
+            raise HTTPException(403, str(exc)) from exc
+        if (contract is not None and proposal.goal_contract_id == contract.goal_contract_id
+                and not goal_supported(contract.goal_statement.text, catalog)
+                and plan_has_curriculum_scope(proposal.content)):
+            raise HTTPException(422, unsupported_goal_message(contract.goal_statement.text, catalog))
         try:
             return PlanService(store).accept(learner_id, version_id, utcnow()).model_dump(mode="json")
         except KeyError as exc:

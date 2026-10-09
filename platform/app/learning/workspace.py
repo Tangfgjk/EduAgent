@@ -102,6 +102,38 @@ class WorkspaceService:
     def project(self, learner_id, content, *, record_id=None, expected_revision=0):
         return self._save(learner_id, record_id or "project:"+uuid4().hex, "project", content.model_dump(mode="json"), expected_revision)
 
+    def attach_evidence_in_transaction(self, learner_id, record_id, evidence_id):
+        """Append a project revision inside the caller's evidence transaction."""
+        project = self.latest(learner_id, "project", record_id)
+        if project["content"]["archived"]:
+            raise ValueError("Archived projects cannot receive evidence")
+        content = ProjectContent.model_validate(project["content"])
+        if evidence_id in content.evidence_refs:
+            return
+        content.evidence_refs.append(evidence_id)
+        self._validate_project(learner_id, content.model_dump(mode="json"))
+        value = {**project, "revision": project["revision"] + 1,
+                 "content": content.model_dump(mode="json"), "updated_at": utcnow().isoformat()}
+        self.store.conn.execute("INSERT INTO workspace_records VALUES (?,?,?,?,?)", (
+            record_id, value["revision"], learner_id, "project", json.dumps(value, ensure_ascii=False)))
+        self.learning._audit(learner_id, "project_evidence_attached", dict(record_id=record_id, evidence_id=evidence_id))
+
+    def attach_session_in_transaction(self, learner_id, record_id, session_id):
+        """Append a session reference while the caller owns the write lock."""
+        project = self.latest(learner_id, "project", record_id)
+        if project["content"]["archived"]:
+            raise ValueError("Archived projects cannot receive sessions")
+        content = ProjectContent.model_validate(project["content"])
+        if session_id in content.session_refs:
+            return
+        content.session_refs.append(session_id)
+        self._validate_project(learner_id, content.model_dump(mode="json"))
+        value = {**project, "revision": project["revision"] + 1,
+                 "content": content.model_dump(mode="json"), "updated_at": utcnow().isoformat()}
+        self.store.conn.execute("INSERT INTO workspace_records VALUES (?,?,?,?,?)", (
+            record_id, value["revision"], learner_id, "project", json.dumps(value, ensure_ascii=False)))
+        self.learning._audit(learner_id, "project_session_attached", dict(record_id=record_id, session_id=session_id))
+
     def share(self, learner_id, audiences, expected_revision=0):
         if not set(audiences) <= {"teacher", "parent"}: raise ValueError("Unknown sharing audience")
         return self._save(learner_id, "sharing:"+learner_id, "sharing", dict(audiences=sorted(set(audiences))), expected_revision)

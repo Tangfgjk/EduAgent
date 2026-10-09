@@ -6,7 +6,7 @@ from app.learning.review_port import retrievability, require_aware
 from app.learning.schema import AssessmentProfile, MasteryState
 
 
-def recommend(service, learner_id: str, as_of: datetime, prerequisites=None, profiles=None):
+def recommend(service, learner_id: str, as_of: datetime, prerequisites=None, profiles=None, allowed_kcs=None):
     require_aware(as_of)
     if prerequisites is None:
         prerequisites = {"MATH.G7.EQ.SOLVE": [], "MATH.G7.EQ.SETUP": ["MATH.G7.EQ.SOLVE"], "MATH.G7.EQ.APPLY": ["MATH.G7.EQ.SOLVE", "MATH.G7.EQ.SETUP"]}
@@ -24,6 +24,8 @@ def recommend(service, learner_id: str, as_of: datetime, prerequisites=None, pro
         result = replay(selected,learner_id,as_of)
         states,retention = result.mastery,result.retention
     kcs = sorted(set(prerequisites) | set(states) | {k for refs in prerequisites.values() for k in refs})
+    if allowed_kcs is not None:
+        kcs = [kc for kc in kcs if kc in allowed_kcs]
     gates = {kc:evaluate_gate(states.get(kc,MasteryState(learner_id=learner_id,kc_id=kc)),list(active.values()),profiles.get(kc,AssessmentProfile())) for kc in kcs}
     nodes = []
     for kc in kcs:

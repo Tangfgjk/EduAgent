@@ -64,7 +64,10 @@ def build_equation_course_draft() -> CourseReviewPackage:
         created_at=datetime(2026, 10, 6, 17, 33, tzinfo=timezone(timedelta(hours=8))), review_status="pending",
         source=CourseSource(source_kind="synthetic_ai_generated",
             locator="seeds/synthetic/learning_assets_overlay_v1.json; KC references: seeds/learning_assets_v1.json",
-            source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+            # The frozen review package hashes the repository's LF form. Git may
+            # check this JSON out with CRLF on Windows; normalize line endings so
+            # the candidate identity is reproducible across developer machines.
+            source_sha256=hashlib.sha256(source.read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
             license_ref="local-development-synthetic-candidate; no externally licensed curriculum claimed",
             usage_scope="simulation_only", grade_band="G7"), catalog=snapshot,
         knowledge_reviews=tuple(knowledge_reviews), task_reviews=tuple(task_reviews),

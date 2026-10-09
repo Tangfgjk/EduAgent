@@ -24,7 +24,7 @@ async function main() {
     await page.waitForURL(url+'/');
     await page.waitForFunction(()=>document.querySelector('#identity').textContent.includes('e2e_validation'));
     assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(13, 17, 23)');
-    assert.equal(await page.getByRole('tab').count(),6);
+    assert.equal(await page.getByRole('tab').count(),7);
     await page.screenshot({path:path.join(outputs,'desktop-study.png'),fullPage:true});
     await page.locator('#assessment').selectOption('D-SOLVE-1');
     await page.locator('#answer').fill('999'); await page.locator('#submit').click();

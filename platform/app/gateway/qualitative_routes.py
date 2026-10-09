@@ -33,6 +33,7 @@ class QualitativeReviewIn(BaseModel):
 class ArtifactIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     assessment_id: str = Field(min_length=1)
+    project_id: str | None = None
     assessment_version: str = "1.0.0"
     attempt_id: str = Field(min_length=1)
     content: str = Field(min_length=1, max_length=8000)
@@ -44,6 +45,8 @@ class ArtifactIn(BaseModel):
 def install_qualitative_routes(app: FastAPI, store, settings) -> None:
     service = LearningService(store)
     catalog = load_catalog(settings)
+    from app.learning.workspace import WorkspaceService
+    workspace = WorkspaceService(store, catalog)
     def locked(method):
         @wraps(method)
         def guarded(*args, **kwargs):
@@ -63,6 +66,13 @@ def install_qualitative_routes(app: FastAPI, store, settings) -> None:
             raise HTTPException(400, "A configured explanation assessment is required")
         with store.lock:
             service._authorize(learner_id)
+            if body.project_id:
+                try:
+                    project = workspace.latest(learner_id, "project", body.project_id)
+                except KeyError as exc:
+                    raise HTTPException(404, "Unknown project") from exc
+                if project["content"]["archived"]:
+                    raise HTTPException(409, "Archived project")
             fingerprint = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
             key = "qualitative-artifact:" + body.attempt_id
             old = store.conn.execute("SELECT content_hash,payload FROM learning_api_receipts WHERE learner_id=? AND attempt_id=?",(learner_id,key)).fetchone()
@@ -85,6 +95,8 @@ def install_qualitative_routes(app: FastAPI, store, settings) -> None:
                             pending_teacher_review=True,transition=transition)
             def save(stage):
                 if stage=="receipt":
+                    if body.project_id:
+                        workspace.attach_evidence_in_transaction(learner_id, body.project_id, evidence.evidence_id)
                     store.conn.execute("INSERT INTO qualitative_artifacts VALUES (?,?,?)",(evidence.artifact_ref,learner_id,
                         json.dumps(dict(content=body.content,assessment_ref=asset.ref.key,content_sha256=hashlib.sha256(body.content.encode()).hexdigest()),ensure_ascii=False)))
             try:

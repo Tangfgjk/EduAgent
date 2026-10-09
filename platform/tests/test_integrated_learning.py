@@ -4,9 +4,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.core.schema import GoalContract, GoalStatement, utcnow
 from app.gateway.routes import create_app
 from app.learning.decisions import recommend
 from app.learning.service import LearningService
+from app.learning.plans import PlanService
 from app.llm.client import FakeLLM
 from app.storage.db import Store
 from tests.test_learning_storage import evidence, service, NOW
@@ -42,6 +44,60 @@ def test_plan_accept_draft_sign_modify_and_foreign_learner(client):
     rejected = c.post(f'/api/plans/{modified["version_id"]}/reject',json={"learner_id":"s1"}).json()
     assert rejected["status"] == "rejected"
     assert c.get(f"/api/plans/{id1}").json()["status"] == "confirmed"
+
+
+def test_unsupported_goal_cannot_receive_equation_path(client):
+    c, store = client
+    # Existing databases may already contain a free-text goal saved by older versions.
+    contract = GoalContract(
+        learner_id="s1", goal_statement=GoalStatement(text="我想学习洛必达法则"))
+    store.save_contract(contract)
+    response = c.get("/api/path/recommend")
+    assert response.status_code == 422
+    assert "洛必达" in response.json()["detail"]
+    assert "当前课程" in response.json()["detail"]
+    assert c.post("/api/path/accept", json={"learner_id": "s1", "path": {}}).status_code == 422
+    draft = PlanService(store).prepare_draft("s1", contract.goal_contract_id, {"bank_scope": ["MATH.G7.EQ.SOLVE"]}, utcnow())
+    assert c.post(f"/api/plans/{draft.version_id}/sign", json={"learner_id": "s1"}).status_code == 422
+    workspace = c.get("/api/learning/plans/s1/workspace").json()
+    assert workspace["goal_supported"] is False
+
+
+def test_unsupported_goal_is_not_saved_with_equation_plan(client):
+    c, store = client
+    response = c.post("/api/contracts", json={"goal_text": "我想学习洛必达法则"})
+    assert response.status_code == 422
+    assert store.latest_contract("s1") is None
+
+
+def test_unsupported_goal_creates_trackable_course_request(client):
+    c, store = client
+    coverage = c.get("/api/goals/coverage", params={"goal_text": "我想学习洛必达法则"}).json()
+    assert coverage["supported"] is False
+    assert coverage["next_action"] == "request_course"
+    created = c.post("/api/course-requests", json={"goal_text": "我想学习洛必达法则"})
+    assert created.status_code == 200
+    request = created.json()
+    assert request["topic"] == "洛必达法则"
+    assert request["status"] == "awaiting_sources"
+    assert request["analysis"]["candidate_only"] is True
+    assert c.post("/api/course-requests", json={"goal_text": "我想学习洛必达法则"}).json()["request_id"] == request["request_id"]
+    assert c.get("/api/course-requests").json()["requests"][0]["request_id"] == request["request_id"]
+    assert c.get("/api/course-requests", params={"learner_id": "other"}).status_code == 403
+    assert c.post("/api/course-requests", json={"goal_text": "解一元一次方程"}).status_code == 422
+    assert store.latest_contract("s1") is None
+
+
+def test_path_recommendation_stays_with_goal_topic(client):
+    c, _ = client
+    coverage = c.get("/api/goals/coverage", params={"goal_text": "等式的基本性质"}).json()
+    assert coverage["target_kcs"] == ["MATH.G7.EQ.BALANCE"]
+    contract = c.post("/api/contracts", json={"goal_text": "等式的基本性质"})
+    assert contract.status_code == 200
+    assert contract.json()["contract"]["success_criteria"][0]["kc_refs"] == ["MATH.G7.EQ.BALANCE"]
+    assert contract.json()["plan_version"]["content"]["bank_scope"] == ["MATH.G7.EQ.BALANCE"]
+    path = c.get("/api/path/recommend").json()
+    assert [node["kc_id"] for node in path["nodes"]] == ["MATH.G7.EQ.BALANCE"]
 
 
 def test_session_stable_attempt_receipt_and_revoked_old_views(client):

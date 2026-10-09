@@ -99,6 +99,7 @@ class MasteryGateResult(Contract):
     confidence_method: str
     effective_evidence_count: int
     evidence_refs: list[str]
+    provenance: dict = Field(default_factory=dict)
     assessment_profile_ref: str
     gate_version: str = "gate-v1"
     reason: str

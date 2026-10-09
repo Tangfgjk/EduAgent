@@ -40,7 +40,10 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     learning = LearningService(store)
     from app.orchestration.runtime import SessionRuntime, RuntimeConflict
     from app.learning.assets import load_catalog
+    from app.learning.goal_scope import goal_supported, goal_target_kcs, plan_has_curriculum_scope, unsupported_goal_message
     catalog = load_catalog(settings)
+    from app.learning.course_requests import CourseRequestService
+    course_requests = CourseRequestService(store, catalog, Path(__file__).resolve().parents[2] / "seeds" / "knowledge")
     runtime = SessionRuntime(store, llm, catalog=catalog, policy_factory=policy_factory, clock=clock, bank_factory=bank_factory)
 
     app = FastAPI(title="桂子问津 Wenjin", version="4.0.0-local-mvp")
@@ -59,6 +62,8 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     from app.learning.plans import PlanService, PlanConflict
     plans = PlanService(store)
+    from app.learning.workspace import WorkspaceService
+    workspace = WorkspaceService(store, catalog)
 
     def runtime_call(operation, *args, **kwargs):
         try:
@@ -96,6 +101,38 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
 
     # ---------- 学习契约（docs/02 §3.1） ----------
 
+    @app.get("/api/goals/coverage")
+    def goal_coverage(goal_text: str, learner_id: str | None = None) -> dict:
+        learner_id = learner_id or settings.learner_id
+        require_purpose(learner_id)
+        if not 2 <= len(goal_text.strip()) <= 120:
+            raise HTTPException(422, "学习目标需为 2 至 120 个字符")
+        targets = goal_target_kcs(goal_text, catalog)
+        titles = {item.ref.asset_id: item.title for item in catalog.knowledge}
+        return {"supported": bool(targets), "target_kcs": list(targets),
+                "target_titles": [titles[kc] for kc in targets],
+                "next_action": "create_contract" if targets else "request_course",
+                "message": "已找到当前课程中的对应知识点" if targets else unsupported_goal_message(goal_text, catalog)}
+
+    class CourseRequestIn(BaseModel):
+        goal_text: str
+        learner_id: str | None = None
+
+    @app.post("/api/course-requests")
+    def request_course(body: CourseRequestIn) -> dict:
+        learner_id = body.learner_id or settings.learner_id
+        require_purpose(learner_id)
+        try:
+            return course_requests.submit(learner_id, body.goal_text)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/course-requests")
+    def list_course_requests(learner_id: str | None = None) -> dict:
+        learner_id = learner_id or settings.learner_id
+        require_purpose(learner_id)
+        return {"requests": course_requests.list_for(learner_id)}
+
     class ContractIn(BaseModel):
         goal_text: str
         learner_id: str | None = None
@@ -106,12 +143,14 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     def create_contract(body: ContractIn) -> dict:
         learner_id = body.learner_id or settings.learner_id
         require_purpose(learner_id)
+        target_kcs = goal_target_kcs(body.goal_text, catalog)
+        if not target_kcs:
+            raise HTTPException(422, unsupported_goal_message(body.goal_text, catalog))
         contract = GoalContract(
             learner_id=learner_id,
             goal_statement=GoalStatement(text=body.goal_text.strip(), authored_by="student"),
             success_criteria=[SuccessCriterion(kind="post_test", threshold=0.8,
-                                               kc_refs=["MATH.G7.EQ.SOLVE",
-                                                        "MATH.G7.EQ.APPLY"])],
+                                               kc_refs=list(target_kcs))],
         )
         if body.deadline_title and body.deadline_at:
             contract.external_deadline_refs.append(ExternalDeadline(
@@ -122,8 +161,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
         store.save_contract(contract)
         plan = PlanVersion(goal_contract_id=contract.goal_contract_id, status="draft",
                            change_reason="学习目标建立后的初始计划草案",
-                           content={"bank_scope": ["MATH.G7.EQ.SOLVE", "MATH.G7.EQ.SETUP",
-                                                   "MATH.G7.EQ.APPLY"],
+                           content={"bank_scope": list(target_kcs),
                                     "cadence": "每天 2 题 + 1 次阶段测试/周"},
                            confirmed_at=None)
         contract.plan_version_refs = [plan.version_id]
@@ -145,6 +183,7 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
         session_type: str = "explore"     # explore | checkpoint
         learner_id: str | None = None
         contract_id: str | None = None
+        project_id: str | None = None
 
     @app.post("/api/sessions")
     def create_session(body: SessionIn) -> dict:
@@ -156,7 +195,18 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
             raise HTTPException(403,"学习契约不属于当前学习者")
         if body.session_type == "checkpoint" and contract is None:
             raise HTTPException(400, "阶段测试需要先签署学习契约")
-        return runtime_call(runtime.create, learner_id, contract, body.session_type)
+        if body.project_id:
+            try:
+                project = workspace.latest(learner_id, "project", body.project_id)
+            except KeyError as exc:
+                raise HTTPException(404, "Unknown project") from exc
+            if project["content"]["archived"]:
+                raise HTTPException(409, "Archived project")
+        result = runtime_call(runtime.create, learner_id, contract, body.session_type)
+        if body.project_id:
+            with store.lock:
+                workspace.attach_session_in_transaction(learner_id, body.project_id, result["session_id"])
+        return result
 
     class MessageIn(BaseModel):
         text: str = ""
@@ -255,9 +305,14 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
         local_learner(learner_id)
         if learning.consent(learner_id) is None:
             raise HTTPException(403,"先建立学习目标并授权教学用途")
+        contract = store.latest_contract(learner_id)
+        if contract is not None and not goal_supported(contract.goal_statement.text, catalog):
+            raise HTTPException(422, unsupported_goal_message(contract.goal_statement.text, catalog))
         try:
-            graph = {asset.ref.asset_id: [ref.asset_id for ref in asset.prerequisite_refs] for asset in catalog.knowledge}
-            return recommend(learning, learner_id, utcnow(), prerequisites=graph)
+            target_kcs = set(goal_target_kcs(contract.goal_statement.text, catalog)) if contract else None
+            graph = {asset.ref.asset_id: [ref.asset_id for ref in asset.prerequisite_refs]
+                     for asset in catalog.knowledge if target_kcs is None or asset.ref.asset_id in target_kcs}
+            return recommend(learning, learner_id, utcnow(), prerequisites=graph, allowed_kcs=target_kcs)
         except ConsentDenied as exc:
             raise HTTPException(403,str(exc))
 
@@ -271,7 +326,14 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
         contract = store.latest_contract(body.learner_id)
         if contract is None:
             raise HTTPException(404, "无学习契约：路径必须挂在目标契约下（R-02）")
-        proposed = plan_call(plans.propose,body.learner_id,contract.goal_contract_id,{"path":path_recommend(body.learner_id)},utcnow())
+        if not goal_supported(contract.goal_statement.text, catalog):
+            raise HTTPException(422, unsupported_goal_message(contract.goal_statement.text, catalog))
+        if not isinstance(body.path, dict):
+            raise HTTPException(422, "path must be an object")
+        # Keep the exact client proposal, including an intentionally empty
+        # proposal used by older clients; never silently replace it with a
+        # freshly computed recommendation.
+        proposed = plan_call(plans.propose,body.learner_id,contract.goal_contract_id,{"path":body.path},utcnow())
         plan = plan_call(plans.accept,body.learner_id,proposed.version_id,utcnow())
         return {"ok": True,"version_id":plan.version_id,"status":plan.status,"diff":plan.diff}
 
@@ -293,6 +355,12 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
             learning._authorize(body.learner_id)
         except ConsentDenied as exc:
             raise HTTPException(403,str(exc))
+        contract = store.latest_contract(body.learner_id)
+        plan = plan_call(plans.get, body.learner_id, version_id)
+        if (contract is not None and plan.goal_contract_id == contract.goal_contract_id
+                and not goal_supported(contract.goal_statement.text, catalog)
+                and plan_has_curriculum_scope(plan.content)):
+            raise HTTPException(422, unsupported_goal_message(contract.goal_statement.text, catalog))
         return plan_call(plans.sign,body.learner_id,version_id,utcnow()).model_dump(mode="json")
 
     @app.post("/api/plans/{version_id}/modify")
@@ -350,4 +418,6 @@ def create_app(settings: Settings | None = None, llm: BaseLLM | None = None,
     install_qualitative_routes(app,store,settings)
     from app.gateway.governance_routes import install_governance_routes
     install_governance_routes(app,store,settings)
+    from app.gateway.workspace_feature_routes import install_workspace_feature_routes
+    install_workspace_feature_routes(app,store,settings,catalog,llm)
     return app
