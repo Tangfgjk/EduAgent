@@ -4,3 +4,14 @@ __pycache__/
 .pytest_cache/
 .env
 .env.local
+.venv/
+.uv-cache/
+.local/
+dist/
+build/
+*.egg-info/
+data/
+node_modules/
+playwright-report/
+test-results/
+frontend/.npm-cache/

@@ -1,0 +1,16 @@
+name: wenjin-dev
+services:
+  db:
+    image: postgres:17.11@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
+    env_file: .local/postgres.env
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wenjin -d wenjin"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  database:

@@ -1,0 +1,134 @@
+import type { components } from './schema';
+
+export type Account = components['schemas']['AccountOut'];
+export type Workspace = components['schemas']['WorkspaceOut'];
+export type StudentInput = components['schemas']['StudentIn'];
+export type WorkspaceInput = components['schemas']['WorkspaceIn'];
+export type LoginInput = components['schemas']['LoginIn'];
+export type AgentRun = components['schemas']['RunOut'];
+export type PlanDecision = components['schemas']['PlanDecision'];
+export type AgentEvent = components['schemas']['EventOut'];
+export type TutorRun = components['schemas']['TutorRunOut'];
+export type ActivityRun = components['schemas']['ActivityRunOut'];
+export type ActivityKind = 'roundtable' | 'teach';
+export type TutorView = components['schemas']['TutorView'];
+export type CatalogUnit = components['schemas']['CatalogUnit'];
+export type ActivityContentInfo = components['schemas']['ActivityContentOut'];
+export type ContentInfo = components['schemas']['ContentOut'];
+export type AnswerReview = components['schemas']['ReviewOut'];
+export type ReviewCard = components['schemas']['CardOut'];
+export type RecallResult = components['schemas']['RecallResult'];
+export type EvidenceReport = components['schemas']['EvidenceOut'];
+export type EvidenceCategory = 'all' | 'answer' | 'checkpoint' | 'hint' | 'reflection' | 'activity' | 'self_report' | 'human_judgment';
+export type EvidenceSource = 'all' | 'synthetic' | 'adult_test' | 'real_student';
+export type StrategyRun = components['schemas']['StrategyOut'];
+export type StrategyStart = components['schemas']['StartStrategy'];
+export type PlanningMaterial = components['schemas']['MaterialOut'];
+export type MaterialInput = components['schemas']['MaterialIn'];
+export type ActiveStrategy = components['schemas']['ActiveOut'];
+export type SourceRef = components['schemas']['SourceRef'];
+type WithoutGate<T> = T extends unknown ? Omit<T, 'gate_id' | 'expected_revision'> : never;
+export type TutorCommand = WithoutGate<components['schemas']['AnswerInput'] | components['schemas']['HintInput'] | components['schemas']['ReflectInput'] | components['schemas']['NextInput']>;
+
+export class ApiError extends Error {
+  constructor(public status: number, public code: string, message: string, public requestId?: string) { super(message); }
+}
+
+function csrfToken() {
+  const cookie = document.cookie.split('; ').find(item => item.startsWith('wenjin_csrf='));
+  return cookie ? decodeURIComponent(cookie.slice('wenjin_csrf='.length)) : '';
+}
+
+async function request<T>(path: string, options: RequestInit = {}, decode?: (response: Response) => Promise<T>): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (options.body) headers.set('Content-Type', 'application/json');
+  if (options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken());
+  let response: Response;
+  try {
+    response = await fetch('/api/v1' + path, { ...options, headers, credentials: 'same-origin' });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ApiError(0, 'network_error', '暂时连接不上服务，请检查网络后重试');
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as components['schemas']['ErrorOut'] | null;
+    const problem = body?.error;
+    if (response.status === 401 && path !== '/auth/me' && path !== '/auth/login') window.dispatchEvent(new Event('wenjin:expired'));
+    throw new ApiError(response.status, problem?.code ?? 'request_failed', problem?.message ?? '请求未完成，请稍后重试', problem?.request_id);
+  }
+  if (response.status === 204) return undefined as T;
+  if (decode) return decode(response);
+  return response.json() as Promise<T>;
+}
+
+const json = (value: unknown) => JSON.stringify(value);
+export const api = {
+  planningMaterials: (admin: boolean, offset: number, signal?: AbortSignal) => request<components['schemas']['MaterialsOut']>(`/${admin ? 'admin' : 'student'}/planning-materials?offset=${offset}`, { signal }),
+  addPlanningMaterial: (input: MaterialInput) => request<PlanningMaterial>('/admin/planning-materials', { method: 'POST', body: json(input) }),
+  releasePlanningMaterial: (material: PlanningMaterial, enabled: boolean) => request<PlanningMaterial>(`/admin/planning-materials/${material.material_id}/release`, { method: 'POST', body: json({ expected_revision: material.revision, enabled, acknowledge_development_only: true }) }),
+  strategies: (wid: string | undefined, offset: number, signal?: AbortSignal) => request<components['schemas']['StrategiesOut']>(wid ? `/student/workspaces/${wid}/strategies?offset=${offset}` : `/admin/strategies?offset=${offset}`, { signal }),
+  strategy: (rid: string, wid?: string, signal?: AbortSignal) => request<StrategyRun>(wid ? `/student/workspaces/${wid}/strategies/${rid}` : `/admin/strategies/${rid}`, { signal }),
+  startStrategy: (wid: string, body: StrategyStart, key: string) => request<StrategyRun>(`/student/workspaces/${wid}/strategies`, { method: 'POST', body: json(body), headers: { 'Idempotency-Key': key } }),
+  decideStrategy: (run: StrategyRun, action: 'approve' | 'reject' | 'confirm' | 'decline', note: string, key: string, admin = false) => request<StrategyRun>(admin ? `/admin/strategies/${run.run_id}/decision` : `/student/workspaces/${run.workspace_id}/strategies/${run.run_id}/decision`, { method: 'POST', body: json({ action, note, expected_revision: run.revision, gate_id: run.gate_id }), headers: { 'Idempotency-Key': key } }),
+  cancelStrategy: (run: StrategyRun) => request<StrategyRun>(`/student/workspaces/${run.workspace_id}/strategies/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
+  activeStrategy: (wid: string, signal?: AbortSignal) => request<ActiveStrategy>(`/student/workspaces/${wid}/active-strategy`, { signal }),
+  rollbackStrategy: (active: ActiveStrategy, target_version: string | null, note: string, key: string) => request<ActiveStrategy>(`/student/workspaces/${active.workspace_id}/active-strategy/rollback`, { method: 'POST', body: json({ target_version, note, expected_revision: active.revision }), headers: { 'Idempotency-Key': key } }),
+  evidence: (wid: string | undefined, days: 14 | 30 | 90, source: EvidenceSource, record_kind: EvidenceCategory, offset: number, signal?: AbortSignal) => request<EvidenceReport>((wid ? `/student/workspaces/${wid}/evidence` : '/student/evidence') + `?days=${days}&source=${source}&record_kind=${record_kind}&offset=${offset}`, { signal }),
+  activityCatalog: (admin = false, signal?: AbortSignal) => request<components['schemas']['ActivityCatalogOut']>(`/${admin ? 'admin' : 'student'}/activity-catalog`, { signal }),
+  releaseActivityPack: (content: ActivityContentInfo, enabled: boolean) => request<ActivityContentInfo>(`/admin/activity-catalog/${encodeURIComponent(content.unit_id)}/development-release`, { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
+  activityContent: (admin = false, signal?: AbortSignal) => request<ContentInfo>(`/${admin ? 'admin' : 'student'}/activity-content`, { signal }),
+  releaseActivityContent: (content: ContentInfo, enabled: boolean) => request<ContentInfo>('/admin/activity-content/development-release', { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
+  activities: (wid: string, kind: ActivityKind, offset = 0, signal?: AbortSignal) => request<components['schemas']['ActivityRunsOut']>(`/student/workspaces/${wid}/${kind}?offset=${offset}`, { signal }),
+  startActivity: (wid: string, kind: ActivityKind, unit_id: string, key: string) => request<ActivityRun>(`/student/workspaces/${wid}/${kind}`, { method: 'POST', body: json({ unit_id }), headers: { 'Idempotency-Key': key } }),
+  activityInput: (run: ActivityRun, command: { action: 'contribute' | 'conclude'; answer: string; reasoning: string }, key: string) => request<ActivityRun>(`/student/workspaces/${run.workspace_id}/${run.kind}/${run.run_id}/inputs`, { method: 'POST', body: json({ ...command, gate_id: run.gate_id, expected_revision: run.revision }), headers: { 'Idempotency-Key': key } }),
+  cancelActivity: (run: ActivityRun) => request<ActivityRun>(`/student/workspaces/${run.workspace_id}/${run.kind}/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
+  reviewCards: (wid: string, status: 'all' | 'due' | 'scheduled', offset: number, signal?: AbortSignal) => request<components['schemas']['CardsOut']>(`/student/workspaces/${wid}/review-cards?status=${status}&offset=${offset}`, { signal }),
+  reviewCard: (wid: string, cid: string) => request<ReviewCard>(`/student/workspaces/${wid}/review-cards/${cid}`),
+  recall: (card: ReviewCard, answer: string, reasoning: string, key: string) => request<RecallResult>(`/student/workspaces/${card.workspace_id}/review-cards/${card.card_id}/attempts`, { method: 'POST', body: json({ answer, reasoning, expected_revision: card.revision }), headers: { 'Idempotency-Key': key } }),
+  unverifiable: (wid: string, offset: number, signal?: AbortSignal) => request<components['schemas']['UnknownsOut']>(`/student/workspaces/${wid}/unverifiable-answers?offset=${offset}`, { signal }),
+  memory: (wid?: string, offset = 0, signal?: AbortSignal) => request<components['schemas']['MemoryOut']>(wid ? `/student/workspaces/${wid}/memory` : `/student/memory?offset=${offset}`, { signal }),
+  learningFact: (wid: string, fid: string, signal?: AbortSignal) => request<components['schemas']['FactOut']>(`/student/workspaces/${wid}/facts/${fid}`, { signal }),
+  memoryNote: (wid: string, fact_id: string, text: string, key: string) => request<components['schemas']['NoteOut']>(`/student/workspaces/${wid}/memory-notes`, { method: 'POST', body: json({ fact_id, text }), headers: { 'Idempotency-Key': key } }),
+  contentCatalog: (admin = false, signal?: AbortSignal) => request<components['schemas']['CatalogOut']>(`/${admin ? 'admin' : 'student'}/content-catalog`, { signal }),
+  releaseCatalogUnit: (content: CatalogUnit, enabled: boolean) => request<CatalogUnit>(`/admin/content-catalog/${encodeURIComponent(content.unit_id)}/development-release`, { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
+  content: (admin = false, signal?: AbortSignal) => request<ContentInfo>(`/${admin ? 'admin' : 'student'}/content`, { signal }),
+  releaseContent: (content: ContentInfo, enabled: boolean) => request<ContentInfo>('/admin/content/development-release', { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
+  answerReviews: (status: 'pending' | 'resolved', offset: number, signal?: AbortSignal) => request<components['schemas']['ReviewsOut']>(`/admin/answer-reviews?status=${status}&offset=${offset}`, { signal }),
+  resolveAnswer: (review: AnswerReview, conclusion: 'correct' | 'incorrect' | 'unresolved', note: string) => request<AnswerReview>(`/admin/answer-reviews/${review.review_id}/resolve`, { method: 'POST', body: json({ expected_revision: review.revision, conclusion, note }) }),
+  tutoring: (wid: string, signal?: AbortSignal) => request<components['schemas']['TutorRunsOut']>(`/student/workspaces/${wid}/tutoring`, { signal }),
+  startTutor: (wid: string, unit_id: string, key: string) => request<TutorRun>(`/student/workspaces/${wid}/tutoring`, { method: 'POST', body: json({ unit_id }), headers: { 'Idempotency-Key': key } }),
+  tutorInput: (run: TutorRun, command: TutorCommand, key: string) => request<TutorRun>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/inputs`, { method: 'POST', body: json({ ...command, gate_id: run.gate_id, expected_revision: run.revision }), headers: { 'Idempotency-Key': key } }),
+  cancelTutor: (run: TutorRun) => request<TutorRun>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
+  runs: (wid: string, signal?: AbortSignal) => request<components['schemas']['RunsOut']>(`/student/workspaces/${wid}/runs`, { signal }),
+  startPlan: (wid: string, goal: string, daily_minutes: number, key: string) => request<AgentRun>(`/student/workspaces/${wid}/runs`, { method: 'POST', body: json({ goal, daily_minutes }), headers: { 'Idempotency-Key': key } }),
+  decidePlan: (wid: string, rid: string, decision: PlanDecision, key: string) => request<AgentRun>(`/student/workspaces/${wid}/runs/${rid}/resume`, { method: 'POST', body: json(decision), headers: { 'Idempotency-Key': key } }),
+  cancelRun: (run: AgentRun) => request<AgentRun>(`/student/workspaces/${run.workspace_id}/runs/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
+  runEvents: (run: Pick<AgentRun, 'workspace_id' | 'run_id'>, after: number, signal?: AbortSignal, kind: 'runs' | 'tutoring' | ActivityKind = 'runs') => request<AgentEvent[]>(`/student/workspaces/${run.workspace_id}/${kind}/${run.run_id}/events`, { signal, headers: { 'Last-Event-ID': String(after) } }, async response => {
+    const text = await response.text();
+    return text.split('\n\n').flatMap(packet => {
+      const data = packet.split('\n').find(line => line.startsWith('data: '));
+      if (!data) return [];
+      const event = JSON.parse(data.slice(6)) as AgentEvent;
+      if (event.run_id !== run.run_id || !Number.isInteger(event.seq) || event.seq <= after) throw new ApiError(0, 'event_invalid', '事件序列不符合当前运行范围，请刷新');
+      return [event];
+    });
+  }),
+  me: (signal?: AbortSignal) => request<components['schemas']['MeOut']>('/auth/me', { signal }),
+  login: (input: LoginInput) => request<components['schemas']['AuthOut']>('/auth/login', { method: 'POST', body: json(input) }),
+  logout: () => request<void>('/auth/logout', { method: 'POST' }),
+  students: (offset = 0, signal?: AbortSignal) => request<components['schemas']['StudentsOut']>(`/admin/students?offset=${offset}&limit=20`, { signal }),
+  createStudent: (input: StudentInput) => request<Account>('/admin/students', { method: 'POST', body: json(input) }),
+  resetPassword: (id: string, password: string) => request<Account>(`/admin/students/${encodeURIComponent(id)}/reset-password`, { method: 'POST', body: json({ password }) }),
+  disableStudent: (id: string) => request<Account>(`/admin/students/${encodeURIComponent(id)}/disable`, { method: 'POST' }),
+  async workspaces(signal?: AbortSignal) {
+    const items: Workspace[] = [];
+    for (let offset = 0; ; offset += 100) {
+      const page = await request<components['schemas']['WorkspacesOut']>(`/student/workspaces?offset=${offset}&limit=100`, { signal });
+      items.push(...page.items);
+      if (page.items.length < 100) return [...new Map(items.map(item => [item.workspace_id, item])).values()];
+    }
+  },
+  createWorkspace: (input: WorkspaceInput, key: string) => request<Workspace>('/student/workspaces', { method: 'POST', body: json(input), headers: { 'Idempotency-Key': key } }),
+  renameWorkspace: (workspace: Workspace, title: string) => request<Workspace>(`/student/workspaces/${workspace.workspace_id}`, { method: 'PATCH', body: json({ title, expected_revision: workspace.revision }) }),
+  changeStatus: (workspace: Workspace, action: 'archive' | 'restore') => request<Workspace>(`/student/workspaces/${workspace.workspace_id}/${action}`, { method: 'POST', body: json({ expected_revision: workspace.revision }) }),
+};

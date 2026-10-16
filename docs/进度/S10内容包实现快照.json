@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "scope": "source_code_inventory_not_runtime_approval_or_curriculum_completion",
+  "limitations": "当前未接真实模型，不自动理解课程正文或评定教学效果。",
+  "professional_review": "pending",
+  "curriculum_textbook_mapping": "pending",
+  "real_student_release": false,
+  "unit_count": 5,
+  "task_count": 25,
+  "units": [
+    {
+      "unit_id": "math.g7.equations.dev1",
+      "title": "一元一次方程与应用 · 开发单元",
+      "grade_suggestion": "七年级",
+      "registry_domain": "数与式",
+      "content_version": "76c6f6042369b14d8f01bd2fbfd9f53f90b75cb84ad28a66e5dc0df9ecc33f7d",
+      "knowledge_points": [
+        "等式性质",
+        "一元一次方程",
+        "数量关系建模"
+      ],
+      "prerequisite_references": [],
+      "coverage": "partial_development_sample",
+      "verifier": "bounded-rational.v1",
+      "tasks": [
+        {
+          "task_id": "D-EQ-01",
+          "stage": "diagnostic",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-EQ-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-APP-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-EQ-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-APP-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        }
+      ],
+      "numeric_tutoring_review_evidence": "implemented_development_only",
+      "roundtable": "fixed_template",
+      "teach_ai": "fixed_template"
+    },
+    {
+      "unit_id": "math.g7.rational.dev1",
+      "title": "有理数运算 · 开发单元",
+      "grade_suggestion": "七年级",
+      "registry_domain": "数与式",
+      "content_version": "3c996393d79b5634b445086d6204389b5b063035a16353e61f13a5f6e9eff479",
+      "knowledge_points": [
+        "有理数加减",
+        "有理数乘除",
+        "运算顺序"
+      ],
+      "prerequisite_references": [],
+      "coverage": "partial_development_sample",
+      "verifier": "bounded-rational.v1",
+      "tasks": [
+        {
+          "task_id": "D-RAT-01",
+          "stage": "diagnostic",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-RAT-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "P-RAT-02",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "C-RAT-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-RAT-02",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        }
+      ],
+      "numeric_tutoring_review_evidence": "implemented_development_only",
+      "roundtable": "not_implemented",
+      "teach_ai": "not_implemented"
+    },
+    {
+      "unit_id": "math.g8.linear.dev1",
+      "title": "一次函数求值 · 开发单元",
+      "grade_suggestion": "八年级",
+      "registry_domain": "函数",
+      "content_version": "3c1f0e95a920e29c322c8969ef7d292a750d4fa97bfde8b0bcebb5b97765d605",
+      "knowledge_points": [
+        "自变量与函数值",
+        "代入求值"
+      ],
+      "prerequisite_references": [
+        "math.g7.equations.dev1"
+      ],
+      "coverage": "partial_development_sample",
+      "verifier": "bounded-rational.v1",
+      "tasks": [
+        {
+          "task_id": "D-LIN-01",
+          "stage": "diagnostic",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-LIN-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "P-LIN-02",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "C-LIN-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-LIN-02",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        }
+      ],
+      "numeric_tutoring_review_evidence": "implemented_development_only",
+      "roundtable": "not_implemented",
+      "teach_ai": "not_implemented"
+    },
+    {
+      "unit_id": "math.g8.pythagoras.dev1",
+      "title": "勾股定理计算 · 开发单元",
+      "grade_suggestion": "八年级",
+      "registry_domain": "几何",
+      "content_version": "0726e9da99d01e2b8a5f569a860feae4033d2697a5126c081eb9f0e2c7e3cd2c",
+      "knowledge_points": [
+        "识别直角三角形的斜边",
+        "勾股定理求边长"
+      ],
+      "prerequisite_references": [
+        "math.g7.rational.dev1"
+      ],
+      "coverage": "partial_development_sample",
+      "verifier": "bounded-rational.v1",
+      "tasks": [
+        {
+          "task_id": "D-PYT-01",
+          "stage": "diagnostic",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-PYT-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "P-PYT-02",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "C-PYT-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-PYT-02",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        }
+      ],
+      "numeric_tutoring_review_evidence": "implemented_development_only",
+      "roundtable": "not_implemented",
+      "teach_ai": "not_implemented"
+    },
+    {
+      "unit_id": "math.g9.probability.dev1",
+      "title": "等可能事件概率 · 开发单元",
+      "grade_suggestion": "九年级",
+      "registry_domain": "统计概率",
+      "content_version": "7097bc1c5090dca2f064bbdcbce58f0885d7543ea9b0d849d072408f4d0792fc",
+      "knowledge_points": [
+        "等可能结果计数",
+        "概率的分数表示"
+      ],
+      "prerequisite_references": [
+        "math.g7.rational.dev1"
+      ],
+      "coverage": "partial_development_sample",
+      "verifier": "bounded-rational.v1",
+      "tasks": [
+        {
+          "task_id": "D-PRB-01",
+          "stage": "diagnostic",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "P-PRB-01",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "P-PRB-02",
+          "stage": "practice",
+          "hint_count": 4,
+          "misconception_recorded": true
+        },
+        {
+          "task_id": "C-PRB-01",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        },
+        {
+          "task_id": "C-PRB-02",
+          "stage": "checkpoint",
+          "hint_count": 0,
+          "misconception_recorded": false
+        }
+      ],
+      "numeric_tutoring_review_evidence": "implemented_development_only",
+      "roundtable": "not_implemented",
+      "teach_ai": "not_implemented"
+    }
+  ],
+  "activity_pack": {
+    "unit_id": "math.g7.equations.activities.dev1",
+    "parent_unit_id": "math.g7.equations.dev1",
+    "task_id": "P-EQ-01",
+    "content_version": "1328ce7eca9fa74f74a45ca9d408b67b2c1fe1789d66b44383914ca32481ae18",
+    "template_kinds": [
+      "roundtable",
+      "teach"
+    ],
+    "separate_development_approval_required": true,
+    "student_text_understanding": false,
+    "reasoning_quality_assessment": false
+  }
+}
