@@ -15,7 +15,7 @@ from app.infrastructure.db.models import (Account, AgentRun, AuditEvent, ModelCo
     ModelDailyBudget, ModelOperation, ModelPolicy, LearningInput, OutboxJob, Workspace, new_id, now)
 from app.llm.provider import (FakeProvider, GenerationRequest, ProviderConfig, ProviderError, create_provider)
 from app.modules.errors import DomainError
-from app.modules.learning.model_coaching import (PROMPT_VERSION, MULTITURN_PROMPT_VERSION, SUPPORTED_PROMPTS,
+from app.modules.learning.model_coaching import (PROMPT_VERSION, MULTITURN_PROMPTS, SUPPORTED_PROMPTS,
     UNIT, freeze_request, validate_proposal)
 from app.modules.learning.service import request_hash
 
@@ -32,7 +32,10 @@ def model_key():
     if not value:
         path = Path(os.getenv("WENJIN_DEEPSEEK_KEY_FILE", ".local/deepseek.key"))
         if path.is_file():
-            value = path.read_text(encoding="utf-8").strip()
+            try:
+                value = path.read_text(encoding="utf-8").strip()
+            except OSError:
+                return ''
     return value
 
 
@@ -42,8 +45,9 @@ def remaining_calls(session, account_id, config):
     remaining = []
     for scope, limit in (("global", config.site_daily_calls), ("account:" + account_id, config.account_daily_calls)):
         budget = session.get(ModelDailyBudget, (day, scope))
-        remaining.append(max(0, limit - (budget.calls if budget else 0)))
-    return min(remaining)
+        if limit > 0:
+            remaining.append(max(0, limit - (budget.calls if budget else 0)))
+    return min(remaining) if remaining else None
 
 
 def public_configuration(config):
@@ -93,7 +97,7 @@ def publish_configuration(session, actor, payload):
     if prompt_version not in SUPPORTED_PROMPTS:
         raise DomainError(422, "model_version_conflict", "不支持此模型提示版本")
     if vendor == "deepseek" and not model_key():
-        raise DomainError(409, "model_key_missing", "请先通过本机维护命令配置 DeepSeek 密钥")
+        raise DomainError(409, "model_key_missing", "请先配置 DeepSeek 密钥并确认服务进程有读取权限")
     config = ModelConfiguration(vendor=vendor, model="deepseek-flash" if vendor == "deepseek" else "scripted",
         max_output_tokens=payload["max_output_tokens"], account_daily_calls=payload["account_daily_calls"],
         site_daily_calls=payload["site_daily_calls"], prompt_version=prompt_version, actor_id=actor.account.id)
@@ -118,7 +122,7 @@ def pause_configuration(session, actor, revision):
 
 def collect_context(session, account, run, config, policy):
     """Fetch only completed same-task coaching; never traverse other spaces or full checkpoints."""
-    if config.prompt_version != MULTITURN_PROMPT_VERSION:
+    if config.prompt_version not in MULTITURN_PROMPTS:
         return (), ()
     ops = list(session.scalars(select(ModelOperation).join(LearningInput, LearningInput.id == ModelOperation.input_id)
         .where(ModelOperation.account_id == account.id, ModelOperation.workspace_id == run.workspace_id,
@@ -148,9 +152,14 @@ def collect_context(session, account, run, config, policy):
     return history, sources
 
 
-def reserve(session, account, run, entry, text):
-    if run.view["unit_id"] != UNIT or run.view["phase"] != "practice":
+def reserve(session, account, run, entry, text, *, teach_item=None):
+    if teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
         raise DomainError(409, "model_scope_forbidden", "模型追问目前仅开放概率练习，不用于诊断或独立检测")
+    if teach_item is not None:
+        from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
+        if (run.kind != 'teach' or teach_item.unit_id != TEACH_UNIT or run.view['phase'] != 'opening'
+                or entry.payload.get('action') != 'contribute'):
+            raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于首次概率讲解，不用于另一题验证')
     if account.source_kind not in {"synthetic", "adult_test"}:
         raise DomainError(403, "model_source_forbidden", "当前模型仅用于模拟或成人开发测试")
     policy = session.get(ModelPolicy, 1, with_for_update=True)
@@ -166,15 +175,20 @@ def reserve(session, account, run, entry, text):
         if budget is None:
             budget = ModelDailyBudget(day=day, scope=scope, calls=0)
             session.add(budget)
-        if budget.calls >= limit:
+        if limit > 0 and budget.calls >= limit:
             raise DomainError(429, "model_budget_exhausted", "今日模型调用额度已用完，可继续使用预设提示")
         budget.calls += 1
-    history, sources = collect_context(session, account, run, config, policy)
-    snapshot = freeze_request(run.view, text, account, config.max_output_tokens,
-        prompt_version=config.prompt_version, history=history, context_sources=sources)
+    if teach_item is None:
+        history, sources = collect_context(session, account, run, config, policy)
+        snapshot = freeze_request(run.view, text, account, config.max_output_tokens,
+            prompt_version=config.prompt_version, history=history, context_sources=sources)
+    else:
+        from app.modules.learning.teach_coaching import freeze_request as freeze_teach
+        snapshot = freeze_teach(teach_item, text, entry.payload['answer'], account,
+            config.max_output_tokens, config.prompt_version)
     op = ModelOperation(input_id=entry.id, run_id=run.id, workspace_id=run.workspace_id, account_id=account.id,
         configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id=run.view["task"]["task_id"],
-        hint_level=len(run.view["hints"]), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
+        hint_level=len(run.view.get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
     session.add(op)
     session.flush()
     return op
@@ -213,7 +227,10 @@ class ModelTaskRunner:
     @staticmethod
     def _provider(config, snapshot):
         if config.vendor == "fake":
-            return FakeProvider((json.dumps({"quote": snapshot["student_text"][:80], "focus": "clarify"}, ensure_ascii=False),))
+            proposal = {"quote": snapshot["student_text"][:80], "focus": "clarify"}
+            if snapshot.get('purpose') == 'teach':
+                proposal['question'] = '你能说明讲解中每个基本结果是怎样确定的吗？'
+            return FakeProvider((json.dumps(proposal, ensure_ascii=False),))
         return create_provider(ProviderConfig(vendor="deepseek", model=config.model,
             api_key=model_key(), max_output_tokens=config.max_output_tokens, timeout_seconds=30))
 
@@ -234,7 +251,20 @@ class ModelTaskRunner:
         if not reason:
             from app.modules.learning.content_service import require_content
             try:
-                require_content(session, account.source_kind, UNIT, op.request["content_version"])
+                if op.request.get('purpose') == 'teach':
+                    from app.modules.learning.activity_catalog import activity_for_run
+                    from app.modules.learning.content_service import require_activity_content
+                    from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
+                    item = activity_for_run(run)
+                    if (run.kind != 'teach' or item.unit_id != TEACH_UNIT or run.view['phase'] != 'challenge'
+                            or item.version != op.request.get('activity_version')
+                            or item.unit_id != op.request.get('activity_unit_id')
+                            or item.parent.version != op.request.get('content_version')):
+                        raise DomainError(409, 'stale_result', '讲解步骤已更新')
+                    # Match HTTP/teaching-worker order: activity approval, then parent approval.
+                    require_activity_content(session, account.source_kind, item.unit_id)
+                else:
+                    require_content(session, account.source_kind, UNIT, op.request["content_version"])
             except DomainError as error:
                 reason = error.code
         return op, reason
@@ -282,7 +312,7 @@ class ModelTaskRunner:
                     continue
                 config = session.get(ModelConfiguration, op.configuration_id)
                 if (config.prompt_version not in SUPPORTED_PROMPTS
-                        or op.request.get("prompt_version") != config.prompt_version):
+                        or op.request.get("configuration_prompt_version", op.request.get("prompt_version")) != config.prompt_version):
                     self._end(op, "failed", "model_version_conflict")
                     continue
                 op.status, op.lease_token, op.lease_until = "running", new_id(), now() + self.lease_seconds
@@ -321,7 +351,11 @@ class ModelTaskRunner:
             try:
                 if result.finish_reason != "stop":
                     raise ProviderError("truncated_output")
-                proposal = validate_proposal(result.text, claim["request"])
+                if claim['request'].get('purpose') == 'teach':
+                    from app.modules.learning.teach_coaching import validate_proposal as validate_teach
+                    proposal = validate_teach(result.text, claim['request'])
+                else:
+                    proposal = validate_proposal(result.text, claim["request"])
             except ProviderError as failure:
                 self._end(op, "failed", failure.code)
             else:

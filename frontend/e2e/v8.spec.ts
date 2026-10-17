@@ -50,7 +50,9 @@ test('V8：内容核对开放、评测分类复核、我教 AI 新题验证与�
   await dialog.getByRole('button', { name: '保存复核记录', exact: true }).click();
   await expect(dialog.getByText('复核记录已保存', { exact: true })).toBeVisible();
   await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: '启用此互动包', exact: true }).click();
+  const enableActivity = dialog.getByRole('button', { name: '启用此互动包', exact: true });
+  if (await enableActivity.count()) await enableActivity.click();
+  else await dialog.getByRole('button', { name: '关闭', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   const context = await browser.newContext();
   const student = await context.newPage();
@@ -63,6 +65,8 @@ test('V8：内容核对开放、评测分类复核、我教 AI 新题验证与�
     await student.getByRole('button', { name: '开始我教 AI', exact: true }).click();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的讲解', { exact: true }).fill('我先用颜色列结果，再检查这样是否等可能。');
+    const modelChoice = student.getByLabel('让 AI 根据本次讲解提出一个问题', { exact: true });
+    if (await modelChoice.count()) await modelChoice.uncheck();
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('预设误区 · 待纠正', { exact: true })).toBeVisible();
     await student.getByLabel('我的数值表达', { exact: true }).fill('2/5');

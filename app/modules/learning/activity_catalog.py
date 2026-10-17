@@ -27,7 +27,7 @@ class ActivityPack:
         return [{**self.task, 'activity_templates': self.templates, 'flow': self.flow,
                  'verification_task': self.verification_task,
                  'base_content_version': self.parent.version,
-                 'boundary': '模板角色并不读取或评价学生文字；仅在最后核对数值，解释质量尚未评定。'}]
+                 'boundary': '预设角色不读取学生文字；概率新流程可单独请求模型追问。程序另核对数值，解释质量尚未评定。'}]
 
 
 _parent = get_pack('math.g9.probability.dev1')

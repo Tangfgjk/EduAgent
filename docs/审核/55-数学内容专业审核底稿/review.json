@@ -1,0 +1,928 @@
+{
+  "schema_version": 1,
+  "purpose": "teacher_review_draft",
+  "contains_reference_answers": true,
+  "real_student_release": false,
+  "limitations": "人工开发复算，不自动理解题意、评价提示质量、映射课标或评定教学效果；不写入审核或启用记录。",
+  "task_count": 35,
+  "reference_mismatch_count": 0,
+  "units": [
+    {
+      "unit_id": "math.g7.equations.dev1",
+      "title": "一元一次方程与应用 · 开发单元",
+      "content_version": "76c6f6042369b14d8f01bd2fbfd9f53f90b75cb84ad28a66e5dc0df9ecc33f7d",
+      "grade_suggestion": "七年级",
+      "knowledge_points": [
+        "等式性质",
+        "一元一次方程",
+        "数量关系建模"
+      ],
+      "tasks": [
+        {
+          "id": "D-EQ-01",
+          "stage": "diagnostic",
+          "stem": "解方程：3x + 5 = 14。请给出 x 的值，并写下你的想法。",
+          "answer": "3",
+          "format": "填写数值或 x=数值，可使用分数与四则运算。",
+          "hints": [],
+          "development_calculation": "(14-5)/3",
+          "development_rationale": "等式两边减 5，再除以 3；代回 3x+5=14。",
+          "calculated_answer": "3",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-EQ-01",
+          "stage": "practice",
+          "stem": "解方程：2x − 7 = 5。每次变形，等式两边做了什么？",
+          "answer": "6",
+          "format": "填写 x 的值，步骤写在下方。",
+          "hints": [
+            "想让含 x 的项单独留在一边，先观察常数项。",
+            "怎样在等式两边做相同的运算，消去左边的 −7？",
+            "两边同时加 7，得到 2x = 12；下一步怎样让 x 的系数变成 1？",
+            "两边同时加 7：2x = 12；再同时除以 2：x = 6。代入检查：2×6−7=5。请用自己的话复述依据。"
+          ],
+          "development_calculation": "(5+7)/2",
+          "development_rationale": "等式两边加 7，再除以 2；代回 2x−7=5。",
+          "calculated_answer": "6",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-APP-01",
+          "stage": "practice",
+          "stem": "每支笔 3 元，另付一次包装费 5 元，一共付了 26 元。买了几支笔？请设未知数列方程，并给出支数。",
+          "answer": "7",
+          "format": "答案只填支数（数值），列式和依据写在下方。",
+          "hints": [
+            "总费用由哪两部分组成？包装费要付几次？",
+            "设买了 x 支笔，把买笔的费用与包装费相加。",
+            "方程是 3x + 5 = 26。先用等式性质处理常数项，继续算一算。",
+            "设买了 x 支笔，3x+5=26，两边减 5 得 3x=21，再除以 3 得 x=7。检查：3×7+5=26。注意包装费只付一次。"
+          ],
+          "development_calculation": "(26-5)/3",
+          "development_rationale": "总费用先扣除一次包装费，再除以每支价格；数量须为非负整数。",
+          "calculated_answer": "7",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-EQ-01",
+          "stage": "checkpoint",
+          "stem": "独立检测 1：解方程 4x + 3 = 23，求 x。请独立完成。",
+          "answer": "5",
+          "format": "填写 x 的值。本次检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "development_calculation": "(23-3)/4",
+          "development_rationale": "等式两边减 3，再除以 4。",
+          "calculated_answer": "5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-APP-01",
+          "stage": "checkpoint",
+          "stem": "独立检测 2：每本练习本 6 元，另付一次包装费 4 元，总共付了 40 元。买了几本？请列式并给出本数。",
+          "answer": "6",
+          "format": "答案只填本数（数值），列式写在下方；提交后不能修改。",
+          "hints": [],
+          "development_calculation": "(40-4)/6",
+          "development_rationale": "总费用扣除一次包装费，再除以每本价格。",
+          "calculated_answer": "6",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g7.rational.dev1",
+      "title": "有理数运算 · 开发单元",
+      "content_version": "3c996393d79b5634b445086d6204389b5b063035a16353e61f13a5f6e9eff479",
+      "grade_suggestion": "七年级",
+      "knowledge_points": [
+        "有理数加减",
+        "有理数乘除",
+        "运算顺序"
+      ],
+      "tasks": [
+        {
+          "id": "D-RAT-01",
+          "stage": "diagnostic",
+          "stem": "计算 −3 + 8。",
+          "answer": "5",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "-3+8",
+          "development_rationale": "异号相加，绝对值作差，结果取正号。",
+          "calculated_answer": "5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-RAT-01",
+          "stage": "practice",
+          "stem": "计算 −6 ÷ 3 + 4，说明运算顺序。",
+          "answer": "2",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "观察算式里有哪些运算。",
+            "先算除法，再算加法。",
+            "−6÷3=−2，再计算 −2+4。",
+            "−6÷3+4=−2+4=2。异号两数相除得负，随后再相加。"
+          ],
+          "misconception": "把负数相除的结果当成正数，或先加后除。",
+          "development_calculation": "-6/3+4",
+          "development_rationale": "先除后加，−6÷3=−2。",
+          "calculated_answer": "2",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-RAT-02",
+          "stage": "practice",
+          "stem": "上午气温 −2℃，中午升高 7℃，晚上又降低 3℃。晚上气温是多少摄氏度？",
+          "answer": "2",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "用正负数表示升高和降低。",
+            "从 −2 出发，先加 7，再减 3。",
+            "列式 −2+7−3，中午为 5℃。",
+            "−2+7−3=5−3=2，晚上为 2℃。可用数轴核对方向。"
+          ],
+          "misconception": "把降低也记为加法。",
+          "development_calculation": "-2+7-3",
+          "development_rationale": "温度变化依次记为 +7 和 −3。",
+          "calculated_answer": "2",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-RAT-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：计算 −12 ÷ 4 + 8。",
+          "answer": "5",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "-12/4+8",
+          "development_rationale": "先算 −12÷4，再加 8。",
+          "calculated_answer": "5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-RAT-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：气温 −4℃，升高 9℃后再降低 2℃，最终气温是多少摄氏度？",
+          "answer": "3",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "-4+9-2",
+          "development_rationale": "升温为正、降温为负；保留起始温度。",
+          "calculated_answer": "3",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g8.linear.dev1",
+      "title": "一次函数求值 · 开发单元",
+      "content_version": "3c1f0e95a920e29c322c8969ef7d292a750d4fa97bfde8b0bcebb5b97765d605",
+      "grade_suggestion": "八年级",
+      "knowledge_points": [
+        "自变量与函数值",
+        "代入求值"
+      ],
+      "tasks": [
+        {
+          "id": "D-LIN-01",
+          "stage": "diagnostic",
+          "stem": "一次函数 y=2x+1，当 x=3 时，y 是多少？",
+          "answer": "7",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "2*3+1",
+          "development_rationale": "将 x=3 代入给定函数。",
+          "calculated_answer": "7",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-LIN-01",
+          "stage": "practice",
+          "stem": "一次函数 y=−2x+5，当 x=−1 时，求 y 并说明代入过程。",
+          "answer": "7",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "先找出自变量 x 的给定值。",
+            "把表达式中的 x 替换为 −1，注意括号。",
+            "y=−2×(−1)+5，先算乘法。",
+            "y=−2×(−1)+5=2+5=7。负数相乘得正。"
+          ],
+          "misconception": "漏掉负数代入时的括号或符号。",
+          "development_calculation": "-2*(-1)+5",
+          "development_rationale": "代入负数须保留括号，负负相乘为正。",
+          "calculated_answer": "7",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-LIN-02",
+          "stage": "practice",
+          "stem": "费用模型 y=3x+4，其中 x 表示购买件数，y 表示总费用（元）。购买 5 件时费用是多少元？",
+          "answer": "19",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "确认 x 与 y 分别代表什么。",
+            "把 x=5 代入已有模型。",
+            "y=3×5+4，固定费用只加一次。",
+            "y=3×5+4=15+4=19 元。这里使用给定模型，不自动评定建模能力。"
+          ],
+          "misconception": "将固定费用也乘以件数。",
+          "development_calculation": "3*5+4",
+          "development_rationale": "购买件数为 5，固定费用只计一次。",
+          "calculated_answer": "19",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-LIN-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：y=−3x+2，当 x=−2 时，y 是多少？",
+          "answer": "8",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "-3*(-2)+2",
+          "development_rationale": "将 x=−2 代入，先乘后加。",
+          "calculated_answer": "8",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-LIN-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：费用模型 y=4x+6，购买 3 件时费用是多少元？",
+          "answer": "18",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "4*3+6",
+          "development_rationale": "给定费用模型代入 3 件。",
+          "calculated_answer": "18",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g8.pythagoras.dev1",
+      "title": "勾股定理计算 · 开发单元",
+      "content_version": "0726e9da99d01e2b8a5f569a860feae4033d2697a5126c081eb9f0e2c7e3cd2c",
+      "grade_suggestion": "八年级",
+      "knowledge_points": [
+        "识别直角三角形的斜边",
+        "勾股定理求边长"
+      ],
+      "tasks": [
+        {
+          "id": "D-PYT-01",
+          "stage": "diagnostic",
+          "stem": "直角三角形两条直角边分别长 3、4，斜边长多少？",
+          "answer": "5",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "5",
+          "development_rationale": "3²+4²=25=5²；边长取正。",
+          "calculated_answer": "5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PYT-01",
+          "stage": "practice",
+          "stem": "直角三角形两条直角边分别长 6、8，求斜边长，写出所用关系。",
+          "answer": "10",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "先区分直角边和斜边。",
+            "设斜边为 c，使用 c²=a²+b²。",
+            "c²=6²+8²=36+64=100，边长取正值。",
+            "c²=100，c=10。检查 6²+8²=10²。这是数值计算，不是定理证明。"
+          ],
+          "misconception": "把两条直角边直接相加作为斜边。",
+          "development_calculation": "10",
+          "development_rationale": "6²+8²=100=10²；边长取正。",
+          "calculated_answer": "10",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PYT-02",
+          "stage": "practice",
+          "stem": "直角三角形斜边长 13，一条直角边长 5，另一条直角边长多少？",
+          "answer": "12",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "已知的是斜边还是两条直角边？",
+            "设另一条直角边为 b，5²+b²=13²。",
+            "b²=169−25=144，边长取正值。",
+            "b=12。检查 5²+12²=13²，不能把 13 与 5 的平方相加。"
+          ],
+          "misconception": "求直角边时仍把两个已知长度的平方相加。",
+          "development_calculation": "12",
+          "development_rationale": "13²−5²=144=12²；未知量是直角边。",
+          "calculated_answer": "12",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PYT-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：直角三角形两条直角边长 9、12，斜边长多少？",
+          "answer": "15",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "15",
+          "development_rationale": "9²+12²=225=15²；边长取正。",
+          "calculated_answer": "15",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PYT-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：直角三角形斜边长 10，一条直角边长 6，另一条直角边长多少？",
+          "answer": "8",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "8",
+          "development_rationale": "10²−6²=64=8²；未知量是直角边。",
+          "calculated_answer": "8",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g9.probability.dev1",
+      "title": "等可能事件概率 · 开发单元",
+      "content_version": "7097bc1c5090dca2f064bbdcbce58f0885d7543ea9b0d849d072408f4d0792fc",
+      "grade_suggestion": "九年级",
+      "knowledge_points": [
+        "等可能结果计数",
+        "概率的分数表示"
+      ],
+      "tasks": [
+        {
+          "id": "D-PRB-01",
+          "stage": "diagnostic",
+          "stem": "掷一枚各面朝上等可能的六面骰子一次，点数是 6 的概率是多少？",
+          "answer": "1/6",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "1/6",
+          "development_rationale": "六个等可能点数中，只有 6 符合事件。",
+          "calculated_answer": "1/6",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PRB-01",
+          "stage": "practice",
+          "stem": "掷一枚各面朝上等可能的六面骰子一次，点数为偶数的概率是多少？",
+          "answer": "1/2",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "先列出全部可能的点数。",
+            "1 到 6 中哪些是偶数？",
+            "偶数为 2、4、6，共 3 个；总结果共 6 个。",
+            "概率=3/6=1/2。只在各个基本结果等可能的前提下这样计数。"
+          ],
+          "misconception": "把偶数的数值之和当作有利结果个数。",
+          "development_calculation": "3/6",
+          "development_rationale": "有利结果为 {2,4,6}，样本空间为 {1,2,3,4,5,6}。",
+          "calculated_answer": "1/2",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PRB-02",
+          "stage": "practice",
+          "stem": "袋中有 3 个红球、2 个蓝球，球除颜色外完全相同。随机摸出一个，每个球被摸出的机会相同。摸到蓝球的概率是多少？",
+          "answer": "2/5",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "确认总球数及有利结果对应的颜色。",
+            "每个球是一个等可能的基本结果，不能只按颜色种类计数。",
+            "总球数 3+2=5，蓝球有 2 个。",
+            "摸到蓝球的概率=2/5。两种颜色不代表两个等可能结果。"
+          ],
+          "misconception": "有两种颜色就认为概率各为 1/2。",
+          "development_calculation": "2/(3+2)",
+          "development_rationale": "按五个等可能的球计数，蓝球占两个；颜色种类并不等可能。",
+          "calculated_answer": "2/5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PRB-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：掷一枚各面朝上等可能的六面骰子一次，点数大于 4 的概率是多少？",
+          "answer": "1/3",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "2/6",
+          "development_rationale": "大于 4 的点数为 {5,6}。",
+          "calculated_answer": "1/3",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PRB-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：袋中有 4 个白球、3 个黑球，除颜色外完全相同，各球摸到机会相同。随机摸一个是黑球的概率是多少？",
+          "answer": "3/7",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "3/(4+3)",
+          "development_rationale": "七个等可能的球中有三个黑球。",
+          "calculated_answer": "3/7",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g9.probability.counting.dev1",
+      "title": "概率计数与事件 · 扩展开发单元",
+      "content_version": "5f7c2006c91fd32e981c095033e366869579b11d3d53c07056fab86ff3c15971",
+      "grade_suggestion": "九年级",
+      "knowledge_points": [
+        "列举基本结果",
+        "事件计数",
+        "补事件"
+      ],
+      "tasks": [
+        {
+          "id": "D-PCO-01",
+          "stage": "diagnostic",
+          "stem": "四张卡片分别写有 1、2、3、4，随机等可能抽一张，抽到 4 的概率是多少？",
+          "answer": "1/4",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "1/4",
+          "development_rationale": "四张卡片等可能，只有编号 4 符合。",
+          "calculated_answer": "1/4",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PCO-01",
+          "stage": "practice",
+          "stem": "八张卡片分别写有 1 至 8，随机等可能抽一张，抽到 3 的倍数的概率是多少？",
+          "answer": "1/4",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "先列出所有可能的卡片。",
+            "判断 1 至 8 中哪些数是 3 的倍数。",
+            "符合条件的是 3 和 6，共 2 个；总数为 8。",
+            "概率为 2/8=1/4。基本结果按卡片计数，不按数的类别计数。"
+          ],
+          "misconception": "把倍数类别误作一个等可能结果。",
+          "development_calculation": "2/8",
+          "development_rationale": "1 至 8 的 3 的倍数为 {3,6}。",
+          "calculated_answer": "1/4",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-PCO-02",
+          "stage": "practice",
+          "stem": "袋中 2 个红球、3 个蓝球，各球摸到机会相同，随机摸一个不是红球的概率是多少？",
+          "answer": "3/5",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "先说明“不是红球”包含哪些球。",
+            "这里只有两种颜色，不是红球就是蓝球。",
+            "符合条件的有 3 个，总共有 5 个。",
+            "概率为 3/5，也可以用 1−2/5 核对。"
+          ],
+          "misconception": "把不是红球理解为没有球。",
+          "development_calculation": "3/(2+3)",
+          "development_rationale": "仅红蓝两色，不是红球即蓝球；也可用 1−2/5。",
+          "calculated_answer": "3/5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PCO-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：卡片写有 1 至 10，随机等可能抽一张，抽到大于 7 的数的概率是多少？",
+          "answer": "3/10",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "3/10",
+          "development_rationale": "大于 7 的编号为 {8,9,10}。",
+          "calculated_answer": "3/10",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-PCO-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：6 个球中有 1 个红球、5 个白球，各球等可能被摸到。随机摸一个不是白球的概率是多少？",
+          "answer": "1/6",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "1/6",
+          "development_rationale": "只有红白两色，不是白球即唯一的红球。",
+          "calculated_answer": "1/6",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    },
+    {
+      "unit_id": "math.g7.statistics.frequency.dev1",
+      "title": "平均数与频率 · 扩展开发单元",
+      "content_version": "cb0362946e696e5a863ce9ac9b1569c08086bbcdd93941bdec05536d10d76885",
+      "grade_suggestion": "七年级",
+      "knowledge_points": [
+        "算术平均数",
+        "中位数",
+        "频率与概率的区别"
+      ],
+      "tasks": [
+        {
+          "id": "D-STA-01",
+          "stage": "diagnostic",
+          "stem": "数据 2、4、6 的算术平均数是多少？",
+          "answer": "4",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "(2+4+6)/3",
+          "development_rationale": "算术平均数为总和除以数据个数。",
+          "calculated_answer": "4",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-STA-01",
+          "stage": "practice",
+          "stem": "一组已从小到大排列的数据为 3、4、6、9、12，中位数是多少？",
+          "answer": "6",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "中位数关注排序后的位置。",
+            "这组数据已有从小到大的顺序。",
+            "共有 5 个数据，中间是第 3 个。",
+            "第 3 个数据是 6，所以中位数是 6，不是求总和。"
+          ],
+          "misconception": "把中位数当作平均数。",
+          "development_calculation": "6",
+          "development_rationale": "数据已排序，五项数据的第三项为 6；不是使用平均数公式。",
+          "calculated_answer": "6",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "P-STA-02",
+          "stage": "practice",
+          "stem": "掷骰子 20 次，其中点数 6 出现 4 次。本次实验点数 6 出现的频率是多少？只求实验频率。",
+          "answer": "1/5",
+          "format": "只填数值或分数，步骤与依据写在下方。",
+          "hints": [
+            "频率描述这次实验的实际记录。",
+            "用某结果出现的次数除以总实验次数。",
+            "出现 4 次，总共 20 次，列式 4/20。",
+            "4/20=1/5。这是本次实验频率，不据此改写均匀骰子的理论概率 1/6。"
+          ],
+          "misconception": "直接写理论概率而忽略实验记录。",
+          "development_calculation": "4/20",
+          "development_rationale": "本次实验频率为出现次数除以实验次数，不用理论概率替代。",
+          "calculated_answer": "1/5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-STA-01",
+          "stage": "checkpoint",
+          "stem": "独立检测：数据 3、5、7 的算术平均数是多少？",
+          "answer": "5",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "(3+5+7)/3",
+          "development_rationale": "算术平均数为总和除以数据个数。",
+          "calculated_answer": "5",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        },
+        {
+          "id": "C-STA-02",
+          "stage": "checkpoint",
+          "stem": "独立检测：某事件在 30 次实验中出现 9 次，该事件在本次实验中的频率是多少？",
+          "answer": "3/10",
+          "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+          "hints": [],
+          "misconception": "",
+          "development_calculation": "9/30",
+          "development_rationale": "只计算本次实验频率，不据此断言理论概率。",
+          "calculated_answer": "3/10",
+          "reference_matches": true,
+          "professional_review": "pending",
+          "reviewer": null,
+          "standard_mapping": null,
+          "textbook_mapping": null,
+          "review_conclusion": null,
+          "review_note": null
+        }
+      ]
+    }
+  ],
+  "activities": [
+    {
+      "unit_id": "math.g7.equations.activities.dev1",
+      "title": "方程圆桌与我教 AI · 开发活动",
+      "content_version": "1328ce7eca9fa74f74a45ca9d408b67b2c1fe1789d66b44383914ca32481ae18",
+      "parent_unit_id": "math.g7.equations.dev1",
+      "parent_version": "76c6f6042369b14d8f01bd2fbfd9f53f90b75cb84ad28a66e5dc0df9ecc33f7d",
+      "task_id": "P-EQ-01",
+      "flow": "legacy",
+      "verification_task_id": null,
+      "templates": {
+        "roundtable": [
+          {
+            "speaker": "思路提出者",
+            "text": "我建议把等式两边同时加上 7，先消去左边的常数项。",
+            "category": "role_opinion"
+          },
+          {
+            "speaker": "质疑者",
+            "text": "另一位学伴说：把 −7 移到右边仍写成 −7，因此 2x=5−7。这一步成立吗？请代入核验。",
+            "category": "role_opinion"
+          },
+          {
+            "speaker": "整理者",
+            "text": "请比较两种说法，说明等式两边实际进行了什么运算，再给出可检验的数值。",
+            "category": "role_opinion"
+          }
+        ],
+        "teach": [
+          {
+            "speaker": "虚拟学伴",
+            "text": "我把 −7 移到右边后仍写成 −7，得到 2x=5−7。请你指出这一步的问题，并教我怎样代入检查。",
+            "category": "preset_misconception"
+          }
+        ]
+      },
+      "professional_review": "pending",
+      "review_note": null
+    },
+    {
+      "unit_id": "math.g9.probability.activities.dev1",
+      "title": "概率圆桌与我教 AI · 开发活动",
+      "content_version": "08695be3acaff7c6afea2d1133a8e76b4a7003c89a0b9c8ece98808dc256efbd",
+      "parent_unit_id": "math.g9.probability.dev1",
+      "parent_version": "7097bc1c5090dca2f064bbdcbce58f0885d7543ea9b0d849d072408f4d0792fc",
+      "task_id": "P-PRB-02",
+      "flow": "legacy",
+      "verification_task_id": null,
+      "templates": {
+        "roundtable": [
+          {
+            "speaker": "思路提出者",
+            "text": "我建议先把每个球看作一个基本结果，再数蓝球和全部球的个数。",
+            "category": "role_opinion"
+          },
+          {
+            "speaker": "质疑者",
+            "text": "另一位学伴说：只有红、蓝两种颜色，所以摸到蓝球的概率是 1/2。两种颜色一定等可能吗？",
+            "category": "role_opinion"
+          },
+          {
+            "speaker": "整理者",
+            "text": "请比较按球数与按颜色种类计数的依据，确认等可能的基本结果，再给出概率并说明理由。",
+            "category": "role_opinion"
+          }
+        ],
+        "teach": [
+          {
+            "speaker": "虚拟学伴",
+            "text": "袋中只有红、蓝两种颜色，所以我认为摸到蓝球的概率是 1/2。请教我：应该按球还是按颜色计数？为什么？",
+            "category": "preset_misconception"
+          }
+        ]
+      },
+      "professional_review": "pending",
+      "review_note": null
+    },
+    {
+      "unit_id": "math.g9.probability.teach.dev2",
+      "title": "概率我教 AI · 讲解与新题验证",
+      "content_version": "9ce8092dc77213513ee9ebbab855724a357e866c66d0fc0620d79487d7a403cf",
+      "parent_unit_id": "math.g9.probability.dev1",
+      "parent_version": "7097bc1c5090dca2f064bbdcbce58f0885d7543ea9b0d849d072408f4d0792fc",
+      "task_id": "P-PRB-02",
+      "flow": "teach_cycle_v1",
+      "verification_task_id": "C-PRB-02",
+      "templates": {
+        "teach": [
+          {
+            "speaker": "虚拟学伴",
+            "text": "袋中只有红、蓝两种颜色，所以我认为摸到蓝球的概率是 1/2。请教我：应该按球还是按颜色计数？为什么？",
+            "category": "preset_misconception"
+          }
+        ]
+      },
+      "professional_review": "pending",
+      "review_note": null
+    }
+  ]
+}

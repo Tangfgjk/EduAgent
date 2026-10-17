@@ -14,6 +14,7 @@ class ActivityInput(GateInput):
     action: Literal["contribute", "conclude", "verify"]
     answer: str = Field(min_length=1, max_length=128)
     reasoning: str = Field(min_length=2, max_length=1500)
+    request_model: bool = Field(default=False, strict=True)
 
     @field_validator("answer", "reasoning")
     @classmethod
@@ -63,6 +64,7 @@ class ActivityView(Contract):
     flow: str = 'legacy'
     verification_task: TaskOut | None = None
     verification_check: IndependentCheck | None = None
+    model_requested: bool = False
 
 
 class ActivityRunOut(TutorRunOut):

@@ -78,11 +78,12 @@ def fingerprints():
 
 class EvaluationHarness:
     """A fixed synthetic account in a dedicated DB; repeated runs share its daily limit."""
-    def __init__(self, db: Database, mode: str, provider_factory=None, *, prompt_version=PROMPT_VERSION):
+    def __init__(self, db: Database, mode: str, provider_factory=None, *, prompt_version=PROMPT_VERSION, unlimited=False):
         if mode not in {'fake', 'live'}:
             raise ValueError('unknown evaluation mode')
         self.db, self.mode = db, mode
         self.prompt_version = prompt_version
+        self.unlimited = unlimited
         self.tutoring, self.spaces = Tutoring(), Workspaces()
         self.worker = Worker(db, enable_models=False)
         self.model_runner = ModelTaskRunner(db, provider_factory=provider_factory)
@@ -111,7 +112,7 @@ class EvaluationHarness:
             publish_configuration(session, admin, {'expected_revision': policy.revision,
                 'vendor': 'deepseek' if self.mode == 'live' else 'fake',
                 'prompt_version': self.prompt_version,
-                'max_output_tokens': 512, 'account_daily_calls': 30, 'site_daily_calls': 100})
+                'max_output_tokens': 512, 'account_daily_calls': 0 if self.unlimited else 30, 'site_daily_calls': 0 if self.unlimited else 100})
             pack = get_pack(UNIT)
             content = Content(pack.unit_id, pack.title, pack.version, pack.tasks)
             state = content.view(session)

@@ -6,6 +6,9 @@ from app.modules.learning.activity_graph import check_action, version_for
 from app.modules.learning.activity_catalog import get_activity, activity_for_run
 from app.modules.learning.content_service import require_activity_content
 from app.modules.learning.service import Learning, event, request_hash
+from app.infrastructure.runtime import model_tasks
+from app.infrastructure.db.models import ModelPolicy, ModelConfiguration, Workspace, Account, ModelOperation
+from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
 
 
 def require_idle(session, wid, kinds):
@@ -15,8 +18,21 @@ def require_idle(session, wid, kinds):
         raise DomainError(409, "learning_busy", "请先完成或结束当前陪学/互动活动，再切换路线；独立检测期间不开放辅助互动")
 
 
-def public_activity(run):
-    return {"run_id": run.id, **{key: getattr(run, key) for key in (
+def public_activity(session, run):
+    policy = session.get(ModelPolicy, 1)
+    config = session.get(ModelConfiguration, policy.active_id) if policy.active_id else None
+    space = session.get(Workspace, run.workspace_id)
+    account = session.get(Account, space.owner_id)
+    eligible = bool(run.kind == 'teach' and run.view and run.view.get('flow') == 'teach_cycle_v1'
+        and run.view.get('activity_version') == get_activity(TEACH_UNIT).version
+        and account.source_kind in {'synthetic', 'adult_test'})
+    remaining = model_tasks.remaining_calls(session, account.id, config) if config and eligible else None
+    coaching = model_tasks.latest(session, run)
+    if coaching and run.view and run.view['phase'] == 'summary' and coaching['status'] == 'succeeded':
+        coaching['result'] = session.get(ModelOperation, coaching['operation_id']).result
+    return {'coaching': coaching, 'coaching_available': bool(config and eligible and run.status == 'awaiting_input'
+        and run.view['phase'] == 'opening' and (remaining is None or remaining > 0)),
+        'coaching_remaining_calls': remaining, "run_id": run.id, **{key: getattr(run, key) for key in (
         "workspace_id", "conversation_id", "kind", "status", "revision", "gate_id", "error_code", "event_seq", "created_at", "view")}}
 
 
@@ -31,7 +47,7 @@ class Activities(Learning):
 
     def list(self, session, actor, wid, offset=0):
         self.spaces.owned(session, actor, wid)
-        return {"items": [public_activity(run) for run in session.scalars(select(AgentRun).where(
+        return {"items": [public_activity(session, run) for run in session.scalars(select(AgentRun).where(
             AgentRun.workspace_id == wid, AgentRun.kind == self.kind).order_by(
             AgentRun.created_at.desc(), AgentRun.id.desc()).offset(offset).limit(20))]}
 
@@ -41,7 +57,7 @@ class Activities(Learning):
         if existing:
             if existing.kind != self.kind or existing.creation_hash != request_hash(payload):
                 raise DomainError(409, "idempotency_conflict", "该标识已用于其他请求")
-            return public_activity(existing)
+            return public_activity(session, existing)
         self.spaces.owned(session, actor, wid, active=True)
         item = get_activity(payload["unit_id"])
         if item.flow == 'teach_cycle_v1' and self.kind != 'teach':
@@ -58,17 +74,19 @@ class Activities(Learning):
         event(session, run, "run.queued")
         session.add(AuditEvent(actor_id=actor.account.id, action=self.kind + ".start", target_id=run.id))
         session.flush()
-        return public_activity(run)
+        return public_activity(session, run)
 
     def submit(self, session, actor, wid, rid, payload, key):
         run = self.owned(session, actor, wid, rid)
         operation = {**payload, "run_id": rid, "operation": "activity_input", "activity_kind": self.kind}
+        if not operation.get('request_model'):
+            operation.pop('request_model', None)  # Preserve idempotency for pre-model activity inputs.
         existing = session.scalar(select(LearningInput).where(LearningInput.conversation_id == run.conversation_id,
             LearningInput.idempotency_key == key))
         if existing:
             if existing.payload != operation:
                 raise DomainError(409, "idempotency_conflict", "该标识已用于不同操作")
-            return public_activity(run)
+            return public_activity(session, run)
         self.spaces.owned(session, actor, wid, active=True)
         if not run.view:
             raise DomainError(409, "gate_conflict", "互动任务尚未准备好，请稍后刷新")
@@ -81,13 +99,21 @@ class Activities(Learning):
             raise DomainError(409, "version_conflict", "互动版本已更新，请重新发起")
         check_action(run.view, payload["action"])
         conversation = session.get(Conversation, run.conversation_id)
-        self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
+        if payload.get('request_model') and (self.kind != 'teach' or item.unit_id != TEACH_UNIT or payload['action'] != 'contribute'):
+            raise DomainError(409, 'model_scope_forbidden', '仅首次概率讲解可请求模型追问')
+        entry = self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
         run.status, run.gate_id = "queued", None
         run.revision += 1
+        if payload.get('request_model'):
+            model_tasks.reserve(session, actor.account, run, entry, payload['reasoning'], teach_item=item)
         event(session, run, "run.queued")
         session.flush()
-        return public_activity(run)
+        return public_activity(session, run)
 
     def cancel(self, session, actor, wid, rid, revision):
         super().cancel(session, actor, wid, rid, revision)
-        return public_activity(self.owned(session, actor, wid, rid))
+        run = self.owned(session, actor, wid, rid)
+        for op in session.scalars(select(ModelOperation).where(ModelOperation.run_id == rid, ModelOperation.status.in_(model_tasks.ACTIVE))):
+            model_tasks.cancel(session, run, op.id)
+        session.flush()
+        return public_activity(session, self.owned(session, actor, wid, rid))

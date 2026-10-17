@@ -37,10 +37,10 @@ class ModelRuntimeOut(Contract):
 class PublishModel(Contract):
     expected_revision: int = Field(ge=0, strict=True)
     vendor: Literal["deepseek", "fake"]
-    prompt_version: Literal["probability.followup.v1", "probability.followup.v2"] = "probability.followup.v1"
+    prompt_version: Literal["probability.followup.v1", "probability.followup.v2", "probability.followup.v3"] = "probability.followup.v1"
     max_output_tokens: int = Field(default=512, ge=64, le=512, strict=True)
-    account_daily_calls: int = Field(default=30, ge=1, le=30, strict=True)
-    site_daily_calls: int = Field(default=100, ge=1, le=100, strict=True)
+    account_daily_calls: int = Field(default=30, ge=0, le=30, strict=True)
+    site_daily_calls: int = Field(default=100, ge=0, le=100, strict=True)
     acknowledge_development_only: Literal[True]
 
 

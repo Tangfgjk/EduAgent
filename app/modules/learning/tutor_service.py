@@ -26,7 +26,7 @@ def public_tutor(session, run):
     available = bool(policy.active_id and account.source_kind in {"synthetic", "adult_test"} and view
         and view["unit_id"] == model_tasks.UNIT and view["phase"] == "practice" and view["can_hint"])
     remaining = model_tasks.remaining_calls(session, account.id, config) if config and account.source_kind in {"synthetic", "adult_test"} else None
-    available = available and bool(remaining)
+    available = available and (remaining is None or remaining > 0)
     return {"run_id": run.id, **{key: getattr(run, key) for key in (
         "workspace_id", "conversation_id", "status", "revision", "gate_id", "error_code", "event_seq", "created_at")},
         "view": view, "coaching": model_tasks.latest(session, run), "coaching_available": available,

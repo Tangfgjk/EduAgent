@@ -76,6 +76,26 @@ def test_end_to_end_fake_and_ledger(env):
     assert not Worker(env.db).step()  # No duplicate execution.
 
 
+@pytest.mark.parametrize('account_limit,site_limit,expected', [(0, 0, None), (0, 100, 25), (30, 0, 5)])
+def test_unlimited_keeps_counts_and_remaining_finite_scope(env, account_limit, site_limit, expected):
+    client, path, account = setup(env, account_daily_calls=account_limit, site_daily_calls=site_limit)
+    with env.db.transaction() as session:
+        session.add(ModelDailyBudget(day=day_key(), scope='global', calls=75))
+        session.add(ModelDailyBudget(day=day_key(), scope='account:' + account['id'], calls=25))
+    shown = client.get(path).json()
+    assert shown['coaching_remaining_calls'] == expected and shown['coaching_available']
+    ready(env, client, path)
+    assert Worker(env.db).step()
+    assert client.get(path).json()['coaching']['status'] == 'succeeded'
+    with env.db.transaction() as session:
+        assert session.get(ModelDailyBudget, (day_key(), 'global')).calls == 76
+        assert session.get(ModelDailyBudget, (day_key(), 'account:' + account['id'])).calls == 26
+    # Publishing a finite configuration never resets the existing ledger.
+    publish(env, account_daily_calls=1, site_daily_calls=1)
+    assert client.get(path).json()['coaching_remaining_calls'] == 0
+    assert submit(client, path, key='after-limit-restored').status_code == 429
+
+
 def test_idempotency_reserves_once(env):
     client, path, _ = setup(env)
     run = client.get(path).json()

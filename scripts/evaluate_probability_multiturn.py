@@ -8,7 +8,7 @@ from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from app.evaluation.multiturn import DEFAULT_CORPUS, HOLDOUT_CORPUS, MultiHarness, load_corpus, markdown_report, run_multiturn
+from app.evaluation.multiturn import DEFAULT_CORPUS, HOLDOUT_CORPUS, REGRESSION_CORPUS, MultiHarness, load_corpus, markdown_report, run_multiturn
 from app.evaluation.runner import atomic_json, exclusive_lock
 from app.infrastructure.db.database import Database
 from app.infrastructure.runtime.model_tasks import BUSINESS_TIMEZONE, model_key
@@ -19,8 +19,10 @@ def main():
     parser.add_argument('--live', action='store_true')
     parser.add_argument('--resume', type=Path)
     parser.add_argument('--publish-prefix', type=Path)
-    parser.add_argument('--corpus', choices=('baseline', 'holdout'), default='baseline')
+    parser.add_argument('--corpus', choices=('baseline', 'holdout', 'regression'), default='baseline')
     parser.add_argument('--check-only', action='store_true', help='Inspect quota and configuration only; no calls or publishing')
+    parser.add_argument('--limited-daily', action='store_true', help='Restore account30/site100 daily limits; default unlimited development calls')
+    parser.add_argument('--prompt-version', choices=('probability.followup.v2', 'probability.followup.v3'), default='probability.followup.v2')
     args = parser.parse_args()
     mode = 'live' if args.live else 'fake'
     root = (ROOT / '.local/evaluation').resolve()
@@ -43,20 +45,20 @@ def main():
     try:
         with exclusive_lock(root / (mode + '.lock')):
             db.migrate()
-            corpus, digest = load_corpus(HOLDOUT_CORPUS if args.corpus == 'holdout' else DEFAULT_CORPUS)
-            harness = MultiHarness(db, mode)
+            corpus, digest = load_corpus({'baseline': DEFAULT_CORPUS, 'holdout': HOLDOUT_CORPUS, 'regression': REGRESSION_CORPUS}[args.corpus])
+            harness = MultiHarness(db, mode, unlimited=not args.limited_daily, prompt_version=args.prompt_version)
             required = sum(len(d.turns) for d in corpus.dialogues)
             if args.check_only:
-                check = {'status': 'ready' if harness.remaining() >= required else 'budget_exhausted',
-                    'mode': mode, 'budget_day': datetime.now(BUSINESS_TIMEZONE).strftime('%Y-%m-%d'),
-                    'remaining': harness.remaining(), 'required': required, 'corpus': corpus.version,
+                check = {'status': 'ready' if harness.remaining() is None or harness.remaining() >= required else 'budget_exhausted',
+                    'mode': mode, 'prompt_version': args.prompt_version, 'budget_day': datetime.now(BUSINESS_TIMEZONE).strftime('%Y-%m-%d'),
+                    'remaining': harness.remaining(), 'daily_call_limits': 'unlimited' if harness.unlimited else 'account30_site100', 'required': required, 'corpus': corpus.version,
                     'corpus_sha256': digest, 'key_configured': bool(model_key()) if args.live else None,
                     'calls_made': 0}
                 if args.live and not check['key_configured']:
                     check['status'] = 'key_missing'
                 print(json.dumps(check, ensure_ascii=False))
                 return 0 if check['status'] == 'ready' else 2
-            if not args.resume and harness.remaining() < required:
+            if not args.resume and harness.remaining() is not None and harness.remaining() < required:
                 print(json.dumps({'status': 'budget_exhausted', 'remaining': harness.remaining(), 'required': required,
                     'message': 'Wait for daily reset; existing account and counters preserved.'}))
                 return 2

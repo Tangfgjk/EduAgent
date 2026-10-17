@@ -59,7 +59,8 @@ def interaction(state: ActivityState):
     check_action(view, decision["action"])
     view["messages"].append({"speaker": "我", "text": decision["reasoning"], "answer": decision["answer"], "category": "student_contribution"})
     if decision["action"] == "contribute":
-        for message in deepcopy(item.templates[state["kind"]]):
+        view['model_requested'] = bool(decision.get('request_model'))
+        for message in ([] if view['model_requested'] else deepcopy(item.templates[state["kind"]])):
             message["text"] = govern_text(state["learner_id"], message["text"], unit_id=item.unit_id)
             view["messages"].append(message)
         view["phase"] = "challenge"
@@ -70,7 +71,8 @@ def interaction(state: ActivityState):
             'reasoning_reviewed': False, 'independent': True}
         view['phase'] = 'summary'
         view['report'] = ['已分别保留初次讲解、修正和新题验证。',
-            '学伴追问仍为预设模板，未自动理解你的讲解。', '新题未提供辅助，仅核验数值；不据此判定教学效果、迁移能力或素养。']
+            '本轮请求了模型追问，实际结果与状态单独保留；模型不评价讲解质量。' if view.get('model_requested') else '学伴追问为预设模板，未自动理解你的讲解。',
+            '新题未提供辅助，仅核验数值；不据此判定教学效果、迁移能力或素养。']
     else:
         status = verify(decision["answer"], item.task["answer"])
         messages = {"passed": "数值结果符合此题条件；解释与纠错质量尚未评定。",

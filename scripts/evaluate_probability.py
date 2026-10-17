@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--max-calls', type=int, default=30, choices=range(1, 31))
     parser.add_argument('--resume', type=Path, help='Resume saved inputs/results without reissuing leased calls')
     parser.add_argument('--publish-prefix', type=Path, help='Write a new .json and .md under docs/评测; never overwrite')
+    parser.add_argument('--limited-daily', action='store_true', help='Restore account30/site100 daily limits; default unlimited development calls')
     args = parser.parse_args()
     mode = 'live' if args.live else 'fake'
     root = (ROOT / '.local/evaluation').resolve()
@@ -50,7 +51,7 @@ def main():
     try:
         with exclusive_lock(root / (mode + '.lock')):
             db.migrate()
-            report = run_evaluation(EvaluationHarness(db, mode), corpus, corpus_hash, folder,
+            report = run_evaluation(EvaluationHarness(db, mode, unlimited=not args.limited_daily), corpus, corpus_hash, folder,
                                     max_calls=args.max_calls, resume=bool(args.resume))
             atomic_json(folder / 'report.json', report)
             (folder / 'report.md').write_text(markdown_report(report), encoding='utf-8')

@@ -64,7 +64,7 @@ def activity_router(student, admin):
 
         @router.get(prefix + "/{rid}", response_model=ActivityRunOut, name=kind + "_get")
         def run(wid: UUID, rid: UUID, ctx=student_auth):
-            return public_activity(service.owned(ctx.session, ctx.actor, str(wid), str(rid)))
+            return public_activity(ctx.session, service.owned(ctx.session, ctx.actor, str(wid), str(rid)))
 
         @router.post(prefix + "/{rid}/inputs", response_model=ActivityRunOut, status_code=202, name=kind + "_input")
         def submit(wid: UUID, rid: UUID, body: ActivityInput, ctx=student_auth,
@@ -74,6 +74,14 @@ def activity_router(student, admin):
         @router.post(prefix + "/{rid}/cancel", response_model=ActivityRunOut, name=kind + "_cancel")
         def cancel(wid: UUID, rid: UUID, body: RunRevision, ctx=student_auth):
             return service.cancel(ctx.session, ctx.actor, str(wid), str(rid), body.expected_revision)
+
+        @router.post(prefix + '/{rid}/model-operations/{oid}/cancel', response_model=ActivityRunOut, name=kind + '_model_cancel')
+        def cancel_model(wid: UUID, rid: UUID, oid: UUID, ctx=student_auth):
+            from app.infrastructure.runtime import model_tasks
+            run = service.owned(ctx.session, ctx.actor, str(wid), str(rid))
+            model_tasks.cancel(ctx.session, run, str(oid))
+            ctx.session.flush()
+            return public_activity(ctx.session, run)
 
         @router.get(prefix + "/{rid}/event-history", response_model=list[EventOut], name=kind + "_history")
         def history(wid: UUID, rid: UUID, ctx=student_auth, after: int = Query(0, ge=0)):

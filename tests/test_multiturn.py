@@ -8,7 +8,7 @@ from app.infrastructure.db.models import Account, LearningInput, ModelOperation
 from app.infrastructure.runtime.model_tasks import ModelTaskRunner
 from app.llm.provider import FakeProvider, ProviderError
 from app.modules.learning.model_coaching import (MULTITURN_PROMPT_VERSION, PROMPT_VERSION,
-    QUESTIONS, freeze_request, validate_proposal)
+    CANDIDATE_PROMPT_VERSION, QUESTIONS, freeze_request, validate_proposal)
 from app.modules.learning.service import request_hash
 from app.worker import Worker
 from tests.test_s02 import database, env
@@ -139,3 +139,22 @@ def test_identity_redaction_cannot_expand_multiturn_beyond_input_bound():
     next_turn = freeze_request(view, '当前提问', account, 512, prompt_version=MULTITURN_PROMPT_VERSION,
         history=[{'student_text': frozen['student_text'], 'focus': 'clarify', 'question': QUESTIONS['clarify']}], context_sources=['op'])
     assert len(next_turn['context'][0]['student_text']) <= 1500
+
+
+def test_candidate_runs_through_real_history_collection_and_configuration_fence(env):
+    client, path, _ = setup(env, prompt_version=CANDIDATE_PROMPT_VERSION)
+    first = turn(env, client, path, '先问基本结果的单位，不要给解答。', 'candidate-first')
+    second = turn(env, client, path, '继续讨论刚才那个问题。', 'candidate-second')
+    assert second['coaching']['prompt_version'] == CANDIDATE_PROMPT_VERSION
+    assert second['coaching']['context_turns'] == 2
+    assert second['coaching']['context'][0]['student_text'] == '先问基本结果的单位，不要给解答。'
+    with env.db.transaction() as session:
+        op = session.get(ModelOperation, second['coaching']['operation_id'])
+        assert op.request['context_sources'] == [first['coaching']['operation_id']]
+        # Quote provenance is still enforced for the candidate, irrespective of model intent.
+        with pytest.raises(ProviderError):
+            validate_proposal(json.dumps({'quote': '基本结果的单位', 'focus': 'sample_space'}), op.request)
+    publish(env, prompt_version=MULTITURN_PROMPT_VERSION)
+    third = turn(env, client, path, '切回旧版后的新问题。', 'back-to-v2')
+    assert third['coaching']['context_turns'] == 1
+    assert third['coaching']['prompt_version'] == MULTITURN_PROMPT_VERSION

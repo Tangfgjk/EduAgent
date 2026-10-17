@@ -15,10 +15,11 @@ from app.evaluation.runner import EvaluationHarness, atomic_json, fingerprints
 from app.infrastructure.db.models import Account, ModelConfiguration, ModelDailyBudget, ModelOperation, ModelPolicy
 from app.infrastructure.runtime.model_tasks import BUSINESS_TIMEZONE, day_key
 from app.modules.learning.content_catalog import get_pack
-from app.modules.learning.model_coaching import MULTITURN_PROMPT_VERSION, UNIT
+from app.modules.learning.model_coaching import MULTITURN_PROMPT_VERSION, MULTITURN_PROMPTS, UNIT
 
 DEFAULT_CORPUS = Path(__file__).resolve().parents[2] / 'seeds/evaluation/probability_multiturn.v1.json'
 HOLDOUT_CORPUS = DEFAULT_CORPUS.with_name('probability_multiturn_holdout.v1.json')
+REGRESSION_CORPUS = DEFAULT_CORPUS.with_name('probability_multiturn_regression.v1.json')
 
 
 class Turn(BaseModel):
@@ -51,7 +52,7 @@ class Dialogue(BaseModel):
 
 class MultiCorpus(BaseModel):
     model_config = ConfigDict(extra='forbid', frozen=True)
-    version: Literal['probability.multiturn.eval.v1', 'probability.multiturn.holdout.v1']
+    version: Literal['probability.multiturn.eval.v1', 'probability.multiturn.holdout.v1', 'probability.multiturn.regression.v1']
     source: Literal['self_authored_development']
     professional_review: Literal[False]
     content_version: str
@@ -93,10 +94,14 @@ def sources():
 
 
 class MultiHarness(EvaluationHarness):
-    def __init__(self, db, mode, provider_factory=None):
-        super().__init__(db, mode, provider_factory, prompt_version=MULTITURN_PROMPT_VERSION)
+    def __init__(self, db, mode, provider_factory=None, *, unlimited=False, prompt_version=MULTITURN_PROMPT_VERSION):
+        if prompt_version not in MULTITURN_PROMPTS:
+            raise ValueError('multi-turn evaluation requires a multi-turn prompt')
+        super().__init__(db, mode, provider_factory, prompt_version=prompt_version, unlimited=unlimited)
 
     def remaining(self):
+        if self.unlimited:
+            return None
         with self.db.transaction() as session:
             account = session.scalar(select(Account).where(Account.username == 'eval.synthetic'))
             global_budget = session.get(ModelDailyBudget, (day_key(), 'global'))
@@ -192,17 +197,18 @@ def run_multiturn(harness, corpus, digest, folder, *, resume=False):
     plan = [(dialogue, index) for dialogue in corpus.dialogues for index in range(len(dialogue.turns))]
     if resume:
         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-        if manifest['sources'] != sources() or manifest['corpus_sha256'] != digest or manifest['mode'] != harness.mode:
+        if manifest['sources'] != sources() or manifest['corpus_sha256'] != digest or manifest['mode'] != harness.mode or manifest['prompt_version'] != harness.prompt_version:
             raise ValueError('resume requires identical source, corpus and mode')
     else:
         if manifest_path.exists():
             raise ValueError('run already exists')
-        if harness.remaining() < len(plan):
+        if harness.remaining() is not None and harness.remaining() < len(plan):
             raise ValueError('insufficient existing daily budget; wait for reset, do not recreate accounts')
         harness.initialize()
         manifest = {'run_id': uuid4().hex, 'mode': harness.mode, 'created_at': datetime.now(BUSINESS_TIMEZONE).isoformat(timespec='seconds'),
+            'daily_call_limits': 'unlimited' if harness.unlimited else 'account30_site100',
             'corpus_version': corpus.version, 'corpus_sha256': digest, 'sources': sources(),
-            'prompt_version': MULTITURN_PROMPT_VERSION, 'configuration_id': harness.configuration(),
+            'prompt_version': harness.prompt_version, 'configuration_id': harness.configuration(),
             'model': 'deepseek-flash' if harness.mode == 'live' else 'scripted', 'content_version': corpus.content_version}
         atomic_json(manifest_path, manifest)
     incomplete = any(not (folder / 'rows' / f'{dialogue.id}-{index+1}.json').exists() for dialogue, index in plan)
@@ -237,7 +243,7 @@ def markdown_report(report):
         '**自编开发样本，无教师金标；Fake 仅验证工程流程，不能证明真实模型理解、追问质量或教学效果。**', '',
         f"- {len({r['dialogue_id'] for r in report['rows']})} 组对话、{len(report['rows'])} 轮；两道开发练习。语料：{report['corpus_version']}。",
         '- 参考标签不发送模型；每组最多 4 次提示，历史只取已完成交流。失败仍占分母和额度。',
-        '- 与单轮脚本共用固定隔离评测账号、数据库及每日额度；恢复不重复已执行调用。', '',
+        '- 与单轮脚本共用固定隔离评测账号、数据库及调用账本；每日限额模式见运行清单，恢复不重复已执行调用。', '',
         '| 指标 | 结果 |', '| --- | --- |',
         f"| 预约 / 执行成功 | {s['reserved_calls']} / {s['contract_pass']} |",
         f"| 引用 / 方向权限检查通过 | {s['citation_pass']} / {s['policy_pass']} |",

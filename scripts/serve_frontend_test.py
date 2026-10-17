@@ -21,7 +21,10 @@ def test_provider(config, snapshot):
         raise ProviderError('test_real_model_forbidden')
     if '[开发故障：超时]' in snapshot['student_text']:
         return FakeProvider((ProviderError('timeout'),))
-    return FakeProvider((json.dumps({'quote': snapshot['student_text'][:80], 'focus': 'clarify'}, ensure_ascii=False),))
+    proposal = {'quote': snapshot['student_text'][:80], 'focus': 'clarify'}
+    if snapshot.get('purpose') == 'teach':
+        proposal['question'] = '为什么在你的讲解中把颜色作为一个基本结果？'
+    return FakeProvider((json.dumps(proposal, ensure_ascii=False),))
 
 
 def main():

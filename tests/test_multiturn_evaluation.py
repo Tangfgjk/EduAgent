@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
-from app.evaluation.multiturn import HOLDOUT_CORPUS, MultiCorpus, MultiHarness, load_corpus, markdown_report, run_multiturn
+from app.evaluation.multiturn import HOLDOUT_CORPUS, REGRESSION_CORPUS, MultiCorpus, MultiHarness, load_corpus, markdown_report, run_multiturn
 from app.infrastructure.db.database import Database
 from app.infrastructure.db.models import Account, ModelDailyBudget, ModelOperation
 from app.infrastructure.runtime.model_tasks import day_key
@@ -22,6 +22,51 @@ def test_multiturn_corpus_validates_hint_cap_and_context_control():
     raw['dialogues'][0]['initial_hints'] = 1
     with pytest.raises(ValidationError, match='hint cap'):
         MultiCorpus.model_validate(raw)
+
+
+def test_candidate_fake_report_and_resume_rejects_different_prompt(tmp_path):
+    from app.modules.learning.model_coaching import CANDIDATE_PROMPT_VERSION
+    db = Database('sqlite:///' + (tmp_path / 'candidate.sqlite3').as_posix())
+    db.migrate()
+    try:
+        corpus, digest = load_corpus(REGRESSION_CORPUS)
+        assert sum(len(d.turns) for d in corpus.dialogues) == 12
+        old, _ = load_corpus()
+        holdout, _ = load_corpus(HOLDOUT_CORPUS)
+        existing = {t.text for c in (old, holdout) for d in c.dialogues for t in d.turns}
+        assert not existing.intersection(t.text for d in corpus.dialogues for t in d.turns)
+        harness = MultiHarness(db, 'fake', unlimited=True, prompt_version=CANDIDATE_PROMPT_VERSION)
+        report = run_multiturn(harness, corpus, digest, tmp_path / 'run')
+        assert report['prompt_version'] == CANDIDATE_PROMPT_VERSION
+        assert report['summary']['contract_pass'] == 12
+        assert [r['context_turns'] for r in report['rows']] == [1, 2] * 6
+        assert report['summary']['direction_match'] < 12  # Fake is still constant, not semantic evidence.
+        with pytest.raises(ValueError, match='identical source'):
+            run_multiturn(MultiHarness(db, 'fake', unlimited=True), corpus, digest, tmp_path / 'run', resume=True)
+    finally:
+        db.close()
+
+
+def test_unlimited_evaluation_preserves_existing_ledger(tmp_path):
+    db = Database('sqlite:///' + (tmp_path / 'unlimited.sqlite3').as_posix())
+    db.migrate()
+    try:
+        harness = MultiHarness(db, 'fake', unlimited=True)
+        harness.initialize()
+        with db.transaction() as session:
+            account = session.scalar(select(Account).where(Account.username == 'eval.synthetic'))
+            session.add(ModelDailyBudget(day=day_key(), scope='global', calls=100))
+            session.add(ModelDailyBudget(day=day_key(), scope='account:' + account.id, calls=30))
+        corpus, digest = load_corpus()
+        report = run_multiturn(harness, corpus, digest, tmp_path / 'run')
+        assert report['daily_call_limits'] == 'unlimited'
+        assert report['summary']['reserved_calls'] == report['summary']['contract_pass'] == 18
+        assert harness.remaining() is None
+        with db.transaction() as session:
+            assert session.get(ModelDailyBudget, (day_key(), 'global')).calls == 118
+            assert session.get(ModelDailyBudget, (day_key(), 'account:' + account.id)).calls == 48
+    finally:
+        db.close()
 
 
 def test_multiturn_fake_resume_and_same_daily_budget(tmp_path):
@@ -103,7 +148,7 @@ def test_cli_check_only_does_not_publish_or_call(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(module, 'run_multiturn', forbidden)
     assert module.main() == 0
     result = json.loads(capsys.readouterr().out)
-    assert result['calls_made'] == 0 and result['remaining'] == 30 and result['required'] == 10
+    assert result['calls_made'] == 0 and result['remaining'] is None and result['required'] == 10
     db = Database('sqlite:///' + (tmp_path / '.local/evaluation/probability-fake.sqlite3').as_posix())
     try:
         with db.transaction() as session:

@@ -14,7 +14,7 @@ async function headers(page: Page, role: 'student' | 'admin') {
   return { 'X-Wenjin-Client': role, 'X-CSRF-Token': cookies.find(c => c.name === `wenjin_${role}_csrf`)!.value };
 }
 
-test('管理端发布模拟模型，学生概率思路追问可刷新恢复，并保留独立检测门禁', async ({ page, browser }) => {
+test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢复，并保留独立检测门禁', async ({ page, browser }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await login(page, 'admin', 's03.admin');
@@ -26,10 +26,11 @@ test('管理端发布模拟模型，学生概率思路追问可刷新恢复，�
     data: { content_version: unit.content_version, expected_revision: unit.revision, enabled: true, acknowledge_development_only: true } })).ok()).toBeTruthy();
   await page.getByRole('link', { name: '配置与权限', exact: true }).click();
   await page.getByLabel('开发服务').selectOption('fake');
-  await page.getByLabel('追问模式', { exact: false }).selectOption('probability.followup.v2');
+  await page.getByLabel('追问模式', { exact: false }).selectOption('probability.followup.v3');
   await page.getByLabel('确认仅用于开发测试', { exact: false }).check();
   await page.getByRole('button', { name: '发布开发模型配置', exact: true }).click();
-  await expect(page.getByText('开发模型配置已发布，仅用于概率练习追问。')).toBeVisible();
+  await expect(page.getByText('开发模型配置已发布，用于概率陪学与我教 AI 开发追问。')).toBeVisible();
+  await expect(page.getByText('每账号 不限次数，全站 不限次数，输出上限 512 tokens', { exact: true })).toBeVisible();
   const context = await browser.newContext();
   const student = await context.newPage();
   student.on('pageerror', e => errors.push(e.message));
@@ -47,6 +48,7 @@ test('管理端发布模拟模型，学生概率思路追问可刷新恢复，�
     await expect(student.getByRole('button', { name: '继续下一步', exact: true })).toBeEnabled();
     await student.getByRole('button', { name: '继续下一步', exact: true }).click();
     await expect(student.getByLabel('我想让 AI 帮我澄清的思路')).toBeEnabled();
+    await expect(student.getByText('开发测试：每日模型调用次数不限，调用与 token 用量继续记录。')).toBeVisible();
     await student.getByLabel('我想让 AI 帮我澄清的思路').fill('我认为偶数共有三种可能');
     await student.getByRole('button', { name: '提交思路并请求追问' }).click();
     await expect(student.getByText('追问建议已保存', { exact: true })).toBeVisible();

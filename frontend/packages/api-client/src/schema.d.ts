@@ -907,6 +907,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/student/workspaces/{wid}/roundtable/{rid}/model-operations/{oid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Roundtable Model Cancel */
+        post: operations["roundtable_model_cancel_api_v1_student_workspaces__wid__roundtable__rid__model_operations__oid__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/student/workspaces/{wid}/roundtable/{rid}/event-history": {
         parameters: {
             query?: never;
@@ -1004,6 +1021,23 @@ export interface paths {
         put?: never;
         /** Teach Cancel */
         post: operations["teach_cancel_api_v1_student_workspaces__wid__teach__rid__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/student/workspaces/{wid}/teach/{rid}/model-operations/{oid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Teach Model Cancel */
+        post: operations["teach_model_cancel_api_v1_student_workspaces__wid__teach__rid__model_operations__oid__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1534,6 +1568,11 @@ export interface components {
             answer: string;
             /** Reasoning */
             reasoning: string;
+            /**
+             * Request Model
+             * @default false
+             */
+            request_model: boolean;
         };
         /** ActivityMessage */
         ActivityMessage: {
@@ -1641,6 +1680,11 @@ export interface components {
             flow: string;
             verification_task?: components["schemas"]["TaskOut"] | null;
             verification_check?: components["schemas"]["IndependentCheck"] | null;
+            /**
+             * Model Requested
+             * @default false
+             */
+            model_requested: boolean;
         };
         /** AnswerInput */
         AnswerInput: {
@@ -2738,7 +2782,7 @@ export interface components {
              * @default probability.followup.v1
              * @enum {string}
              */
-            prompt_version: "probability.followup.v1" | "probability.followup.v2";
+            prompt_version: "probability.followup.v1" | "probability.followup.v2" | "probability.followup.v3";
             /**
              * Max Output Tokens
              * @default 512
@@ -8068,6 +8112,84 @@ export interface operations {
             };
         };
     };
+    roundtable_model_cancel_api_v1_student_workspaces__wid__roundtable__rid__model_operations__oid__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+                rid: string;
+                oid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRunOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
     roundtable_history_api_v1_student_workspaces__wid__roundtable__rid__event_history_get: {
         parameters: {
             query?: {
@@ -8561,6 +8683,84 @@ export interface operations {
                 "application/json": components["schemas"]["RunRevision"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRunOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    teach_model_cancel_api_v1_student_workspaces__wid__teach__rid__model_operations__oid__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+                rid: string;
+                oid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
