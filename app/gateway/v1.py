@@ -21,9 +21,12 @@ from app.gateway.memory import memory_router
 from app.gateway.activities import activity_router
 from app.gateway.evidence import evidence_router
 from app.gateway.planning import planning_router
+from app.gateway.model_runtime import model_runtime_router
+from app.gateway.development import development_router
 from app.infrastructure.db.database import Database
 from app.infrastructure.db.models import Account
 from app.modules.errors import DomainError
+from app.modules.identity.security import STUDENT_PASSWORD_MIN_LENGTH
 from app.modules.identity.service import Actor, Identity, public_account
 from app.modules.workspaces.service import Workspaces, public_workspace
 
@@ -43,7 +46,7 @@ class LoginIn(Body):
 class StudentIn(Body):
     username: str = Field(min_length=3, max_length=64)
     display_name: str = Field(min_length=1, max_length=80)
-    password: str = Field(min_length=12, max_length=128, repr=False)
+    password: str = Field(min_length=STUDENT_PASSWORD_MIN_LENGTH, max_length=128, repr=False)
 
     @field_validator("display_name")
     @classmethod
@@ -54,7 +57,7 @@ class StudentIn(Body):
 
 
 class PasswordIn(Body):
-    password: str = Field(min_length=12, max_length=128, repr=False)
+    password: str = Field(min_length=STUDENT_PASSWORD_MIN_LENGTH, max_length=128, repr=False)
 
 
 class WorkspaceIn(Body):
@@ -141,7 +144,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             if database is None:
                 db.close()
 
-    app = FastAPI(title="桂子问津", version="0.10.1", lifespan=lifespan,
+    app = FastAPI(title="桂子问津", version="0.12.0", lifespan=lifespan,
                   responses={status: {"model": ErrorOut} for status in (401, 403, 409, 422, 429, 503)})
 
     @app.middleware("http")
@@ -182,14 +185,26 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         if request.headers.get("sec-fetch-site") == "cross-site":
             raise DomainError(403, "origin_forbidden", "请求来源不被允许")
 
+    def client_role(request: Request):
+        value = request.headers.get("x-wenjin-client")
+        if value not in {None, "student", "admin"}:
+            raise DomainError(400, "invalid_client", "未知登录端")
+        return value
+
+    def cookie_names(role):
+        # 无客户端标识的维护/API 调用保留旧协议；浏览器双端各自持有会话。
+        return (f"wenjin_{role}_session", f"wenjin_{role}_csrf") if role else (SESSION_COOKIE, CSRF_COOKIE)
+
     def context_for(role=None):
         def dependency(request: Request):
             write = request.method not in {"GET", "HEAD", "OPTIONS"}
             if write:
                 check_origin(request)
+            ui_role = client_role(request)
+            session_cookie, _ = cookie_names(ui_role)
             with db.transaction() as session:
-                actor = identity.authorize(session, request.cookies.get(SESSION_COOKIE, ""),
-                                           request.headers.get("x-csrf-token"), role, write)
+                actor = identity.authorize(session, request.cookies.get(session_cookie, ""),
+                                           request.headers.get("x-csrf-token"), role or ui_role, write)
                 yield Context(session, actor)
         return dependency
 
@@ -207,12 +222,18 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     @app.post("/api/v1/auth/login", response_model=AuthOut)
     def login(body: LoginIn, request: Request, response: Response):
         check_origin(request)
+        ui_role = client_role(request)
+        session_cookie, csrf_cookie = cookie_names(ui_role)
         account, token, csrf = identity.login(body.username, body.password,
-                                              request.client.host if request.client else "unknown")
-        response.set_cookie(SESSION_COOKIE, token, httponly=True, secure=settings.cookie_secure,
+                                              request.client.host if request.client else "unknown", expected_role=ui_role)
+        response.set_cookie(session_cookie, token, httponly=True, secure=settings.cookie_secure,
                             samesite="strict", path="/api/v1", max_age=identity.ttl)
-        response.set_cookie(CSRF_COOKIE, csrf, httponly=False, secure=settings.cookie_secure,
+        response.set_cookie(csrf_cookie, csrf, httponly=False, secure=settings.cookie_secure,
                             samesite="strict", path="/", max_age=identity.ttl)
+        if ui_role:
+            # 成功升级到分端会话后清理本浏览器遗留凭据，避免旧 Cookie 隐式保留登录。
+            response.delete_cookie(SESSION_COOKIE, path="/api/v1")
+            response.delete_cookie(CSRF_COOKIE, path="/")
         return {"account": account, "csrf_token": csrf}
 
     @app.get("/api/v1/auth/me", response_model=MeOut)
@@ -220,10 +241,11 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         return {"account": public_account(ctx.actor.account)}
 
     @app.post("/api/v1/auth/logout", status_code=204)
-    def logout(response: Response, ctx: Annotated[Context, Depends(anyone, scope="function")]):
+    def logout(request: Request, response: Response, ctx: Annotated[Context, Depends(anyone, scope="function")]):
         identity.logout(ctx.session, ctx.actor)
-        response.delete_cookie(SESSION_COOKIE, path="/api/v1")
-        response.delete_cookie(CSRF_COOKIE, path="/")
+        session_cookie, csrf_cookie = cookie_names(client_role(request))
+        response.delete_cookie(session_cookie, path="/api/v1")
+        response.delete_cookie(csrf_cookie, path="/")
 
     @app.get("/api/v1/admin/students", response_model=StudentsOut)
     def students(ctx: Annotated[Context, Depends(admin, scope="function")], offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100)):
@@ -274,5 +296,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app.include_router(activity_router(student, admin))
     app.include_router(evidence_router(student))
     app.include_router(planning_router(student, admin))
+    app.include_router(model_runtime_router(admin))
+    app.include_router(development_router(admin))
     mount_frontends(app, Path(settings.frontend_dir) if settings.frontend_dir else Path(__file__).resolve().parents[2] / "frontend" / "dist")
     return app

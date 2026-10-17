@@ -20,10 +20,92 @@ class Base(DeclarativeBase):
     pass
 
 
+class DevelopmentReviewScope(Base):
+    __tablename__ = 'development_review_scopes'
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class DevelopmentReview(Base):
+    __tablename__ = 'development_reviews'
+    __table_args__ = (UniqueConstraint('scope_id', 'revision'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    scope_id: Mapped[str] = mapped_column(ForeignKey('development_review_scopes.id'), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(24))
+    target_id: Mapped[str] = mapped_column(String(160))
+    version: Mapped[str] = mapped_column(String(64))
+    conclusion: Mapped[str] = mapped_column(String(40))
+    note: Mapped[str] = mapped_column(String(2000))
+    reviewer_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
 class SystemState(Base):
     __tablename__ = "system_state"
     id: Mapped[int] = mapped_column(primary_key=True)
     admin_initialized: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ModelConfiguration(Base):
+    """Published immutable configuration; credentials remain outside the database."""
+    __tablename__ = "model_configurations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    vendor: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(String(160))
+    max_output_tokens: Mapped[int] = mapped_column(Integer)
+    account_daily_calls: Mapped[int] = mapped_column(Integer)
+    site_daily_calls: Mapped[int] = mapped_column(Integer)
+    prompt_version: Mapped[str] = mapped_column(String(64))
+    actor_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class ModelPolicy(Base):
+    __tablename__ = "model_policy"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    active_id: Mapped[str | None] = mapped_column(ForeignKey("model_configurations.id"))
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    stop_epoch: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ModelDailyBudget(Base):
+    __tablename__ = "model_daily_budgets"
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)
+    scope: Mapped[str] = mapped_column(String(64), primary_key=True)
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ModelOperation(Base):
+    __tablename__ = "model_operations"
+    __table_args__ = (
+        UniqueConstraint("input_id"),
+        CheckConstraint("status IN ('waiting','pending','running','succeeded','failed','cancelled','discarded','unknown')"),
+        Index("ix_model_operations_ready", "status", "created_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    input_id: Mapped[str] = mapped_column(ForeignKey("learning_inputs.id"))
+    run_id: Mapped[str] = mapped_column(ForeignKey("agent_runs.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"))
+    configuration_id: Mapped[str] = mapped_column(ForeignKey("model_configurations.id"))
+    run_revision: Mapped[int] = mapped_column(Integer)
+    policy_epoch: Mapped[int] = mapped_column(Integer)
+    task_id: Mapped[str] = mapped_column(String(64))
+    hint_level: Mapped[int] = mapped_column(Integer)
+    request: Mapped[dict] = mapped_column(JSON)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default="waiting")
+    lease_token: Mapped[str | None] = mapped_column(String(36))
+    lease_until: Mapped[int | None] = mapped_column(BigInteger)
+    result: Mapped[dict | None] = mapped_column(JSON)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    usage: Mapped[dict | None] = mapped_column(JSON)
+    returned_model: Mapped[str | None] = mapped_column(String(160))
+    elapsed_ms: Mapped[int | None] = mapped_column(Integer)
+    billing_unknown: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+    finished_at: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class Account(Base):

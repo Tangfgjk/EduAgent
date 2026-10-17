@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.infrastructure.db.database import Database
 from app.infrastructure.db.models import Account, AuditEvent, AuthSession, LoginThrottle, SystemState, new_id, now
 from app.modules.errors import DomainError
-from app.modules.identity.security import HASHER, digest, password_hash, username, verify
+from app.modules.identity.security import HASHER, STUDENT_PASSWORD_MIN_LENGTH, digest, password_hash, username, verify
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ class Identity:
             session.add(AuditEvent(actor_id=account.id, action="admin.bootstrap", target_id=account.id))
             return public_account(account)
 
-    def login(self, name: str, password: str, client_address: str) -> tuple[dict, str, str]:
+    def login(self, name: str, password: str, client_address: str, *, expected_role: str | None = None) -> tuple[dict, str, str]:
         normalized = name.strip().lower()
         error, result = None, None
         with self.db.transaction() as session:
@@ -66,6 +66,9 @@ class Identity:
                     for bucket in buckets:
                         bucket.failures += 1
                     error = DomainError(401, "invalid_credentials", "账号或密码不正确")
+                elif expected_role and account.role != expected_role:
+                    label = "管理员" if expected_role == "admin" else "学生"
+                    error = DomainError(403, "role_forbidden", f"请使用{label}账号登录此端")
                 else:
                     # IP 桶保留窗口内失败数，避免用一个正确账号绕过其他账号的失败限制。
                     for bucket in buckets:
@@ -104,7 +107,7 @@ class Identity:
         name = username(name)
         if session.scalar(select(Account.id).where(Account.username == name)):
             raise DomainError(409, "username_exists", "该账号已存在")
-        account = Account(username=name, display_name=display_name, password_hash=password_hash(password),
+        account = Account(username=name, display_name=display_name, password_hash=password_hash(password, minimum=STUDENT_PASSWORD_MIN_LENGTH),
                           role="student", learner_id=new_id(), source_kind=self.data_mode)
         session.add(account)
         session.flush()
@@ -121,7 +124,7 @@ class Identity:
             student.enabled = False
             action = "student.disable"
         else:
-            student.password_hash = password_hash(password)
+            student.password_hash = password_hash(password, minimum=STUDENT_PASSWORD_MIN_LENGTH)
             action = "student.reset_password"
         session.execute(delete(AuthSession).where(AuthSession.account_id == target))
         session.add(AuditEvent(actor_id=actor.account.id, action=action, target_id=target))

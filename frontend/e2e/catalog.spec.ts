@@ -44,7 +44,7 @@ for (const mobile of [false, true]) {
     await expect(page.getByText('不是七至九年级完整课程', { exact: false })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: `test-results/screens/student-catalog${mobile ? '-mobile' : ''}.png`, fullPage: true });
-    await page.getByRole('link', { name: '查看与学习', exact: true }).click();
+    await page.locator('section.card').filter({ has: page.getByRole('heading', { name: '等可能事件概率 · 开发单元', exact: true }) }).getByRole('link', { name: '查看与学习', exact: true }).click();
     await expect(page.getByLabel('选择开发单元')).toHaveValue('math.g9.probability.dev1');
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
     await expect(page.getByText('D-PRB-01', { exact: true })).toBeVisible();

@@ -9,6 +9,7 @@ export type AgentRun = components['schemas']['RunOut'];
 export type PlanDecision = components['schemas']['PlanDecision'];
 export type AgentEvent = components['schemas']['EventOut'];
 export type TutorRun = components['schemas']['TutorRunOut'];
+export type TutorHistory = components['schemas']['TutorHistoryOut'];
 export type ActivityRun = components['schemas']['ActivityRunOut'];
 export type ActivityKind = 'roundtable' | 'teach';
 export type TutorView = components['schemas']['TutorView'];
@@ -27,6 +28,10 @@ export type PlanningMaterial = components['schemas']['MaterialOut'];
 export type MaterialInput = components['schemas']['MaterialIn'];
 export type ActiveStrategy = components['schemas']['ActiveOut'];
 export type SourceRef = components['schemas']['SourceRef'];
+export type DevelopmentReview = components['schemas']['ReviewRecordOut'];
+export type ReviewState = components['schemas']['ReviewStateOut'];
+export type EvaluationIndex = components['schemas']['EvaluationIndexOut'];
+export type EvaluationDetail = components['schemas']['EvaluationDetailOut'];
 type WithoutGate<T> = T extends unknown ? Omit<T, 'gate_id' | 'expected_revision'> : never;
 export type TutorCommand = WithoutGate<components['schemas']['AnswerInput'] | components['schemas']['HintInput'] | components['schemas']['ReflectInput'] | components['schemas']['NextInput']>;
 
@@ -34,15 +39,23 @@ export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public requestId?: string) { super(message); }
 }
 
-function csrfToken() {
-  const cookie = document.cookie.split('; ').find(item => item.startsWith('wenjin_csrf='));
-  return cookie ? decodeURIComponent(cookie.slice('wenjin_csrf='.length)) : '';
+function browserRole(): 'student' | 'admin' | undefined {
+  const segment = window.location.pathname.split('/')[1];
+  return segment === 'student' || segment === 'admin' ? segment : undefined;
+}
+
+function csrfToken(role: ReturnType<typeof browserRole>) {
+  const name = role ? `wenjin_${role}_csrf` : 'wenjin_csrf';
+  const cookie = document.cookie.split('; ').find(item => item.startsWith(name + '='));
+  return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : '';
 }
 
 async function request<T>(path: string, options: RequestInit = {}, decode?: (response: Response) => Promise<T>): Promise<T> {
   const headers = new Headers(options.headers);
+  const role = browserRole();
+  if (role) headers.set('X-Wenjin-Client', role);
   if (options.body) headers.set('Content-Type', 'application/json');
-  if (options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken());
+  if (options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken(role));
   let response: Response;
   try {
     response = await fetch('/api/v1' + path, { ...options, headers, credentials: 'same-origin' });
@@ -63,6 +76,10 @@ async function request<T>(path: string, options: RequestInit = {}, decode?: (res
 
 const json = (value: unknown) => JSON.stringify(value);
 export const api = {
+  modelRuntime: (signal?: AbortSignal) => request<components['schemas']['ModelRuntimeOut']>('/admin/model-runtime', { signal }),
+  publishModel: (body: components['schemas']['PublishModel']) => request<components['schemas']['ModelRuntimeOut']>('/admin/model-runtime/publish', { method: 'POST', body: json(body) }),
+  pauseModel: (revision: number) => request<components['schemas']['ModelRuntimeOut']>('/admin/model-runtime/pause', { method: 'POST', body: json({ expected_revision: revision }) }),
+  cancelModelTask: (run: TutorRun) => request<TutorRun>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/model-operations/${run.coaching!.operation_id}/cancel`, { method: 'POST' }),
   planningMaterials: (admin: boolean, offset: number, signal?: AbortSignal) => request<components['schemas']['MaterialsOut']>(`/${admin ? 'admin' : 'student'}/planning-materials?offset=${offset}`, { signal }),
   addPlanningMaterial: (input: MaterialInput) => request<PlanningMaterial>('/admin/planning-materials', { method: 'POST', body: json(input) }),
   releasePlanningMaterial: (material: PlanningMaterial, enabled: boolean) => request<PlanningMaterial>(`/admin/planning-materials/${material.material_id}/release`, { method: 'POST', body: json({ expected_revision: material.revision, enabled, acknowledge_development_only: true }) }),
@@ -80,7 +97,11 @@ export const api = {
   releaseActivityContent: (content: ContentInfo, enabled: boolean) => request<ContentInfo>('/admin/activity-content/development-release', { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
   activities: (wid: string, kind: ActivityKind, offset = 0, signal?: AbortSignal) => request<components['schemas']['ActivityRunsOut']>(`/student/workspaces/${wid}/${kind}?offset=${offset}`, { signal }),
   startActivity: (wid: string, kind: ActivityKind, unit_id: string, key: string) => request<ActivityRun>(`/student/workspaces/${wid}/${kind}`, { method: 'POST', body: json({ unit_id }), headers: { 'Idempotency-Key': key } }),
-  activityInput: (run: ActivityRun, command: { action: 'contribute' | 'conclude'; answer: string; reasoning: string }, key: string) => request<ActivityRun>(`/student/workspaces/${run.workspace_id}/${run.kind}/${run.run_id}/inputs`, { method: 'POST', body: json({ ...command, gate_id: run.gate_id, expected_revision: run.revision }), headers: { 'Idempotency-Key': key } }),
+  activityInput: (run: ActivityRun, command: { action: 'contribute' | 'conclude' | 'verify'; answer: string; reasoning: string }, key: string) => request<ActivityRun>(`/student/workspaces/${run.workspace_id}/${run.kind}/${run.run_id}/inputs`, { method: 'POST', body: json({ ...command, gate_id: run.gate_id, expected_revision: run.revision }), headers: { 'Idempotency-Key': key } }),
+  developmentReviews: (target: string, version: string, signal?: AbortSignal) => request<ReviewState>(`/admin/development-reviews?target_id=${encodeURIComponent(target)}&version=${version}`, { signal }),
+  saveDevelopmentReview: (body: components['schemas']['ReviewInput']) => request<ReviewState>('/admin/development-reviews', { method: 'POST', body: json(body) }),
+  evaluationReports: (signal?: AbortSignal) => request<EvaluationIndex>('/admin/evaluation-reports', { signal }),
+  evaluationReport: (id: string, signal?: AbortSignal) => request<EvaluationDetail>(`/admin/evaluation-reports/${encodeURIComponent(id)}`, { signal }),
   cancelActivity: (run: ActivityRun) => request<ActivityRun>(`/student/workspaces/${run.workspace_id}/${run.kind}/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
   reviewCards: (wid: string, status: 'all' | 'due' | 'scheduled', offset: number, signal?: AbortSignal) => request<components['schemas']['CardsOut']>(`/student/workspaces/${wid}/review-cards?status=${status}&offset=${offset}`, { signal }),
   reviewCard: (wid: string, cid: string) => request<ReviewCard>(`/student/workspaces/${wid}/review-cards/${cid}`),
@@ -98,6 +119,7 @@ export const api = {
   tutoring: (wid: string, signal?: AbortSignal) => request<components['schemas']['TutorRunsOut']>(`/student/workspaces/${wid}/tutoring`, { signal }),
   startTutor: (wid: string, unit_id: string, key: string) => request<TutorRun>(`/student/workspaces/${wid}/tutoring`, { method: 'POST', body: json({ unit_id }), headers: { 'Idempotency-Key': key } }),
   tutorInput: (run: TutorRun, command: TutorCommand, key: string) => request<TutorRun>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/inputs`, { method: 'POST', body: json({ ...command, gate_id: run.gate_id, expected_revision: run.revision }), headers: { 'Idempotency-Key': key } }),
+  tutorHistory: (run: TutorRun, after: number, signal?: AbortSignal) => request<TutorHistory>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/history?after=${after}`, { signal }),
   cancelTutor: (run: TutorRun) => request<TutorRun>(`/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
   runs: (wid: string, signal?: AbortSignal) => request<components['schemas']['RunsOut']>(`/student/workspaces/${wid}/runs`, { signal }),
   startPlan: (wid: string, goal: string, daily_minutes: number, key: string) => request<AgentRun>(`/student/workspaces/${wid}/runs`, { method: 'POST', body: json({ goal, daily_minutes }), headers: { 'Idempotency-Key': key } }),

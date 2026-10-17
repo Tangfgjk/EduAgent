@@ -44,6 +44,8 @@ class Activities(Learning):
             return public_activity(existing)
         self.spaces.owned(session, actor, wid, active=True)
         item = get_activity(payload["unit_id"])
+        if item.flow == 'teach_cycle_v1' and self.kind != 'teach':
+            raise DomainError(409, 'activity_kind_forbidden', '此流程仅用于我教 AI，请选择圆桌专用互动包')
         require_activity_content(session, actor.account.source_kind, item.unit_id)
         require_idle(session, wid, ["tutor", "roundtable", "teach"])
         conversation = self.spaces.create_conversation(session, actor, wid, self.kind)

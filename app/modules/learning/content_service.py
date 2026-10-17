@@ -12,6 +12,8 @@ def require_content(session, source_kind, unit_id=UNIT_ID, version=CONTENT_VERSI
         raise DomainError(409, "development_content_only", "当前为开发题库，完成专业内容审核前暂不面向真实学生开放")
     if approval is None or not approval.enabled or approval.version != version:
         raise DomainError(409, "content_not_enabled", "请先由管理员核对并启用当前版本的开发内容")
+    from app.modules.governance.reviews import check_content
+    check_content(session, unit_id, version)
 
 
 def require_activity_content(session, source_kind, unit_id=None):
@@ -19,6 +21,8 @@ def require_activity_content(session, source_kind, unit_id=None):
     from app.modules.learning.activity_content import UNIT_ID as default_id
     item = get_activity(unit_id or default_id)
     require_content(session, source_kind, item.unit_id, item.version)
+    if item.flow == 'teach_cycle_v1':
+        require_content(session, source_kind, item.parent.unit_id, item.parent.version)
 
 
 class Content:
@@ -36,9 +40,12 @@ class Content:
     def toggle(self, session, actor, body):
         if body["content_version"] != self.version:
             raise DomainError(409, "version_conflict", "题库版本已更新，请重新核对内容")
-        approval = session.get(ContentApproval, self.unit_id, with_for_update=True)
+        from app.modules.governance.reviews import check_content, content_lock
+        approval = content_lock(session, actor, self.unit_id, self.version)
         if (approval.revision if approval else 0) != body["expected_revision"]:
             raise DomainError(409, "revision_conflict", "内容状态已更新，请刷新后核对")
+        if body['enabled']:
+            check_content(session, self.unit_id, self.version)
         if not approval:
             approval = ContentApproval(unit_id=self.unit_id, version=self.version, enabled=body["enabled"],
                 revision=1, reviewer_id=actor.account.id)
@@ -90,4 +97,4 @@ def catalog_unit(session, item, admin=False):
 def catalog(session, admin=False):
     from app.modules.learning.content_catalog import PACKS
     return {"items": [catalog_unit(session, item, admin) for item in PACKS],
-        "coverage_note": "当前是 5 个代表性自编开发单元，共 25 题；不是七至九年级完整课程。年级为编排建议，教材/课标映射与专业审核待补齐。先修关系仅供参考，不表示已掌握。几何证明、统计分析、二次函数等尚未实现；圆桌与我教 AI 支持单独审核的方程和概率互动模板，其它单元尚未实现互动。"}
+        "coverage_note": f"当前有 {len(PACKS)} 个自编开发单元，共 {sum(len(p.tasks) for p in PACKS)} 题；不是七至九年级完整课程。新增概率计数、平均数与频率，新增内容须先保存开发审核依据再启用；全部未经专业教师审核，不面向真实学生。年级与先修关系仅供编排参考，不表示已掌握。圆桌与我教 AI 独立管理版本和开放。"}

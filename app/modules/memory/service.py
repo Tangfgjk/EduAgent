@@ -91,7 +91,8 @@ class Memory:
             activity_version = source.payload.get("activity_version")
             if activity_version:
                 activity = activity_for_version(activity_version)
-                if activity.parent.version != card.content_version or activity.task["id"] != card.task_id:
+                source_task = activity.verification_task if source.payload.get('action') == 'verify' else activity.task
+                if activity.parent.version != card.content_version or not source_task or source_task["id"] != card.task_id:
                     raise DomainError(409, "source_version_conflict", "互动来源与内容版本不一致，暂不能复做")
                 require_activity_content(session, actor.account.source_kind, activity.unit_id)
 

@@ -35,6 +35,10 @@ packages = ["app", "evolution"]
 [tool.hatch.build.targets.wheel.force-include]
 "seeds/question_bank.json" = "seeds/question_bank.json"
 "web/index.html" = "web/index.html"
+"seeds/evaluation/probability_followup.v1.json" = "seeds/evaluation/probability_followup.v1.json"
+"seeds/evaluation/probability_multiturn.v1.json" = "seeds/evaluation/probability_multiturn.v1.json"
+"seeds/evaluation/probability_multiturn_holdout.v1.json" = "seeds/evaluation/probability_multiturn_holdout.v1.json"
+"seeds/evaluation/reports" = "seeds/evaluation/reports"
 
 [tool.hatch.build.targets.sdist]
-include = ["/app", "/evolution", "/seeds/question_bank.json", "/web/index.html", "/tests", "/scripts", "/pyproject.toml", "/uv.lock", "/.python-version", "/.env.example", "/README.md", "/compose.dev.yml"]
+include = ["/app", "/evolution", "/seeds/question_bank.json", "/seeds/evaluation", "/web/index.html", "/tests", "/scripts", "/pyproject.toml", "/uv.lock", "/.python-version", "/.env.example", "/README.md", "/compose.dev.yml"]

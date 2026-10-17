@@ -7,6 +7,8 @@ import { Empty, ErrorNotice, Heading, Loading, MathGarden, Modal, Shell, Soon, S
 
 import { ContentPage, ReviewsPage } from './content';
 import { StrategiesPage } from './strategies';
+import { ModelRuntimePanel } from './model-runtime';
+import { EvaluationsPage } from './evaluations';
 
 const navigation: NavItem[] = [
   { path: 'overview', label: '试点概览', icon: LayoutDashboard, section: '教学支持' },
@@ -14,6 +16,7 @@ const navigation: NavItem[] = [
   { path: 'content', label: '知识点与题库', icon: BookOpen, section: '质量与依据' },
   { path: 'review', label: '内容与解答复核', icon: ClipboardCheck },
   { path: 'runs', label: '运行记录', icon: ListChecks },
+  { path: 'evaluations', label: '评测工作台', icon: ClipboardCheck },
   { path: 'strategies', label: '策略评审', icon: FileCheck2 },
   { path: 'config', label: '配置与权限', icon: Settings, section: '管理' },
 ];
@@ -23,6 +26,7 @@ export function AdminApp({ account }: { account: Account }) {
     <Route path="overview" element={<Overview account={account}/>}/><Route path="students" element={<Students account={account}/>}/>
     <Route path="content" element={<ContentPage/>}/><Route path="review" element={<ReviewsPage/>}/>
     <Route path="runs" element={<Preparation page="runs"/>}/><Route path="strategies" element={<StrategiesPage/>}/>
+    <Route path="evaluations" element={<EvaluationsPage/>}/>
     <Route path="config" element={<Configuration account={account}/>}/><Route path="*" element={<Navigate to="/overview" replace/>}/>
   </Routes></Shell>;
 }
@@ -68,7 +72,7 @@ function AccountDialog({ action, onClose, onSaved }: { action: AccountAction; on
   function submit(event: FormEvent) { event.preventDefault(); mutation.mutate(); }
   return <Modal title={title} onClose={onClose} busy={mutation.isPending}><form onSubmit={submit}>
     {action.mode === 'create' ? <><p className="dialog-copy muted">创建后，学生可以登录并建立独立学习项目。</p><label className="field">学生姓名<input autoFocus autoComplete="off" value={form.display_name} required maxLength={80} disabled={mutation.isPending} onChange={event => setForm({ ...form, display_name: event.target.value })}/></label><label className="field">学生账号<input aria-label="学生账号" autoComplete="off" value={form.username} required pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]{2,63}" title="3–64 位字母、数字或 ._-，以字母或数字开头" disabled={mutation.isPending} onChange={event => setForm({ ...form, username: event.target.value })}/><small>3–64 位字母、数字或 ._-，以字母或数字开头。</small></label></> : <p className="dialog-copy">{action.account.display_name}（{action.account.username}）{action.mode === 'disable' ? '禁用后将无法登录，已有会话立即失效。学习记录会保留；当前尚不支持从页面重新启用，请确认后操作。' : '重置后需要使用新密码重新登录，已有会话会失效。'}</p>}
-    {action.mode !== 'disable' && <label className="field">{action.mode === 'create' ? '初始密码' : '新密码'}<input autoFocus={action.mode === 'reset'} type="password" autoComplete="new-password" value={form.password} required minLength={12} maxLength={128} disabled={mutation.isPending} onChange={event => setForm({ ...form, password: event.target.value })}/><small>12–128 个字符。不在页面列表或浏览器存储中保留密码。</small></label>}
+    {action.mode !== 'disable' && <label className="field">{action.mode === 'create' ? '初始密码' : '新密码'}<input autoFocus={action.mode === 'reset'} type="password" autoComplete="new-password" value={form.password} required minLength={6} maxLength={128} disabled={mutation.isPending} onChange={event => setForm({ ...form, password: event.target.value })}/><small>6–128 个字符。不在页面列表或浏览器存储中保留密码。</small></label>}
     <ErrorNotice error={mutation.error}/><div className="dialog-footer"><button type="button" className="button" disabled={mutation.isPending} onClick={onClose}>取消</button><button className={`button ${action.mode === 'disable' ? 'danger' : 'primary'}`} disabled={mutation.isPending}>{mutation.isPending ? '正在保存…' : action.mode === 'create' ? '保存学生账号' : action.mode === 'reset' ? '确认重置' : '确认禁用'}</button></div>
   </form></Modal>;
 }
@@ -85,5 +89,5 @@ function Preparation({ page }: { page: string }) {
 }
 
 function Configuration({ account }: { account: Account }) {
-  return <><Heading kicker="CLEAR ROLES, CLEAR RESPONSIBILITIES" title="配置与权限" description="账号管理与教学决策各有明确职责。"/><div className="grid equal"><section className="card"><div className="card-head"><h2>当前管理身份</h2><UserRound size={22}/></div><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>权限</dt><dd>学生账号、开发内容与解答复核</dd></div></dl><div className="notice"><LockKeyhole size={17}/>管理身份不代表可以替学生作答、代签计划或替代学生确认策略。</div></section><section className="card"><h2>后续配置</h2><div className="source-row"><ShieldCheck size={20}/><div><h3>审核职责与内容开放</h3><p>与对应教学功能一同接入。</p></div><Soon/></div><div className="source-row"><Sparkles size={20}/><div><h3>模型与运行配置</h3><p>具体服务与预算确认后开放。</p></div><Soon/></div><div className="source-row"><CheckCheck size={20}/><div><h3>版本与审核规则</h3><p>保留检查与变更依据。</p></div><Soon/></div><p className="card-note">此页面不会在浏览器中存储模型密钥。</p></section></div></>;
+  return <><Heading kicker="CLEAR ROLES, CLEAR RESPONSIBILITIES" title="配置与权限" description="账号管理与教学决策各有明确职责。"/><div className="grid equal"><section className="card"><div className="card-head"><h2>当前管理身份</h2><UserRound size={22}/></div><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>权限</dt><dd>学生账号、开发内容与解答复核</dd></div></dl><div className="notice"><LockKeyhole size={17}/>管理身份不代表可以替学生作答、代签计划或替代学生确认策略。</div></section><section className="card"><h2>后续配置</h2><div className="source-row"><ShieldCheck size={20}/><div><h3>审核职责与内容开放</h3><p>与对应教学功能一同接入。</p></div><Soon/></div><div className="source-row"><Sparkles size={20}/><div><h3>模型与运行配置</h3><p>下方统一管理开发模型、调用额度与停用。</p></div></div><div className="source-row"><CheckCheck size={20}/><div><h3>版本与审核规则</h3><p>保留检查与变更依据。</p></div><Soon/></div><p className="card-note">此页面不会在浏览器中存储模型密钥。</p></section></div><ModelRuntimePanel/></>;
 }

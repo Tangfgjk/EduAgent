@@ -61,7 +61,7 @@ def test_probability_two_contributions_exact_versions_and_evidence(env, kind):
 def test_catalog_secrecy_independent_release_and_revision(env):
     client,_=env.student()
     catalog=client.get('/api/v1/student/activity-catalog').json()['items']
-    assert len(catalog)==2 and all(not item['tasks'] for item in catalog)
+    assert len(catalog)==3 and all(not item['tasks'] for item in catalog)
     assert client.get('/api/v1/admin/activity-catalog').status_code==403
     assert ACTIVITY_PACKS[0].unit_id==UNIT_ID and ACTIVITY_PACKS[0].version==CONTENT_VERSION
     enable_equation(env)

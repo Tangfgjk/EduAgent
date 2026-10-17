@@ -22,9 +22,12 @@ def username(value: str) -> str:
     return value
 
 
-def password_hash(value: str) -> str:
-    if not 12 <= len(value) <= 128:
-        raise DomainError(422, "invalid_password", "密码长度须为 12–128 个字符")
+STUDENT_PASSWORD_MIN_LENGTH = 6
+
+
+def password_hash(value: str, *, minimum: int = 12) -> str:
+    if not minimum <= len(value) <= 128:
+        raise DomainError(422, "invalid_password", f"密码长度须为 {minimum}–128 个字符")
     return HASHER.hash(value)
 
 

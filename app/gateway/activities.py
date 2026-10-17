@@ -20,7 +20,7 @@ def activity_router(student, admin):
     content = Content(UNIT_ID, TITLE, CONTENT_VERSION, admin_tasks())
 
     def catalog_item(session, item, admin=False):
-        return {**Content(item.unit_id, item.title, item.version, item.admin_tasks()).view(session, admin), "parent_unit_id": item.parent_unit_id}
+        return {**Content(item.unit_id, item.title, item.version, item.admin_tasks()).view(session, admin), "parent_unit_id": item.parent_unit_id, 'flow': item.flow}
 
     @router.get("/student/activity-catalog", response_model=ActivityCatalogOut)
     def student_catalog(ctx=student_auth):

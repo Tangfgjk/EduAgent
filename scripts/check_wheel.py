@@ -172,7 +172,7 @@ try:
         assert client.post(scope + "/active-strategy/rollback", headers={"Idempotency-Key": "rollback"}, json={"expected_revision": active["revision"], "target_version": None, "note": "验证恢复默认基线"}).json()["version_id"] is None
         print(json.dumps({"s09_wheel_smoke": "passed", "double_gate_activation_rollback": "passed"}))
         catalog = client.get("/api/v1/student/content-catalog").json()
-        assert len(catalog["items"]) == 5 and all(not item["tasks"] for item in catalog["items"])
+        assert len(catalog["items"]) == 7 and all(not item["tasks"] for item in catalog["items"])
         login = client.post("/api/v1/auth/login", json={"username": "wheel.admin", "password": "Wheel-test-only-123456"})
         client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
         content = next(item for item in client.get("/api/v1/admin/content-catalog").json()["items"] if item["unit_id"] == "math.g9.probability.dev1")
@@ -210,6 +210,12 @@ try:
             assert run["status"]=="completed" and run["view"]["check"]["status"]=="passed"
             assert run["view"]["activity_version"]==activity["content_version"]
         print(json.dumps({"s10_probability_activities_wheel_smoke":"passed"}))
+        login = client.post('/api/v1/auth/login', json={'username':'wheel.admin','password':'Wheel-test-only-123456'})
+        client.headers['X-CSRF-Token'] = login.json()['csrf_token']
+        reports = client.get('/api/v1/admin/evaluation-reports')
+        assert reports.status_code == 200, reports.text
+        assert len(reports.json()['items']) == 3
+        print(json.dumps({'v8_wheel_smoke':'passed','packaged_evaluation_reports':3}))
 
 
 finally:
@@ -224,6 +230,11 @@ def main() -> None:
     with ZipFile(args.wheel) as archive:
         required = {"app/__init__.py", "evolution/l0_digest.py", "seeds/question_bank.json", "web/index.html",
                     "app/infrastructure/db/migrations/env.py", "app/infrastructure/db/migrations/versions/s06_001.py", "app/modules/memory/projections.py", "app/modules/learning/development_content.py", "app/worker.py", "app/modules/learning/activity_graph.py", "app/gateway/activities.py", "app/modules/evidence/service.py", "app/gateway/evidence.py", "app/modules/planning/service.py", "app/infrastructure/db/migrations/versions/s09_001.py", "app/modules/learning/content_catalog.py", "app/modules/learning/activity_catalog.py"}
+        required.update({"app/llm/provider.py", "app/infrastructure/runtime/model_tasks.py",
+                         "app/infrastructure/db/migrations/versions/p0_001.py",
+                         "app/modules/learning/model_coaching.py", "app/gateway/model_runtime.py"})
+        required.update({'app/gateway/development.py', 'app/modules/governance/reviews.py',
+            'app/infrastructure/db/migrations/versions/v8_001.py', 'seeds/evaluation/reports/holdout-fake.json'})
         missing = required.difference(archive.namelist())
         if missing:
             raise SystemExit(f"Wheel 缺少运行依赖: {', '.join(sorted(missing))}")

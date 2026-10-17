@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 from app.modules.learning.contracts import Contract
+from app.llm.provider import Usage
 
 
 class StartTutor(Contract):
@@ -22,6 +23,7 @@ class AnswerInput(GateInput):
 
 class HintInput(GateInput):
     action: Literal["hint"]
+    coaching_text: str = Field(default="", max_length=1500)
 
 
 class ReflectInput(GateInput):
@@ -86,6 +88,47 @@ class TutorView(Contract):
     records: list[TaskRecord]
 
 
+class CoachingResultOut(Contract):
+    quote: str
+    focus: str
+    question: str
+    judgment: str
+
+
+class CoachingContextOut(Contract):
+    student_text: str
+    focus: str
+    question: str
+
+
+class CoachingOut(Contract):
+    operation_id: UUID
+    configuration_id: UUID
+    status: Literal["waiting", "pending", "running", "succeeded", "failed", "cancelled", "discarded", "unknown"]
+    task_id: str
+    hint_level: int
+    vendor: str
+    model: str
+    simulated: bool
+    current: bool
+    result: CoachingResultOut | None
+    error_code: str | None
+    usage: Usage | None
+    elapsed_ms: int | None
+    billing_unknown: bool
+    prompt_version: str = "probability.followup.v1"
+    context_turns: int = Field(default=1, ge=1, le=4)
+    context: list[CoachingContextOut] = Field(default_factory=list)
+
+
+class TutorQueueOut(Contract):
+    state: Literal['waiting', 'processing', 'retrying', 'recovering', 'failed']
+    wait_seconds: int
+    attempts: int
+    retry_after_seconds: int | None
+    error_code: str | None
+
+
 class TutorRunOut(Contract):
     run_id: UUID
     workspace_id: UUID
@@ -97,6 +140,45 @@ class TutorRunOut(Contract):
     event_seq: int
     created_at: int
     view: TutorView | None
+    coaching: CoachingOut | None = None
+    coaching_available: bool = False
+    coaching_context_limit: Literal[1, 4] = 1
+    coaching_remaining_calls: int | None = Field(default=None, ge=0)
+    queue: TutorQueueOut | None = None
+
+
+class HistoryModelOut(Contract):
+    operation_id: UUID
+    status: Literal['waiting', 'pending', 'running', 'succeeded', 'failed', 'cancelled', 'discarded', 'unknown']
+    vendor: str
+    model: str
+    prompt_version: str
+    result: CoachingResultOut | None
+    error_code: str | None
+
+
+class TutorHistoryItem(Contract):
+    sequence: int
+    created_at: int
+    source_kind: str
+    action: Literal['start', 'answer', 'hint', 'reflect', 'next', 'skip']
+    task_id: str | None
+    task_stem: str | None
+    stage: Literal['diagnostic', 'practice', 'checkpoint'] | None
+    answer: str | None
+    reasoning: str | None
+    reflection: str | None
+    thinking: str | None
+    preset_hint: str | None
+    numeric_status: Literal['passed', 'failed', 'unverifiable'] | None
+    processed: bool
+    model: HistoryModelOut | None
+
+
+class TutorHistoryOut(Contract):
+    items: list[TutorHistoryItem]
+    cursor: int
+    has_more: bool
 
 
 class TutorRunsOut(Contract):

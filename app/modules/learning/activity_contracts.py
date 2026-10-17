@@ -11,7 +11,7 @@ class StartActivity(Contract):
 
 
 class ActivityInput(GateInput):
-    action: Literal["contribute", "conclude"]
+    action: Literal["contribute", "conclude", "verify"]
     answer: str = Field(min_length=1, max_length=128)
     reasoning: str = Field(min_length=2, max_length=1500)
 
@@ -44,15 +44,25 @@ class ActivityCheck(Contract):
     independent: Literal[False] = False
 
 
+class IndependentCheck(Contract):
+    status: Literal['passed', 'failed', 'unverifiable']
+    message: str
+    reasoning_reviewed: Literal[False] = False
+    independent: Literal[True] = True
+
+
 class ActivityView(Contract):
     kind: Literal["roundtable", "teach"]
-    phase: Literal["opening", "challenge", "summary"]
+    phase: Literal["opening", "challenge", "verification", "summary"]
     task: TaskOut
     messages: list[ActivityMessage]
     check: ActivityCheck | None
     report: list[str]
     source: Literal["development_template"] = "development_template"
     activity_version: str
+    flow: str = 'legacy'
+    verification_task: TaskOut | None = None
+    verification_check: IndependentCheck | None = None
 
 
 class ActivityRunOut(TutorRunOut):
@@ -66,6 +76,7 @@ class ActivityRunsOut(Contract):
 
 class ActivityContentOut(ContentOut):
     parent_unit_id: str
+    flow: Literal['legacy', 'teach_cycle_v1'] = 'legacy'
 
 
 class ActivityCatalogOut(Contract):

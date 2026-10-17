@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--env-file", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("migrate")
+    sub.add_parser("set-model-key", help="隐藏输入 DeepSeek 密钥，保存到被 Git 忽略的本机文件")
     materialize = sub.add_parser("backfill-learning-facts", help="停服后核对旧 S05 运行；默认仅报告")
     materialize.add_argument("--apply", action="store_true")
     init = sub.add_parser("bootstrap-admin")
@@ -32,6 +33,17 @@ def main():
     legacy.add_argument("--snapshot", type=Path, required=True)
     args = parser.parse_args()
     settings = Settings.load(args.env_file)
+    if args.command == "set-model-key":
+        import os
+        value = getpass.getpass("DeepSeek API Key（不回显）：").strip()
+        if not value or "\n" in value or len(value) > 1024:
+            parser.error("密钥格式无效")
+        target = Path(os.getenv("WENJIN_DEEPSEEK_KEY_FILE", ".local/deepseek.key"))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(value, encoding="utf-8")
+        target.chmod(0o600)
+        print("本机密钥已保存；请限制该文件访问，不要提交或分享。")
+        return
     if not settings.database_url:
         parser.error("请配置 RSI_DATABASE_URL，或使用 --env-file .local/database.env")
     db = Database(settings.database_url)

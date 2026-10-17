@@ -1,3 +1,4 @@
+import { ContentDevelopmentReview } from './development-review';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type CatalogUnit } from '@wenjin/api-client';
@@ -20,6 +21,7 @@ function CatalogReview({ item, close }: { item: CatalogUnit; close: () => void }
   const mutation = useMutation({ mutationFn: () => api.releaseCatalogUnit(item, !item.enabled), onSuccess: () => { void client.invalidateQueries({ queryKey: ['admin-catalog'] }); close(); }, onError: () => { void client.invalidateQueries({ queryKey: ['admin-catalog'] }); } });
   return <Modal title={'核对：' + item.title} onClose={close} busy={mutation.isPending}><p className="dialog-copy">仅供模拟与成人测试。启用不代表专业教师审核或课程覆盖完成。</p><p className="card-note" style={{ overflowWrap: 'anywhere' }}>版本：{item.content_version}</p><p className="card-note">{item.boundary}</p>
     {(item.tasks ?? []).map(task => <article className="section-gap" key={String(task.id)}><h3>{String(task.id)} · {String(task.stage)}</h3><p>{String(task.stem)}</p><p>参考数值：{String(task.answer)}</p><p>常见误区：{String(task.misconception || '待专业审核补充')}</p>{Array.isArray(task.hints) && <ol>{task.hints.map((hint, i) => <li key={i}>L{i}：{String(hint)}</li>)}</ol>}</article>)}
+    <ContentDevelopmentReview target={item.unit_id} version={item.content_version}/>
     <label className="field section-gap"><span><input type="checkbox" checked={ack} disabled={mutation.isPending} onChange={e => setAck(e.target.checked)} style={{ width: 'auto', marginRight: 8 }}/>我已核对该版本，理解它仅供开发测试</span></label><ErrorNotice error={mutation.error}/><div className="dialog-footer"><button className="button" disabled={mutation.isPending} onClick={close}>关闭</button><button className="button primary" disabled={!ack || mutation.isPending} onClick={() => mutation.mutate()}>{item.enabled ? '停用此内容包' : '启用此内容包'}</button></div>
   </Modal>;
 }

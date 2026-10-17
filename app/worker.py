@@ -1,5 +1,6 @@
-"""开发模板 worker：检查点、业务状态与租约完成在一个短事务提交。"""
+"""教学检查点采用短事务；独立模型任务在事务外调用，并支持分进程运行。"""
 import argparse
+import logging
 import time
 from pathlib import Path
 
@@ -23,11 +24,38 @@ from app.modules.learning.activity_catalog import activity_for_run
 from app.modules.learning.activity_facts import publish_activity
 from app.modules.learning.activity_service import require_idle
 from app.modules.learning.content_service import require_activity_content
+from app.infrastructure.runtime.model_tasks import ModelTaskRunner, activate as activate_model_task
+
+logger = logging.getLogger('wenjin.worker')
+
+
+def run_loop(worker, *, stop=None, once=False, poll_seconds=0.5, lane='combined'):
+    """Shared supervisor for CLI and embedded dev workers; never log exception payloads."""
+    unavailable = False
+    while stop is None or not stop.is_set():
+        try:
+            worked = worker.step()
+            if unavailable:
+                logger.warning('worker_cycle_recovered lane=%s', lane)
+            unavailable = False
+        except Exception:
+            if not unavailable:
+                logger.warning('worker_cycle_unavailable lane=%s code=cycle_unavailable', lane)
+            unavailable, worked = True, False
+        if once:
+            return
+        if not worked:
+            if stop is None:
+                time.sleep(poll_seconds)
+            else:
+                stop.wait(poll_seconds)
 
 
 class Worker:
-    def __init__(self, db):
+    def __init__(self, db, model_runner=None, enable_models=True):
         self.db, self.outbox = db, Outbox(db)
+        self.model_runner = model_runner or ModelTaskRunner(db)
+        self.enable_models = enable_models
 
     def reap(self):
         with self.db.transaction() as session:
@@ -39,10 +67,14 @@ class Worker:
                 event(session, run, "run.failed")
 
     def step(self):
-        claimed = self.outbox.claim()
+        # Housekeeping must finish before taking a lease: an unavailable cycle
+        # otherwise strands an untouched job for the full 60-second lease.
         self.reap()
+        claimed = self.outbox.claim()
         if claimed is None:
-            return False
+            return self.model_runner.step() if self.enable_models else False
+        started = time.monotonic()
+        logger.info('teaching_job_claimed job_id=%s attempt=%s', claimed['job_id'], claimed['attempts'])
         try:
             with self.db.transaction() as session:
                 entry = session.get(LearningInput, claimed["input_id"])
@@ -106,6 +138,7 @@ class Worker:
                         if run.kind in {"roundtable", "teach"}:
                             event_kind = "activity.updated" if paused else "activity.completed"
                     run.revision += 1
+                    activate_model_task(session, run, entry)
                     event(session, run, event_kind)
                 # 取消、已终结运行不再执行图；输入历史仍保留。
                 self.check_lease(job, claimed)
@@ -115,12 +148,14 @@ class Worker:
                     job.status, job.error_code = "completed", None
                 job.lease_until, job.lease_token = None, None
         except Exception:
+            logger.warning('teaching_job_failed job_id=%s attempt=%s code=runtime_error', claimed['job_id'], claimed['attempts'])
             # 事务已回滚，不输出学生原文、检查点、连接地址或原始异常。
             try:
                 self.outbox.finish(claimed["job_id"], claimed["lease_token"], "runtime_error")
             except DomainError:
                 pass
             self.reap()
+        logger.info('teaching_job_cycle_finished job_id=%s elapsed_ms=%s', claimed['job_id'], int((time.monotonic() - started) * 1000))
         return True
 
     @staticmethod
@@ -130,9 +165,11 @@ class Worker:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="运行无外部模型的开发计划流程 worker")
+    parser = argparse.ArgumentParser(description="运行教学流程及已发布的开发模型任务；默认不开放模型")
     parser.add_argument("--env-file")
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--lane", choices=["teaching", "models", "combined"], default="combined",
+                        help="试点分别启动 teaching/models 两个进程，避免模型等待占用教学 worker")
     args = parser.parse_args()
     settings = Settings.load(Path(args.env_file) if args.env_file else None)
     if not settings.database_url:
@@ -140,15 +177,17 @@ def main():
     db = Database(settings.database_url)
     try:
         db.assert_ready()
-        worker = Worker(db)
-        while True:
-            worked = worker.step()
-            if args.once:
-                break
-            if not worked:
-                time.sleep(0.5)
+        worker = ModelTaskRunner(db) if args.lane == "models" else Worker(db, enable_models=args.lane == "combined")
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        run_loop(worker, once=args.once, lane=args.lane)
     except KeyboardInterrupt:
         pass
+    except Exception:
+        raise SystemExit("Worker startup unavailable; check database migration and configuration (details withheld).") from None
     finally:
         db.close()
 

@@ -43,6 +43,7 @@ for (const kind of ['roundtable', 'teach'] as const) {
     await expect(page.locator('.context-bar')).toContainText(title);
     const label = kind === 'teach' ? '我教 AI' : '圆桌讨论';
     await navigate(page, label);
+    if (kind === 'teach') await page.getByLabel('选择互动单元').selectOption('math.g7.equations.activities.dev1');
     await page.getByRole('button', { name: '开始' + label, exact: true }).click();
     await expect(page.getByText('等待你的第一段表达', { exact: true })).toBeVisible();
     await page.getByLabel('我的数值表达', { exact: true }).fill('6');

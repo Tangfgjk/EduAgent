@@ -8,6 +8,10 @@ from app.modules.learning.activity_service import require_idle
 from app.modules.planning.service import effective_policy
 from app.modules.learning.service import Learning, event, request_hash
 from app.modules.learning.tutor_graph import check_action, version_for
+from app.infrastructure.runtime import model_tasks
+from app.infrastructure.db.models import ModelPolicy, ModelConfiguration, Workspace, Account
+from app.modules.learning.model_coaching import context_limit
+from app.modules.learning.tutor_history import queue_status
 
 
 def public_tutor(session, run):
@@ -15,8 +19,19 @@ def public_tutor(session, run):
     if view:
         view["pending_reviews"] = session.scalar(select(func.count()).select_from(AnswerReview).where(
             AnswerReview.run_id == run.id, AnswerReview.status == "pending"))
+    policy = session.get(ModelPolicy, 1)
+    config = session.get(ModelConfiguration, policy.active_id) if policy.active_id else None
+    space = session.get(Workspace, run.workspace_id)
+    account = session.get(Account, space.owner_id)
+    available = bool(policy.active_id and account.source_kind in {"synthetic", "adult_test"} and view
+        and view["unit_id"] == model_tasks.UNIT and view["phase"] == "practice" and view["can_hint"])
+    remaining = model_tasks.remaining_calls(session, account.id, config) if config and account.source_kind in {"synthetic", "adult_test"} else None
+    available = available and bool(remaining)
     return {"run_id": run.id, **{key: getattr(run, key) for key in (
-        "workspace_id", "conversation_id", "status", "revision", "gate_id", "error_code", "event_seq", "created_at")}, "view": view}
+        "workspace_id", "conversation_id", "status", "revision", "gate_id", "error_code", "event_seq", "created_at")},
+        "view": view, "coaching": model_tasks.latest(session, run), "coaching_available": available,
+        "coaching_context_limit": context_limit(config.prompt_version) if config else 1,
+        "coaching_remaining_calls": remaining, "queue": queue_status(session, run)}
 
 
 class Tutoring(Learning):
@@ -86,13 +101,22 @@ class Tutoring(Learning):
             raise DomainError(409, "version_conflict", "教学版本已更新，请重新发起")
         check_action(run.view, payload["action"], actor.account.learner_id)
         conversation = session.get(Conversation, run.conversation_id)
-        self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
+        entry = self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
         run.status, run.gate_id = "queued", None
         run.revision += 1
+        if payload.get("coaching_text"):
+            if len(payload["coaching_text"].strip()) < 2:
+                raise DomainError(422, "invalid_coaching_text", "请写下至少两个字的想法")
+            model_tasks.reserve(session, actor.account, run, entry, payload["coaching_text"])
         event(session, run, "run.queued")
         session.flush()
         return public_tutor(session, run)
 
     def cancel(self, session, actor, wid, rid, revision):
         super().cancel(session, actor, wid, rid, revision)
-        return public_tutor(session, self.owned(session, actor, wid, rid))
+        run = self.owned(session, actor, wid, rid)
+        from app.infrastructure.db.models import ModelOperation
+        for op in session.scalars(select(ModelOperation).where(ModelOperation.run_id == rid, ModelOperation.status.in_(model_tasks.ACTIVE))):
+            model_tasks.cancel(session, run, op.id)
+        session.flush()
+        return public_tutor(session, run)

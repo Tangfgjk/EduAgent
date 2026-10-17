@@ -1,6 +1,7 @@
 """只用于浏览器验收的隔离服务；固定凭据仅写入 .local 中新建的测试库。"""
 import tempfile
 import threading
+import json
 from pathlib import Path
 
 import uvicorn
@@ -9,7 +10,18 @@ from app.config import Settings
 from app.gateway.v1 import create_app
 from app.infrastructure.db.database import Database
 from app.modules.identity.service import Identity
-from app.worker import Worker
+from app.worker import Worker, run_loop
+from app.infrastructure.runtime.model_tasks import ModelTaskRunner
+from app.llm.provider import FakeProvider, ProviderError
+
+
+def test_provider(config, snapshot):
+    """Test server never calls real providers; failure markers only exist in this script."""
+    if config.vendor != 'fake':
+        raise ProviderError('test_real_model_forbidden')
+    if '[开发故障：超时]' in snapshot['student_text']:
+        return FakeProvider((ProviderError('timeout'),))
+    return FakeProvider((json.dumps({'quote': snapshot['student_text'][:80], 'focus': 'clarify'}, ensure_ascii=False),))
 
 
 def main():
@@ -32,10 +44,8 @@ def main():
         app = create_app(settings, database)
         stopped = threading.Event()
         def work():
-            worker = Worker(database)
-            while not stopped.is_set():
-                worker.step()
-                stopped.wait(0.1)
+            worker = Worker(database, model_runner=ModelTaskRunner(database, provider_factory=test_provider))
+            run_loop(worker, stop=stopped, poll_seconds=0.1, lane='test-fake')
         thread = threading.Thread(target=work, daemon=True)
         thread.start()
         try:

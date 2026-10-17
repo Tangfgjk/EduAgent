@@ -16,13 +16,16 @@ class ActivityPack:
     task: dict
     templates: dict
     version: str
+    flow: str = 'legacy'
+    verification_task: dict | None = None
 
     @property
     def parent(self):
         return get_pack(self.parent_unit_id)
 
     def admin_tasks(self):
-        return [{**self.task, 'activity_templates': self.templates,
+        return [{**self.task, 'activity_templates': self.templates, 'flow': self.flow,
+                 'verification_task': self.verification_task,
                  'base_content_version': self.parent.version,
                  'boundary': '模板角色并不读取或评价学生文字；仅在最后核对数值，解释质量尚未评定。'}]
 
@@ -40,9 +43,14 @@ _templates = {
 _version = sha256(json.dumps({'task': _task, 'templates': _templates,
     'base_content_version': _parent.version, 'flow': 'student-first.v1'}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
+_verification = next(task for task in _parent.tasks if task['id'] == 'C-PRB-02')
+
 ACTIVITY_PACKS = (
     ActivityPack(original.UNIT_ID, original.TITLE, 'math.g7.equations.dev1', original.TASK, original.TEMPLATES, original.CONTENT_VERSION),
     ActivityPack('math.g9.probability.activities.dev1', '概率圆桌与我教 AI · 开发活动', _parent.unit_id, _task, _templates, _version),
+    ActivityPack('math.g9.probability.teach.dev2', '概率我教 AI · 讲解与新题验证', _parent.unit_id, _task, _templates,
+        sha256((_version + 'teach-cycle.v1:' + json.dumps(_verification, sort_keys=True, ensure_ascii=False)).encode()).hexdigest(),
+        flow='teach_cycle_v1', verification_task=_verification),
 )
 
 

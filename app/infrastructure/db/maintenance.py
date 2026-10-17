@@ -58,10 +58,14 @@ def restore(db: Database, source: Path) -> dict:
             if table.name == "system_state":
                 if any(row.admin_initialized for row in rows):
                     raise ValueError("目标库已有管理员，拒绝覆盖")
+            elif table.name == "model_policy":
+                if len(rows) != 1 or rows[0].id != 1 or rows[0].active_id is not None or rows[0].revision != 0 or rows[0].stop_epoch != 0:
+                    raise ValueError("目标库已有模型配置，拒绝覆盖")
             elif rows:
                 raise ValueError("恢复仅允许迁移后的空库，拒绝覆盖已有数据")
         state = Base.metadata.tables["system_state"]
         session.execute(state.delete())
+        session.execute(Base.metadata.tables["model_policy"].delete())
         for table in Base.metadata.sorted_tables:
             rows = data["tables"].get(table.name, [])
             if rows:

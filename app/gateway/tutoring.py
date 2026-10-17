@@ -10,6 +10,9 @@ from app.modules.learning.content_service import Content, catalog, catalog_unit
 from app.modules.learning.content_catalog import get_pack
 from app.modules.learning.tutor_contracts import CatalogOut, CatalogUnit, ContentOut, ContentToggle, ReviewDecision, ReviewOut, ReviewsOut, StartTutor, TutorInput, TutorRunOut, TutorRunsOut
 from app.modules.learning.tutor_service import Tutoring, public_tutor
+from app.infrastructure.runtime.model_tasks import cancel as cancel_model
+from app.modules.learning.tutor_history import history as tutor_history
+from app.modules.learning.tutor_contracts import TutorHistoryOut
 
 
 def tutoring_router(student, admin):
@@ -68,9 +71,22 @@ def tutoring_router(student, admin):
     def submit(wid: UUID, rid: UUID, body: TutorInput, ctx=student_auth, key: str = key_header):
         return tutoring.submit(ctx.session, ctx.actor, str(wid), str(rid), body.model_dump(mode="json"), key)
 
+    @router.get(prefix + '/{rid}/history', response_model=TutorHistoryOut)
+    def learning_history(wid: UUID, rid: UUID, ctx=student_auth,
+                         after: int = Query(0, ge=0), limit: int = Query(30, ge=1, le=50)):
+        run = tutoring.owned(ctx.session, ctx.actor, str(wid), str(rid))
+        return tutor_history(ctx.session, ctx.actor.account, run, after, limit)
+
     @router.post(prefix + "/{rid}/cancel", response_model=TutorRunOut)
     def cancel(wid: UUID, rid: UUID, body: RunRevision, ctx=student_auth):
         return tutoring.cancel(ctx.session, ctx.actor, str(wid), str(rid), body.expected_revision)
+
+    @router.post(prefix + "/{rid}/model-operations/{oid}/cancel", response_model=TutorRunOut)
+    def cancel_coaching(wid: UUID, rid: UUID, oid: UUID, ctx=student_auth):
+        run = tutoring.owned(ctx.session, ctx.actor, str(wid), str(rid))
+        cancel_model(ctx.session, run, str(oid))
+        ctx.session.flush()
+        return public_tutor(ctx.session, run)
 
     @router.get(prefix + "/{rid}/events", response_class=Response,
         responses={200: {"content": {"text/event-stream": {"schema": {"type": "string"}}}}})

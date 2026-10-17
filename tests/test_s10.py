@@ -17,6 +17,10 @@ from tests.test_s06 import recall
 
 def release(env, unit, enabled=True, **overrides):
     item = next(item for item in env.admin.get('/api/v1/admin/content-catalog').json()['items'] if item['unit_id'] == unit.unit_id)
+    if enabled and unit.unit_id in {'math.g9.probability.counting.dev1', 'math.g7.statistics.frequency.dev1'}:
+        review = env.admin.get('/api/v1/admin/development-reviews', params={'target_id':unit.unit_id,'version':unit.version}).json()
+        assert env.admin.post('/api/v1/admin/development-reviews', json={'kind':'content','target_id':unit.unit_id,
+            'version':unit.version,'expected_revision':review['revision'],'conclusion':'development_ready','note':'隔离测试核对题目与数值提示；不是专业审核。'}).status_code == 200
     return env.admin.post(f'/api/v1/admin/content-catalog/{unit.unit_id}/development-release', json={
         'content_version': item['content_version'], 'expected_revision': item['revision'],
         'enabled': enabled, 'acknowledge_development_only': True, **overrides})
@@ -31,7 +35,7 @@ def test_registry_integrity_and_original_version():
     assert {p.grade for p in PACKS} == {'七年级', '八年级', '九年级'}
     assert {p.domain for p in PACKS} == {'数与式', '函数', '几何', '统计概率'}
     ids = [task['id'] for p in PACKS for task in p.tasks]
-    assert len(ids) == len(set(ids)) == 25
+    assert len(ids) == len(set(ids)) == 35
     by_id = {p.unit_id: p for p in PACKS}
     for p in PACKS:
         assert [task['stage'] for task in p.tasks] == ['diagnostic', 'practice', 'practice', 'checkpoint', 'checkpoint']
@@ -95,7 +99,7 @@ def test_new_pack_full_cycle_recall_and_evidence(env, unit):
 def test_catalog_role_secrecy_cas_and_unit_isolation(env):
     client, _ = env.student()
     student = client.get('/api/v1/student/content-catalog').json()
-    assert len(student['items']) == 5 and all(not item['tasks'] for item in student['items'])
+    assert len(student['items']) == 7 and all(not item['tasks'] for item in student['items'])
     assert '不是七至九年级完整课程' in student['coverage_note']
     assert client.get('/api/v1/admin/content-catalog').status_code == 403
     unit, other = PACKS[1:3]

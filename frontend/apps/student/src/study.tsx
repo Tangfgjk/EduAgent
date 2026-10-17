@@ -5,6 +5,7 @@ import { BookOpen, Check, Lightbulb, Send, Square } from 'lucide-react';
 import { api, type AgentEvent, type TutorCommand, type TutorRun, type TutorView, type Workspace } from '@wenjin/api-client';
 import { Empty, ErrorNotice, Heading, Loading } from '@wenjin/ui';
 import './study.css';
+import { StudyHistory } from './study-history';
 
 const phaseNames: Record<TutorView['phase'], string> = { diagnostic: '先试一题', practice: '尝试与验证', reflection: '回望方法', checkpoint: '无辅助检测', summary: '学习小结' };
 const statusNames: Record<TutorRun['status'], string> = { queued: '正在处理', awaiting_input: '等待你的思考', completed: '本轮已结束', cancelled: '已取消', failed: '流程暂停' };
@@ -33,7 +34,7 @@ export function StudyPage({ workspace }: { workspace: Workspace }) {
   const planReady = workspace.kind === 'temporary' || (!!plans.data?.items.some(plan => plan.status === 'completed') && !plans.data.items.some(plan => plan.status === 'queued' || plan.status === 'awaiting_input'));
   const unavailable = !unit?.enabled || !planReady || workspace.status === 'archived';
   return <><Heading kicker="THINK BEFORE THE NEXT HINT" title="津津陪学" description="把尝试、依据和检查留下来，一步步接近理解。"/>
-    <div className="notice"><BookOpen size={18}/><div><strong>{run?.view?.title ?? unit?.title ?? '选择开发单元'}</strong><br/>自编开发题，采用程序验证和预设提示，尚无真实模型与教师金标。数值正确不等于步骤正确，也不等于掌握。</div></div>
+    <div className="notice"><BookOpen size={18}/><div><strong>{run?.view?.title ?? unit?.title ?? '选择开发单元'}</strong><br/>自编开发题，程序核验数值，提示逐级开放。概率练习可使用管理员开放的模型追问；当前无教师金标，不自动评价步骤质量或掌握程度。</div></div>
     {workspace.kind === 'temporary' && <p className="page-note">这是临时探索空间。本轮学习只留在此处，不自动并入正式项目长期画像。</p>}
     {content.isPending || plans.isPending || query.isPending ? <Loading text="正在恢复这个空间的学习过程…"/> : content.isError || plans.isError || query.isError ? <ErrorNotice error={content.error ?? plans.error ?? query.error} retry={() => { void content.refetch(); void plans.refetch(); void query.refetch(); }}/> : <>
       {!pending && <label className="field section-gap">选择开发单元<select value={unitId} disabled={start.isPending} onChange={e => { const next = new URLSearchParams(params); next.set('unit', e.target.value); setParams(next); startKey.current = crypto.randomUUID(); start.reset(); }}>{!unit && <option value={unitId}>未找到此内容包，请重新选择</option>}{content.data?.items.map(item => <option key={item.unit_id} value={item.unit_id}>{item.title}{item.enabled ? '' : '（未启用）'}</option>)}</select></label>}
@@ -61,6 +62,7 @@ function TutorSession({ run, archived, update, refresh }: { run: TutorRun; archi
   const view = run.view, locked = submit.isPending || run.status !== 'awaiting_input' || archived;
   return <section className="section-gap"><div className="section-heading"><h2>{view ? phaseNames[view.phase] : '准备学习任务'}</h2><span className="badge">{statusNames[run.status]}</span></div>
     {view && <p className="card-note">本轮内容：{view.title}</p>}
+    {run.queue && <div className="notice" role="status"><div><strong>{({ waiting: '输入已保存，等待教学处理', processing: '正在处理已保存的输入', retrying: '教学步骤暂未完成，正在准备重试', recovering: '正在等待教学任务恢复', failed: '教学处理已暂停，请联系管理员' })[run.queue.state]}</strong><br/>已等待 {run.queue.wait_seconds} 秒。{run.queue.retry_after_seconds ? `约 ${run.queue.retry_after_seconds} 秒后可再次处理。` : ''}{run.queue.wait_seconds >= 15 ? '等待较久；可以刷新状态或结束本次陪学，已有输入不会丢失。' : '请稍候，无需重复提交。'}<button className="button small" type="button" onClick={refresh}>刷新处理状态</button></div></div>}
     {submit.isError && <ErrorNotice error={submit.error}/>}
     {run.status === 'failed' && <div className="notice">流程未能继续（{run.error_code}）。已有记录保留，请检查内容状态后重新开始。</div>}
     {view?.phase === 'summary' ? <Summary view={view}/> : view ? <div className="grid two">
@@ -74,7 +76,8 @@ function TutorSession({ run, archived, update, refresh }: { run: TutorRun; archi
         <p className="body-copy">{view.phase === 'checkpoint' || view.phase === 'diagnostic' ? '这一段请独立完成。提交前不提供提示，提交后不能改写这一题的结果。' : '先试着说出你的想法。提示逐级开放，使用提示的次数会单独保留。'}</p>
         <div className="hint-steps">{['轻推', '方向', '部分步骤', '完整对照'].map((label, index) => <span className={view.hints.length > index ? 'revealed' : ''} key={label}>L{index}<small>{label}</small></span>)}</div>
         {view.hints.map((hint, index) => <div className="study-hint" key={index}><span className="badge neutral">L{index}</span><p>{hint}</p></div>)}
-        <button className="button" disabled={locked || !view.can_hint} onClick={() => submit.mutate({ action: 'hint' })}><Lightbulb size={16}/>{view.hints.length ? '再给我一级提示' : '给我一点提示'}</button>
+        <button className="button" disabled={locked || !view.can_hint} onClick={() => submit.mutate({ action: 'hint', coaching_text: '' })}><Lightbulb size={16}/>{view.hints.length ? '再给我一级提示' : '给我一点提示'}</button>
+        <ModelCoaching key={'coach:' + view.task?.task_id} run={run} locked={locked} send={command => submit.mutate(command)} update={update} refresh={refresh}/>
         {view.can_skip && <button className="button text section-gap" disabled={locked} onClick={() => submit.mutate({ action: 'skip' })}>记录为未完成并反思</button>}
         {view.pending_reviews > 0 && <p className="card-note">本轮有 {view.pending_reviews} 条不可验证提交等待复核，不计为自动验证通过。</p>}
         <p className="card-note">你的步骤与反思是学习记录；本轮程序只验证数值结果，不自动评定推理质量或素养。</p>
@@ -82,6 +85,30 @@ function TutorSession({ run, archived, update, refresh }: { run: TutorRun; archi
     </div> : <section className="card"><Empty title="输入已经保存">正在准备第一道题。等待较久时，请检查开发 worker 是否启动。</Empty></section>}
     {(run.status === 'queued' || run.status === 'awaiting_input') && <button className="button text section-gap" disabled={submit.isPending} onClick={() => submit.mutate({ action: 'cancel' })}><Square size={14}/>结束这次陪学</button>}
     <TutorEvents key={run.run_id} run={run}/>
+    <StudyHistory run={run}/>
+  </section>;
+}
+
+function ModelCoaching({ run, locked, send, update, refresh }: { run: TutorRun; locked: boolean; send: (command: TutorCommand) => void; update: (run: TutorRun) => void; refresh: () => void }) {
+  const [text, setText] = useState('');
+  const op = run.coaching;
+  const cancel = useMutation({ mutationFn: () => api.cancelModelTask(run), onSuccess: update, onError: refresh });
+  if (run.view?.unit_id !== 'math.g9.probability.dev1' || run.view.phase !== 'practice') return null;
+  const relevant = !!op && op.task_id === run.view.task?.task_id;
+  const waiting = !!op && relevant && ['waiting', 'pending', 'running'].includes(op.status);
+  const labels: Record<string, string> = { waiting: '思路已保存，等待教学步骤', pending: '思路已保存，等待模型', running: '模型正在读取本轮思路', succeeded: '追问建议已保存', failed: '模型未能给出可用追问，请使用上方预设提示', cancelled: '本次模型追问已取消', discarded: '学习步骤或权限已变化，旧回复已拦截', unknown: '模型结果未知，不自动重试，请使用预设提示' };
+  return <section className="section-gap"><h3>让 AI 听听我的思路</h3><p className="card-note">{run.coaching_context_limit === 4 ? '发送当前题目、本轮文字及同题同配置下最多 3 轮已完成交流，含本轮最多 4 轮。' : '仅发送当前题目与本轮文字。'}请勿填写姓名、联系方式等个人信息。此操作会使用一级提示和一次调用额度；模型不负责判分。等待时继续作答会使旧追问失效。</p>
+    {run.coaching_remaining_calls != null && <p className="card-note">今日模型追问剩余 {run.coaching_remaining_calls} 次（按账号与全站额度取较小值，北京时间零点重置；并发预约可能改变余量）。</p>}
+    {!run.coaching_available && !waiting && <p className="card-note">{run.coaching_remaining_calls === 0 ? '今日模型调用额度已用完。' : '当前模型追问未开放或提示额度已用完。'}可以继续作答或使用可用的预设提示。</p>}
+    <form className="form-stack" onSubmit={event => { event.preventDefault(); if (text.trim().length >= 2) send({ action: 'hint', coaching_text: text.trim() }); }}><label htmlFor="coach-thinking">我想让 AI 帮我澄清的思路</label><textarea id="coach-thinking" rows={3} maxLength={1500} value={text} onChange={e => setText(e.target.value)} disabled={locked || waiting || !run.coaching_available}/><button className="button" disabled={locked || waiting || !run.coaching_available || text.trim().length < 2}>提交思路并请求追问</button></form>
+    {relevant && op && <div className="study-hint" role="status"><span className="badge neutral">{op.simulated ? '模拟模型' : 'DeepSeek'} · {op.model}</span><p>{labels[op.status]}</p>
+      {!op.current && op.status === 'succeeded' && <p className="card-note">这是较早学习步骤的记录，当前不展示旧建议。</p>}
+      {op.current && op.result && <><blockquote>“{op.result.quote}”</blockquote><p>{op.result.question}</p><p className="card-note">{op.result.judgment}。追问措辞来自受限支架，模型仅选择方向和原文引用。</p></>}
+      {op.current && <><p className="card-note">本次上下文：{op.context_turns ?? 1} 轮（含本轮）</p>{!!op.context?.length && <details><summary>查看本次带入的历史交流</summary><ol>{op.context.map((item, index) => <li key={index}><blockquote>{item.student_text}</blockquote><p>{item.question}</p></li>)}</ol></details>}</>}
+      {waiting && <button type="button" className="button small" disabled={cancel.isPending} onClick={() => cancel.mutate()}>取消本次模型追问</button>}
+      {op.billing_unknown && <p className="card-note">停止等待不保证服务商停止计费；本次不自动重发。</p>}
+    </div>}
+    <ErrorNotice error={cancel.error}/>
   </section>;
 }
 

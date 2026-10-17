@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-10-17T18:18:27+08:00",
+  "mode": "live",
+  "status": "budget_exhausted",
+  "budget_day": "2026-10-17",
+  "remaining_calls": 0,
+  "reserved_global_calls": 30,
+  "key_configured": true,
+  "new_real_calls_this_turn": 0,
+  "plan_required_calls": 28,
+  "bundles": [
+    {
+      "version": "probability.multiturn.eval.v1",
+      "sha256": "8404776cf9eb36fd033315c0b9551e8b1157b4b0b10ef936530baf47762bdcf7",
+      "required": 18
+    },
+    {
+      "version": "probability.multiturn.holdout.v1",
+      "sha256": "7da990db9c567959257a9f2481705a4240329b59d3a40d2a798dbb6242ad3861",
+      "required": 10
+    }
+  ],
+  "real_multiturn_quality": "not_evaluated",
+  "real_latency": "not_evaluated",
+  "professional_review": false,
+  "automatic_execution_scheduled": false
+}

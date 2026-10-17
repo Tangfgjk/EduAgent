@@ -50,8 +50,8 @@ type AuthValue = { account: Account; logout: () => Promise<void>; loggingOut: bo
 const AuthContext = createContext<AuthValue | null>(null);
 export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error('Auth context missing'); return value; }
 
-function broadcastAuth() {
-  if ('BroadcastChannel' in window) { const channel = new BroadcastChannel('wenjin-auth'); channel.postMessage('changed'); channel.close(); }
+function broadcastAuth(role: Account['role']) {
+  if ('BroadcastChannel' in window) { const channel = new BroadcastChannel('wenjin-auth:' + role); channel.postMessage('changed'); channel.close(); }
 }
 
 function AuthGate({ role, children }: { role: Account['role']; children: (account: Account) => ReactNode }) {
@@ -64,14 +64,14 @@ function AuthGate({ role, children }: { role: Account['role']; children: (accoun
     const changed = () => { void client.invalidateQueries({ queryKey: ['me'] }); };
     const expired = () => { client.setQueryData(['me'], null); };
     window.addEventListener('wenjin:expired', expired);
-    const channel = 'BroadcastChannel' in window ? new BroadcastChannel('wenjin-auth') : null;
+    const channel = 'BroadcastChannel' in window ? new BroadcastChannel('wenjin-auth:' + role) : null;
     if (channel) channel.onmessage = changed;
     return () => { channel?.close(); window.removeEventListener('wenjin:expired', expired); };
-  }, [client]);
-  const logout = useMutation({ mutationFn: api.logout, onSuccess: () => { client.setQueryData(['me'], null); broadcastAuth(); }, onError: setLogoutError });
+  }, [client, role]);
+  const logout = useMutation({ mutationFn: api.logout, onSuccess: () => { client.setQueryData(['me'], null); broadcastAuth(role); }, onError: setLogoutError });
   if (me.isPending) return <div className="startup"><Brand admin={role === 'admin'}/><Loading text="正在确认登录状态…"/></div>;
   if (me.isError) return <div className="startup"><Brand admin={role === 'admin'}/><ErrorNotice error={me.error} retry={() => { void me.refetch(); }}/></div>;
-  if (!me.data) return <Login role={role} onLogin={account => { client.setQueryData(['me'], account); broadcastAuth(); }}/>;
+  if (!me.data) return <Login role={role} onLogin={account => { client.setQueryData(['me'], account); broadcastAuth(role); }}/>;
   if (me.data.role !== role) return <div className="startup"><Brand admin={role === 'admin'}/><section className="card role-block"><ShieldCheck size={32}/><h1>请使用{role === 'student' ? '学生' : '管理员'}账号</h1><p>当前登录账号无法访问此页面。你可以退出后切换账号。</p><ErrorNotice error={logoutError}/><button className="button primary" disabled={logout.isPending} onClick={() => logout.mutate()}>退出并切换账号</button></section></div>;
   return <AuthContext.Provider value={{ account: me.data, logout: async () => { await logout.mutateAsync(); }, loggingOut: logout.isPending }}><PrivateQueries key={me.data.id}>{children(me.data)}</PrivateQueries></AuthContext.Provider>;
 }

@@ -117,10 +117,14 @@ test('错误密码、角色边界与深层路由', async ({ page }) => {
   await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
   await expect(page.getByRole('link', { name: '学生账号', exact: true })).toHaveCount(0);
   await page.goto('/admin/students');
-  await expect(page.getByRole('heading', { name: '请使用管理员账号' })).toBeVisible();
-  await expect(page.getByRole('table')).toHaveCount(0);
-  await page.getByRole('button', { name: '退出并切换账号' }).click();
   await expect(page.getByRole('button', { name: '登录', exact: true })).toBeVisible();
+  await expect(page.getByRole('table')).toHaveCount(0);
+  await page.getByLabel('账号', { exact: true }).fill('s03.one');
+  await page.getByLabel('密码', { exact: true }).fill(password);
+  await page.getByRole('button', { name: '登录', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('请使用管理员账号');
+  await page.goto('/student/');
+  await expect(page.locator('.app-shell')).toBeVisible();
 });
 
 test('请求失败可重试，加载期间不展示虚构空态', async ({ page }) => {

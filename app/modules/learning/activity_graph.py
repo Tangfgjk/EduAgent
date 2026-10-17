@@ -26,7 +26,7 @@ def version_for(unit_id=UNIT_ID):
 
 
 def check_action(view, action):
-    expected = {"opening": "contribute", "challenge": "conclude"}.get(view["phase"])
+    expected = {"opening": "contribute", "challenge": "conclude", "verification": "verify"}.get(view["phase"])
     if action != expected:
         raise DomainError(409, "action_unavailable", "当前步骤已变化，请刷新后继续")
 
@@ -63,6 +63,14 @@ def interaction(state: ActivityState):
             message["text"] = govern_text(state["learner_id"], message["text"], unit_id=item.unit_id)
             view["messages"].append(message)
         view["phase"] = "challenge"
+    elif decision['action'] == 'verify':
+        task = item.verification_task
+        status = verify(decision['answer'], task['answer'])
+        view['verification_check'] = {'status': status, 'message': '仅核验新题数值；解释与迁移能力尚未评定。',
+            'reasoning_reviewed': False, 'independent': True}
+        view['phase'] = 'summary'
+        view['report'] = ['已分别保留初次讲解、修正和新题验证。',
+            '学伴追问仍为预设模板，未自动理解你的讲解。', '新题未提供辅助，仅核验数值；不据此判定教学效果、迁移能力或素养。']
     else:
         status = verify(decision["answer"], item.task["answer"])
         messages = {"passed": "数值结果符合此题条件；解释与纠错质量尚未评定。",
@@ -72,6 +80,11 @@ def interaction(state: ActivityState):
         view["phase"] = "summary"
         view["report"] = ["已保存两次学生贡献及其数值表达。", "角色内容为固定开发模板，不是教师结论，也不是对学生文字的智能评价。",
                           "本次数值核验发生在辅助互动之后，不作为独立检测或迁移测验。", "讲解质量、论证有效性和素养变化尚未评定；需要后续专业量规与人工审核。"]
+        if view.get('flow') == 'teach_cycle_v1':
+            task = item.verification_task
+            view['phase'] = 'verification'
+            view['verification_task'] = {'task_id': task['id'], 'stem': task['stem'], 'answer_format': task['format']}
+            view['report'] = []
     turn = state["turn"] + 1
     return {"view": ActivityView(**view).model_dump(), "turn": turn,
             "gate_id": str(uuid5(NAMESPACE_URL, state["run_id"] + ":activity:" + str(turn)))}
@@ -81,7 +94,7 @@ def advance_activity(run_id, learner_id, payload, image):
     kind = payload["activity_kind"]
     item = get_activity(payload.get("unit_id", UNIT_ID))
     view = ActivityView(kind=kind, phase="opening", task={"task_id": item.task["id"], "stem": item.task["stem"], "answer_format": item.task["format"]},
-        messages=[], check=None, report=[], activity_version=item.version).model_dump()
+        messages=[], check=None, report=[], activity_version=item.version, flow=item.flow).model_dump()
     initial = {"run_id": run_id, "kind": kind, "learner_id": learner_id, "turn": 0, "view": view,
                "gate_id": str(uuid5(NAMESPACE_URL, run_id + ":activity:0"))}
     graph = StateGraph(ActivityState)
