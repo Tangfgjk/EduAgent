@@ -15,13 +15,14 @@ export function StudyPage({ workspace }: { workspace: Workspace }) {
   const client = useQueryClient(), key = ['tutoring', workspace.workspace_id];
   const [selected, setSelected] = useState<string>();
   const [params, setParams] = useSearchParams();
-  const unitId = params.get('unit') ?? 'math.g7.equations.dev1';
   const startKey = useRef(crypto.randomUUID());
   const content = useQuery({ queryKey: ['student-catalog'], queryFn: ({ signal }) => api.contentCatalog(false, signal) });
-  const unit = content.data?.items.find(item => item.unit_id === unitId);
   const plans = useQuery({ queryKey: ['runs', workspace.workspace_id], queryFn: ({ signal }) => api.runs(workspace.workspace_id, signal) });
   const query = useQuery({ queryKey: key, queryFn: ({ signal }) => api.tutoring(workspace.workspace_id, signal),
     refetchInterval: q => q.state.data?.items.some(run => run.status === 'queued') ? 1000 : q.state.data?.items.some(run => run.status === 'awaiting_input') ? 3000 : false });
+  const recentUnit = query.data?.items[0]?.view?.unit_id;
+  const unitId = params.get('unit') ?? recentUnit ?? 'math.g7.equations.dev1';
+  const unit = content.data?.items.find(item => item.unit_id === unitId);
   function update(run: TutorRun) {
     client.setQueryData<{ items: TutorRun[] }>(key, old => ({ items: [run, ...(old?.items ?? []).filter(item => item.run_id !== run.run_id)] }));
     void client.invalidateQueries({ queryKey: key });
@@ -37,6 +38,7 @@ export function StudyPage({ workspace }: { workspace: Workspace }) {
     <div className="notice"><BookOpen size={18}/><div><strong>{run?.view?.title ?? unit?.title ?? '选择开发单元'}</strong><br/>自编开发题，程序核验数值，提示逐级开放。概率练习可使用管理员开放的模型追问；当前无教师金标，不自动评价步骤质量或掌握程度。</div></div>
     {workspace.kind === 'temporary' && <p className="page-note">这是临时探索空间。本轮学习只留在此处，不自动并入正式项目长期画像。</p>}
     {content.isPending || plans.isPending || query.isPending ? <Loading text="正在恢复这个空间的学习过程…"/> : content.isError || plans.isError || query.isError ? <ErrorNotice error={content.error ?? plans.error ?? query.error} retry={() => { void content.refetch(); void plans.refetch(); void query.refetch(); }}/> : <>
+      {!pending && recentUnit && !params.has('unit') && <p className="page-note">已沿用当前空间最近一次陪学单元。空间名称可自由修改，不用于猜测课程；需要换内容时再选择。</p>}
       {!pending && <label className="field section-gap">选择开发单元<select value={unitId} disabled={start.isPending} onChange={e => { const next = new URLSearchParams(params); next.set('unit', e.target.value); setParams(next); startKey.current = crypto.randomUUID(); start.reset(); }}>{!unit && <option value={unitId}>未找到此内容包，请重新选择</option>}{content.data?.items.map(item => <option key={item.unit_id} value={item.unit_id}>{item.title}{item.enabled ? '' : '（未启用）'}</option>)}</select></label>}
       {!pending && <section className="card section-gap"><div className="card-head"><h2>{unit?.title}</h2><span className="badge neutral">{unit?.task_count ?? 0} 道开发题</span></div><p className="body-copy">诊断 1 题 → 练习与反思 2 题 → 无辅助检测 2 题。每次输入都会保存在当前空间，刷新后可继续。</p>
         {!unit?.enabled && <p className="card-note">当前开发内容未启用，请管理员先在“知识点与题库”核对版本并启用。</p>}

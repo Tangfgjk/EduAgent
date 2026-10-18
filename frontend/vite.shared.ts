@@ -8,7 +8,7 @@ export function appConfig(name: 'student' | 'admin') {
     plugins: [react()],
     server: {
       fs: { allow: [fileURLToPath(new URL('.', import.meta.url))] },
-      proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: false } },
+      proxy: { '/api': { target: 'http://127.0.0.1:4003', changeOrigin: false } },
     },
     build: { outDir: `../../dist/${name}`, emptyOutDir: true, target: ['chrome109', 'edge109', 'safari16.4'] },
   });

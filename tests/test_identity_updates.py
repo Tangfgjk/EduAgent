@@ -8,6 +8,17 @@ from app.modules.identity.security import password_hash
 from tests.test_s02 import database, env, PASSWORD
 
 
+def test_default_browser_origin_uses_fixed_project_port(env):
+    from app.config import Settings
+    from app.gateway.v1 import create_app
+    with TestClient(create_app(Settings(), database=env.db)) as browser:
+        body = {'username': 'admin.s02', 'password': PASSWORD}
+        for origin in ('http://127.0.0.1:4003', 'http://localhost:4003'):
+            assert browser.post('/api/v1/auth/login', headers={'Origin': origin}, json=body).status_code == 200
+        for origin in ('http://127.0.0.1:8000', 'https://untrusted.example'):
+            assert browser.post('/api/v1/auth/login', headers={'Origin': origin}, json=body).status_code == 403
+
+
 @pytest.mark.parametrize('secret',['123456','ab12cd'])
 def test_student_six_character_password_create_reset_and_revoke(env,secret):
     bad=env.admin.post('/api/v1/admin/students',json={'username':'short.student','display_name':'测试学生','password':'12345'})

@@ -38,7 +38,7 @@ test('模型圆桌：审核启用、三视角、刷新、学生比较及另一�
     const headers = { 'X-Wenjin-Client': 'student', 'X-CSRF-Token': studentCookies.find(c => c.name === 'wenjin_student_csrf')!.value };
     const space = await (await student.request.post('/api/v1/student/workspaces', { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
       data: { kind: 'temporary', title: '圆桌三视角验收' } })).json();
-    await student.goto(`/student/roundtable?workspace=${space.workspace_id}`);
+    await student.goto(`/student/roundtable?workspace=${space.workspace_id}&activity=math.g9.probability.roundtable.dev2`);
     await student.getByRole('button', { name: '开始圆桌讨论', exact: true }).click();
     await expect(student.getByLabel('让 AI 根据本次思路生成三种圆桌视角')).toBeChecked();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');

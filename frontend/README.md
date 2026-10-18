@@ -37,7 +37,7 @@ check:api 需要仓库根目录的 Python `.venv`，准备方式为根目录 `uv
 uv run --locked python -m app.main --env-file .local/database.env
 ```
 
-浏览地址：`http://127.0.0.1:8000/student/` 和 `http://127.0.0.1:8000/admin/`。后端自动挂载存在的两个构建目录，深层地址可直接刷新。缺失 JS/CSS 不回退成 HTML。
+浏览地址：`http://127.0.0.1:4003/student/` 和 `http://127.0.0.1:4003/admin/`。后端自动挂载存在的两个构建目录，深层地址可直接刷新。缺失 JS/CSS 不回退成 HTML。
 
 Python wheel 与前端输出分开部署：wheel 不包含 node_modules 或 React 构建结果。可以把 dist 复制到部署目录并设置 RSI_FRONTEND_DIR 为该目录，其下应有 student 和 admin 两个子目录。
 
@@ -46,7 +46,7 @@ Python wheel 与前端输出分开部署：wheel 不包含 node_modules 或 Reac
 后端开发进程显式允许本机两个 Vite 来源：
 
 ```powershell
-$env:RSI_ALLOWED_ORIGINS='http://127.0.0.1:8000,http://127.0.0.1:5173,http://127.0.0.1:5174'
+$env:RSI_ALLOWED_ORIGINS='http://127.0.0.1:4003,http://127.0.0.1:5173,http://127.0.0.1:5174'
 uv run --locked python -m app.main --env-file .local/database.env
 ```
 

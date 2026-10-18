@@ -13,9 +13,15 @@ export function ActivityPage({ workspace, kind }: { workspace: Workspace; kind: 
   const client = useQueryClient(), [offset, setOffset] = useState(0), [selected, setSelected] = useState<string>();
   const startKey = useRef(crypto.randomUUID()), key = ['activities', workspace.workspace_id, kind, offset];
   const [params, setParams] = useSearchParams();
-  const unitId = params.get('activity') ?? (kind === 'teach' ? 'math.g9.probability.teach.dev2' : 'math.g9.probability.roundtable.dev2');
   const title = kind === 'roundtable' ? '圆桌讨论' : '我教 AI';
   const content = useQuery({ queryKey: ['activity-catalog'], queryFn: ({ signal }) => api.activityCatalog(false, signal), staleTime: 0 });
+  const learning = useQuery({ queryKey: ['tutoring', workspace.workspace_id], queryFn: ({ signal }) => api.tutoring(workspace.workspace_id, signal), staleTime: 0 });
+  const recentStudy = learning.data?.items[0]?.view;
+  const choices = (content.data?.items ?? []).filter(item => kind === 'teach' ? item.flow !== 'roundtable_cycle_v1' : item.flow !== 'teach_cycle_v1');
+  const preferredFlow = kind === 'teach' ? 'teach_cycle_v1' : 'roundtable_cycle_v1';
+  const matches = choices.filter(item => item.parent_unit_id === recentStudy?.unit_id);
+  const matched = matches.find(item => item.enabled && item.flow === preferredFlow) ?? matches.find(item => item.enabled) ?? matches.find(item => item.flow === preferredFlow) ?? matches[0];
+  const unitId = params.get('activity') ?? matched?.unit_id ?? '';
   const unit = content.data?.items.find(item => item.unit_id === unitId);
   const query = useQuery({ queryKey: key, queryFn: ({ signal }) => api.activities(workspace.workspace_id, kind, offset, signal), staleTime: 0,
     refetchInterval: q => q.state.data?.items.some(run => run.status === 'queued' || ['waiting', 'pending', 'running'].includes(run.coaching?.status ?? '')) ? 700 : q.state.data?.items.some(run => run.status === 'awaiting_input') ? 3000 : false });
@@ -34,10 +40,11 @@ export function ActivityPage({ workspace, kind }: { workspace: Workspace; kind: 
     <div className="notice">{kind === 'roundtable' ? <MessagesSquare size={20}/> : <GraduationCap size={20}/>}<div><strong>{kind === 'teach' ? '开发互动 · 可选真实学伴追问' : '开发互动 · 可选真实圆桌'}</strong><br/>{kind === 'teach' ? '概率讲解每次活动最多请求三次模型追问；其他互动仍为预设模板。模型追问不是教师结论，数值由程序另行核验，不评定讲解质量或素养。' : '新版概率圆桌可由同一模型生成提出、质疑、整理三种视角，不是三位独立专家；其他互动仍可使用模板。观点待核验，数值另行检查。'}</div></div>
     {workspace.kind === 'temporary' && <p className="page-note">本次互动仅保留在临时空间，不进入全局正式项目的学习记忆。</p>}
     {workspace.status === 'archived' && <p className="page-note">此空间已归档，可以查看历史，恢复后可继续。</p>}
-    {query.isPending || content.isPending ? <Loading/> : query.isError || content.isError ? <ErrorNotice error={query.error ?? content.error} retry={() => { void query.refetch(); void content.refetch(); }}/> : <>
-      {offset === 0 && !pending && <label className="field section-gap">选择互动单元<select value={unitId} disabled={start.isPending} onChange={e => { const next = new URLSearchParams(params); next.set('activity', e.target.value); setParams(next); startKey.current = crypto.randomUUID(); start.reset(); }}>{!unit && <option value={unitId}>未找到此互动包，请重新选择</option>}{content.data?.items.filter(item => kind === 'teach' ? item.flow !== 'roundtable_cycle_v1' : item.flow !== 'teach_cycle_v1').map(item => <option key={item.unit_id} value={item.unit_id}>{item.title}{item.enabled ? '' : '（未启用）'}</option>)}</select></label>}
+    {query.isPending || content.isPending || learning.isPending ? <Loading/> : query.isError || content.isError || learning.isError ? <ErrorNotice error={query.error ?? content.error ?? learning.error} retry={() => { void query.refetch(); void content.refetch(); void learning.refetch(); }}/> : <>
+      {offset === 0 && !pending && <div className="notice section-gap"><div>{recentStudy ? <><strong>当前学习单元：{recentStudy.title}</strong><p>{matched ? '已按当前空间最近一次陪学匹配互动，不根据项目名称猜测课程。' : `该单元暂未提供${title}内容包；当前不自动切到其他学科内容。陪学、复习和成长证据仍可使用。`}</p>{unit && unit.parent_unit_id !== recentStudy.unit_id && <p>你已手动选择其他单元的互动；本次内容与最近陪学不同，记录仍保存在当前空间。</p>}</> : <><strong>当前空间尚无可匹配的陪学单元</strong><p>空间名称是自定义标题，不能据此可靠判断课程。首次请明确选择互动单元，或先去陪学确定学习内容。</p></>}</div></div>}
+      {offset === 0 && !pending && <label className="field section-gap">选择互动单元<select value={unitId} disabled={start.isPending} onChange={e => { const next = new URLSearchParams(params); next.set('activity', e.target.value); setParams(next); startKey.current = crypto.randomUUID(); start.reset(); }}>{!unit && <option value={unitId}>{unitId ? "未找到此互动包，请重新选择" : recentStudy ? "当前单元暂无可匹配互动，可明确选择其他体验内容" : "请先选择互动单元"}</option>}{content.data?.items.filter(item => kind === 'teach' ? item.flow !== 'roundtable_cycle_v1' : item.flow !== 'teach_cycle_v1').map(item => <option key={item.unit_id} value={item.unit_id}>{item.title}{item.enabled ? '' : '（未启用）'}</option>)}</select></label>}
       {offset === 0 && !pending && <section className="card section-gap"><h2>{unit?.title ?? "选择互动单元"}</h2><p className="body-copy">{kind === 'roundtable' ? unit?.flow === 'roundtable_cycle_v1' ? '我的思路 → 三种视角 → 我的比较修正 → 另一题无辅助验证 → 圆桌小结。' : '我的方案 → 三种角色观点 → 我的比较与数值核验 → 讨论小结。' : unit?.flow === 'teach_cycle_v1' ? '我的讲解 → 最多三轮学伴追问与修正 → 另一题无辅助验证 → TeachReport。' : '我的讲解 → 学伴的预设误区 → 我的纠错与数值核验 → TeachReport。'}</p><p className="card-note">陪学与互动活动在同一空间中依次进行。请先结束当前陪学或另一条互动路线；正式项目和临时会话都可开始本活动。</p>
-        {!unit?.enabled && <p className="card-note">请管理员到“知识点与题库”核对并单独启用互动模板。陪学题库的启用不会自动启用此活动。</p>}
+        {unit && !unit.enabled && <p className="card-note">请管理员到“知识点与题库”核对并单独启用互动模板。陪学题库的启用不会自动启用此活动。</p>}
         <button className="button primary section-gap" disabled={!unit?.enabled || start.isPending || workspace.status !== 'active'} onClick={() => start.mutate()}>{start.isPending ? '正在发起…' : '开始' + title}</button><ErrorNotice error={start.error}/></section>}
       {run?.view && <p className="card-note">本轮内容：{content.data?.items.find(item => item.content_version === run.view?.activity_version)?.title ?? "历史互动版本"}</p>}
       {run ? <ActivitySession key={run.run_id} run={run} archived={workspace.status !== 'active'} update={update} refresh={() => { void query.refetch(); }}/>

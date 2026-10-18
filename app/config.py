@@ -28,7 +28,7 @@ class Settings:
     llm_extra_body_json: str = ""   # 透传 chat/completions 的私有字段（JSON 串），如关闭思考链
     database_url: str = ""  # S02：显式配置，不自动连接旧 SQLite
     cookie_secure: bool = False
-    allowed_origins: str = "http://127.0.0.1:8000,http://localhost:8000"
+    allowed_origins: str = "http://127.0.0.1:4003,http://localhost:4003"
     data_mode: str = "synthetic"
     frontend_dir: str = ""  # 默认仓库 frontend/dist；安装部署可指定独立静态输出目录
 
