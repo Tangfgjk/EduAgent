@@ -11,6 +11,8 @@ async function prepare(page: Page) {
   await page.getByLabel('账号', { exact: true }).fill('s03.one');
   await page.getByLabel('密码', { exact: true }).fill('S03-test-only-password!');
   await page.getByRole('button', { name: '登录', exact: true }).click();
+  await expect(page).toHaveURL(/\/student\/home(?:\?|$)/);
+  await expect(page.locator('.app-shell')).toBeVisible();
   await navigate(page, '项目与会话');
   await page.getByRole('button', { name: '新建学习项目', exact: true }).click();
   await page.getByLabel('空间名称').fill('目标协商验收 ' + Date.now());
