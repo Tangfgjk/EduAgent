@@ -11,7 +11,7 @@ export function ContentDevelopmentReview({ target, version }: { target: string; 
 }
 
 export function ReviewForm({ kind, target, version, revision, reviews, saved }: { kind: 'content' | 'evaluation'; target: string; version: string; revision: number; reviews: DevelopmentReview[]; saved: () => void }) {
-  const options = kind === 'content' ? [['development_ready', '开发核对通过'], ['needs_revision', '需要修改']] : [['acceptable', '本条开发参考可接受'], ['model_issue', '模型方向待改进'], ['reference_ambiguous', '参考方向存在歧义'], ['runtime_issue', '运行失败或结果不可用']];
+  const options = kind === 'content' ? [['development_ready', '开发核对通过'], ['needs_revision', '需要修改']] : [['acceptable', '本条开发参考可接受'], ['model_issue', '模型方向或问题待改进'], ['reference_ambiguous', '参考方向存在歧义'], ['runtime_issue', '运行失败或结果不可用']];
   const [conclusion, setConclusion] = useState(options[0][0]), [note, setNote] = useState('');
   const mutation = useMutation({ mutationFn: () => api.saveDevelopmentReview({ kind, target_id: target, version, expected_revision: revision,
     conclusion: conclusion as 'development_ready' | 'needs_revision' | 'acceptable' | 'model_issue' | 'reference_ambiguous' | 'runtime_issue', note: note.trim() }),

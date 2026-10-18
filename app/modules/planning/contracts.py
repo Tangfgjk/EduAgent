@@ -46,6 +46,7 @@ class ReleaseIn(Contract):
 
 
 class StartStrategy(SoftPolicy):
+    request_model: bool = Field(default=False, strict=True)
     learning_experience: str = Field(min_length=2, max_length=1000)
     material_ids: list[UUID] = Field(min_length=1, max_length=5)
 
@@ -74,10 +75,10 @@ class StrategyDecision(GateInput):
 
 
 class StrategyView(Contract):
-    phase: Literal["admin_review", "student_confirm", "approved", "rejected", "declined"]
+    phase: Literal["model_pending", "admin_review", "student_confirm", "approved", "rejected", "declined"]
     policy: SoftPolicy
     checks: list[str]
-    source: Literal["development_template"] = "development_template"
+    source: Literal["development_template", "model_candidate"] = "development_template"
 
 
 class PlanningEvidence(Contract):
@@ -89,6 +90,28 @@ class PlanningEvidence(Contract):
     limitation: str
 
 
+class PlanningCitation(Contract):
+    source_id: str = Field(min_length=1, max_length=30)
+    quote: str = Field(min_length=1, max_length=120)
+    reason: str = Field(min_length=2, max_length=160)
+
+
+class PlanningGeneration(Contract):
+    operation_id: UUID
+    prompt_version: str
+    requested_policy: SoftPolicy
+    citations: list[PlanningCitation]
+    source_refs: dict[str, dict]
+    source_excerpts: dict[str, str]
+    limitation: str
+
+
+class GlobalPlanningSummary(Contract):
+    fingerprint: str
+    counts: dict[str, int]
+    scope: str
+
+
 class PlanningBundle(Contract):
     workspace_id: UUID
     rules_hash: str
@@ -98,6 +121,19 @@ class PlanningBundle(Contract):
     source_kind: str
     base_version_id: UUID | None
     created_at: int
+    global_summary: GlobalPlanningSummary | None = None
+    model_generation: PlanningGeneration | None = None
+
+
+class PlanningModelOut(Contract):
+    operation_id: UUID
+    status: str
+    vendor: str
+    simulated: bool
+    prompt_version: str
+    error_code: str | None
+    usage: dict | None
+    elapsed_ms: int | None
 
 
 class StrategyOut(Contract):
@@ -116,6 +152,7 @@ class StrategyOut(Contract):
     receipts: list[dict]
     skill_markdown: str | None
     expires_at: int | None
+    generation: PlanningModelOut | None = None
 
 
 class StrategiesOut(Contract):

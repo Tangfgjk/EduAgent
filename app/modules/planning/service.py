@@ -107,6 +107,11 @@ def require_fresh(session, run, bundle, base_revision, expires_at):
     if (current.revision if current else 0) != base_revision: fail("strategy_base_changed", "当前生效版本已变化，请重新生成")
     if evidence_snapshot(session, run.workspace_id)["fingerprint"] != bundle["evidence"]["fingerprint"]:
         fail("evidence_changed", "学习来源已更新，请结合新记录重新生成提案")
+    if bundle.get('global_summary'):
+        from app.modules.planning.model import global_snapshot
+        owner = session.get(Account, session.get(Workspace, run.workspace_id).owner_id)
+        if global_snapshot(session, owner)['fingerprint'] != bundle['global_summary']['fingerprint']:
+            fail('global_evidence_changed', '全局来源计数已变化，请重新生成提案')
     current_materials = material_snapshot(session, [row["material_id"] for row in bundle["materials"]])
     if current_materials != sorted(bundle["materials"], key=lambda row: row["material_id"]):
         fail("material_changed", "资料发布版本已变化，请重新生成提案")
@@ -126,10 +131,19 @@ def effective_policy(session, wid):
 
 def public_strategy(session, run, detail=True):
     version = session.get(StrategyVersion, run.id)
+    from app.infrastructure.db.models import ModelOperation, ModelConfiguration
+    op = session.scalar(select(ModelOperation).where(ModelOperation.run_id == run.id).order_by(ModelOperation.run_revision.desc()).limit(1))
+    config = session.get(ModelConfiguration, op.configuration_id) if op else None
+    generation = {'operation_id': op.id, 'status': op.status, 'vendor': config.vendor, 'simulated': config.vendor == 'fake',
+        'prompt_version': op.request['prompt_version'], 'error_code': op.error_code, 'usage': op.usage, 'elapsed_ms': op.elapsed_ms} if op else None
+    pending_bundle = None
+    if op and not version and detail:
+        pending_bundle = session.get(LearningInput, op.input_id).payload['bundle']
     return {"run_id": run.id, **{key: getattr(run, key) for key in ("workspace_id", "status", "revision", "gate_id", "error_code", "created_at", "view")},
         "workspace_title": session.get(Workspace, run.workspace_id).title,
         "workspace_status": session.get(Workspace, run.workspace_id).status,
-        "version_hash": version.content_hash if version else None, "bundle": version.bundle if version and detail else None,
+        "version_hash": version.content_hash if version else None, "bundle": version.bundle if version and detail else pending_bundle,
+        'generation': generation,
         "expires_at": version.expires_at if version else None, "skill_markdown": skill_text(version.policy) if version and detail else None,
         "receipts": [{"actor_id": row.actor_id, "action": row.action, "note": row.note, "created_at": row.created_at}
             for row in session.scalars(select(StrategyReceipt).where(StrategyReceipt.run_id == run.id).order_by(StrategyReceipt.created_at, StrategyReceipt.id))] if detail else []}
@@ -157,6 +171,9 @@ class Planning(Learning):
         return {"items": [public_strategy(session, row, False) for row in rows]}
 
     def start(self, session, actor, wid, body, key):
+        body = dict(body)
+        if not body.get('request_model'):
+            body.pop('request_model', None)
         workspace = self.spaces.owned(session, actor, wid)
         existing = session.scalar(select(AgentRun).where(AgentRun.workspace_id == wid, AgentRun.creation_key == key))
         if existing:
@@ -165,6 +182,9 @@ class Planning(Learning):
         self.spaces.owned(session, actor, wid, active=True)
         if workspace.kind != "project": fail("project_required", "策略规划只在正式项目中使用，临时记录不会自动带入")
         if actor.account.source_kind == "real_student": fail("development_only", "当前提案为开发模板，暂不面向真实学生")
+        if body.get('request_model'):
+            from app.modules.learning.activity_service import require_idle
+            require_idle(session, wid, ['tutor', 'teach', 'roundtable'])
         pending = session.scalar(select(AgentRun.id).where(AgentRun.workspace_id == wid, AgentRun.kind == "strategy",
             AgentRun.status.in_(["queued", "awaiting_input"])).limit(1))
         if pending: fail("strategy_pending", "当前项目已有待处理策略，请继续或取消")
@@ -173,13 +193,20 @@ class Planning(Learning):
         bundle = {"workspace_id": wid, "rules_hash": registry_hash(), "student_experience": body["learning_experience"],
             "evidence": evidence_snapshot(session, wid), "materials": snapshot, "source_kind": actor.account.source_kind,
             "base_version_id": pointer.version_id if pointer else None, "created_at": now()}
+        if body.get('request_model'):
+            from app.modules.planning.model import global_snapshot
+            bundle['global_summary'] = global_snapshot(session, actor.account)
         conversation = self.spaces.create_conversation(session, actor, wid, "tutor")
         run = AgentRun(workspace_id=wid, conversation_id=conversation.id, kind="strategy", version=VERSION,
             creation_key=key, creation_hash=request_hash(body))
         session.add(run); session.flush()
         candidate = SoftPolicy(daily_minutes=body["daily_minutes"], reflection_focus=body["reflection_focus"]).model_dump()
-        self.enqueue(session, run, actor.account.id, "start:" + run.id, {"operation": "strategy_start", "bundle": bundle,
-            "candidate": candidate, "base_revision": pointer.revision if pointer else 0, "expires_at": now() + 7*86400})
+        entry = self.enqueue(session, run, actor.account.id, "start:" + run.id, {"operation": "strategy_start", "bundle": bundle,
+            "candidate": candidate, "base_revision": pointer.revision if pointer else 0, "expires_at": now() + 7*86400,
+            **({'request_model': True} if body.get('request_model') else {})})
+        if body.get('request_model'):
+            from app.infrastructure.runtime.model_tasks import reserve
+            reserve(session, actor.account, run, entry, '', planning_bundle=bundle)
         session.add(AuditEvent(actor_id=actor.account.id, action="strategy.start", target_id=run.id))
         return public_strategy(session, run)
 
@@ -198,6 +225,7 @@ class Planning(Learning):
         run.status, run.gate_id = "queued", None
         event(session, run, "run.queued")
         session.flush()
+        return entry
 
     def decide(self, session, actor, run, body, key, admin=False):
         operation = {**body, "run_id": run.id, "actor_id": actor.account.id, "operation": "strategy_decision"}
@@ -227,6 +255,11 @@ class Planning(Learning):
         if self.owned(session, actor, wid, rid).status != "cancelled":
             self.spaces.owned(session, actor, wid, active=True)
         super().cancel(session, actor, wid, rid, revision)
+        from app.infrastructure.db.models import ModelOperation
+        from app.infrastructure.runtime.model_tasks import ACTIVE, cancel
+        run = self.owned(session, actor, wid, rid)
+        for op in session.scalars(select(ModelOperation).where(ModelOperation.run_id == rid, ModelOperation.status.in_(ACTIVE))):
+            cancel(session, run, op.id)
         return public_strategy(session, self.owned(session, actor, wid, rid))
 
     def active(self, session, actor, wid):
@@ -266,6 +299,20 @@ class Planning(Learning):
         return self.active(session, actor, wid)
 
 
+def queue_model_candidate(session, op):
+    """Same transaction as model completion; enqueue once, never activate a candidate here."""
+    body = session.get(LearningInput, op.input_id).payload
+    run = session.get(AgentRun, op.run_id)
+    bundle = {**body['bundle'], 'model_generation': {'operation_id': op.id, 'prompt_version': op.request['prompt_version'],
+        'requested_policy': body['candidate'], 'citations': op.result['citations'],
+        'source_refs': op.request['source_refs'], 'source_excerpts': op.request['sources'],
+        'limitation': '只读取所列有界片段与全局计数，引用命中不代表正确理解来源或教学有效。'}}
+    run.revision += 1
+    Planning().enqueue(session, run, op.account_id, 'model-ready:' + op.id, {'operation': 'strategy_model_ready',
+        'bundle': bundle, 'candidate': op.result['policy'], 'base_revision': body['base_revision'],
+        'expires_at': body['expires_at'], 'model_operation_id': op.id})
+
+
 def process_strategy(session, run, entry, account, workspace):
     """worker 的短事务 Adapter；不进行外部 I/O。"""
     try:
@@ -280,6 +327,23 @@ def process_strategy(session, run, entry, account, workspace):
             body = entry.payload
             SoftPolicy.model_validate(body["candidate"])
             require_fresh(session, run, body["bundle"], body["base_revision"], body["expires_at"])
+            if body.get('request_model') or body['operation'] == 'strategy_model_ready':
+                from app.modules.learning.activity_service import require_idle
+                require_idle(session, run.workspace_id, ['tutor', 'teach', 'roundtable'])
+            if body.get('request_model'):
+                run.view = {'phase': 'model_pending', 'policy': body['candidate'], 'checks': ['来源已冻结，模型候选尚未生成；不能审核或激活。'], 'source': 'model_candidate'}
+                run.status, run.gate_id = 'awaiting_input', None
+                run.revision += 1
+                from app.infrastructure.runtime.model_tasks import activate
+                activate(session, run, entry)
+                event(session, run, 'strategy.model_pending')
+                return
+            if body['operation'] == 'strategy_model_ready':
+                from app.infrastructure.db.models import ModelOperation
+                op = session.get(ModelOperation, body['model_operation_id'])
+                if (not op or op.run_id != run.id or op.status != 'succeeded' or op.result['policy'] != body['candidate']
+                        or op.result['citations'] != body['bundle']['model_generation']['citations']):
+                    fail('candidate_changed', '模型候选与冻结结果不一致')
         else:
             receipt = session.scalar(select(StrategyReceipt).where(StrategyReceipt.input_id == entry.id, StrategyReceipt.run_id == run.id))
             if receipt is None or receipt.action != entry.payload["action"]: fail("receipt_missing", "缺少已授权回执")

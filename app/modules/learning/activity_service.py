@@ -9,6 +9,7 @@ from app.modules.learning.service import Learning, event, request_hash
 from app.infrastructure.runtime import model_tasks
 from app.infrastructure.db.models import ModelPolicy, ModelConfiguration, Workspace, Account, ModelOperation
 from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
+from app.modules.learning.roundtable_coaching import UNIT as ROUNDTABLE_UNIT
 
 
 def require_idle(session, wid, kinds):
@@ -23,15 +24,28 @@ def public_activity(session, run):
     config = session.get(ModelConfiguration, policy.active_id) if policy.active_id else None
     space = session.get(Workspace, run.workspace_id)
     account = session.get(Account, space.owner_id)
-    eligible = bool(run.kind == 'teach' and run.view and run.view.get('flow') == 'teach_cycle_v1'
-        and run.view.get('activity_version') == get_activity(TEACH_UNIT).version
+    model_unit = TEACH_UNIT if run.kind == 'teach' else ROUNDTABLE_UNIT
+    eligible = bool(run.view and run.view.get('activity_version') == get_activity(model_unit).version
         and account.source_kind in {'synthetic', 'adult_test'})
     remaining = model_tasks.remaining_calls(session, account.id, config) if config and eligible else None
     coaching = model_tasks.latest(session, run)
     if coaching and run.view and run.view['phase'] == 'summary' and coaching['status'] == 'succeeded':
         coaching['result'] = session.get(ModelOperation, coaching['operation_id']).result
-    return {'coaching': coaching, 'coaching_available': bool(config and eligible and run.status == 'awaiting_input'
-        and run.view['phase'] == 'opening' and (remaining is None or remaining > 0)),
+    history = []
+    if eligible and run.view['phase'] in {'challenge', 'summary'}:
+        for op in session.scalars(select(ModelOperation).where(ModelOperation.run_id == run.id,
+                ModelOperation.workspace_id == run.workspace_id, ModelOperation.account_id == account.id)
+                .order_by(ModelOperation.run_revision).limit(3)):
+            if coaching and op.id == coaching['operation_id']:
+                continue
+            record = model_tasks.public_operation(op, session.get(ModelConfiguration, op.configuration_id), run)
+            record['result'] = op.result if op.status == 'succeeded' else None
+            history.append(record)
+    open_round = run.view and (run.view['phase'] == 'opening' or (run.view['phase'] == 'challenge'
+        and run.kind == 'teach' and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3))
+    model_busy = coaching and coaching['status'] in model_tasks.ACTIVE
+    return {'coaching': coaching, 'coaching_history': history, 'coaching_available': bool(config and eligible and run.status == 'awaiting_input'
+        and open_round and not model_busy and (remaining is None or remaining > 0)),
         'coaching_remaining_calls': remaining, "run_id": run.id, **{key: getattr(run, key) for key in (
         "workspace_id", "conversation_id", "kind", "status", "revision", "gate_id", "error_code", "event_seq", "created_at", "view")}}
 
@@ -62,6 +76,8 @@ class Activities(Learning):
         item = get_activity(payload["unit_id"])
         if item.flow == 'teach_cycle_v1' and self.kind != 'teach':
             raise DomainError(409, 'activity_kind_forbidden', '此流程仅用于我教 AI，请选择圆桌专用互动包')
+        if item.flow == 'roundtable_cycle_v1' and self.kind != 'roundtable':
+            raise DomainError(409, 'activity_kind_forbidden', '此流程仅用于圆桌，请选择我教 AI 专用互动包')
         require_activity_content(session, actor.account.source_kind, item.unit_id)
         require_idle(session, wid, ["tutor", "roundtable", "teach"])
         conversation = self.spaces.create_conversation(session, actor, wid, self.kind)
@@ -99,8 +115,16 @@ class Activities(Learning):
             raise DomainError(409, "version_conflict", "互动版本已更新，请重新发起")
         check_action(run.view, payload["action"])
         conversation = session.get(Conversation, run.conversation_id)
-        if payload.get('request_model') and (self.kind != 'teach' or item.unit_id != TEACH_UNIT or payload['action'] != 'contribute'):
-            raise DomainError(409, 'model_scope_forbidden', '仅首次概率讲解可请求模型追问')
+        teach_allowed = self.kind == 'teach' and item.unit_id == TEACH_UNIT and payload['action'] in {'contribute', 'refine'}
+        roundtable_allowed = self.kind == 'roundtable' and item.unit_id == ROUNDTABLE_UNIT and payload['action'] == 'contribute'
+        if payload.get('request_model') and not (teach_allowed or roundtable_allowed):
+            raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于概率讲解与修正，不用于独立验证')
+        if payload['action'] == 'refine':
+            if not payload.get('request_model'):
+                raise DomainError(409, 'model_scope_forbidden', '继续追问需明确请求模型；也可直接保存修正进入验证')
+            previous = model_tasks.latest(session, run)
+            if previous and previous['status'] in model_tasks.ACTIVE:
+                raise DomainError(409, 'model_busy', '请等待或取消本次追问，再提交下一轮')
         entry = self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
         run.status, run.gate_id = "queued", None
         run.revision += 1

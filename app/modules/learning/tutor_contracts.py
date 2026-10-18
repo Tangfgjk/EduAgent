@@ -88,11 +88,18 @@ class TutorView(Contract):
     records: list[TaskRecord]
 
 
+class RoundtableVoiceOut(Contract):
+    role: Literal['proposer', 'critic', 'organizer']
+    quote: str
+    text: str
+
+
 class CoachingResultOut(Contract):
     quote: str
     focus: str
     question: str
     judgment: str
+    voices: list[RoundtableVoiceOut] = Field(default_factory=list)
 
 
 class CoachingContextOut(Contract):

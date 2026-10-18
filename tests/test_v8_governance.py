@@ -54,7 +54,7 @@ def test_evaluation_reports_reviews_are_admin_only_versioned_and_do_not_call_mod
     student,_=env.student()
     assert student.get('/api/v1/admin/evaluation-reports').status_code==403
     reports=env.admin.get('/api/v1/admin/evaluation-reports').json()
-    assert len(reports['items'])==3
+    assert len(reports['items'])==17
     detail=env.admin.get('/api/v1/admin/evaluation-reports/holdout-fake').json()
     assert detail['mode']=='fake' and len(detail['cases'])==10
     row=detail['cases'][0]

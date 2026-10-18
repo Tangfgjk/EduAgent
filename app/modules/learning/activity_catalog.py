@@ -27,7 +27,7 @@ class ActivityPack:
         return [{**self.task, 'activity_templates': self.templates, 'flow': self.flow,
                  'verification_task': self.verification_task,
                  'base_content_version': self.parent.version,
-                 'boundary': '预设角色不读取学生文字；概率新流程可单独请求模型追问。程序另核对数值，解释质量尚未评定。'}]
+                 'boundary': '预设角色不读取学生文字；概率新流程可单独请求模型追问或同一模型的三种圆桌视角。程序另核对数值，解释质量尚未评定。'}]
 
 
 _parent = get_pack('math.g9.probability.dev1')
@@ -51,6 +51,9 @@ ACTIVITY_PACKS = (
     ActivityPack('math.g9.probability.teach.dev2', '概率我教 AI · 讲解与新题验证', _parent.unit_id, _task, _templates,
         sha256((_version + 'teach-cycle.v1:' + json.dumps(_verification, sort_keys=True, ensure_ascii=False)).encode()).hexdigest(),
         flow='teach_cycle_v1', verification_task=_verification),
+    ActivityPack('math.g9.probability.roundtable.dev2', '概率圆桌 · 三种视角与新题验证', _parent.unit_id, _task, _templates,
+        sha256((_version + 'roundtable-cycle.v1:' + json.dumps(_verification, sort_keys=True, ensure_ascii=False)).encode()).hexdigest(),
+        flow='roundtable_cycle_v1', verification_task=_verification),
 )
 
 

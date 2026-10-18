@@ -34,12 +34,13 @@ async function prepare(admin: Page, title: string) {
   await card.getByRole('button', { name: '发布资料', exact: true }).click();
   await expect(card.getByText('资料已发布', { exact: true })).toBeVisible();
 }
-async function propose(page: Page, materialTitle: string) {
+async function propose(page: Page, materialTitle: string, model = false) {
   await navigate(page, '规划与策略');
   await page.getByLabel('我的学习体验', { exact: false }).fill('我希望先核验数值，再反思为什么这样变形。');
   await page.getByLabel('每日建议时长', { exact: true }).fill('20');
   await page.getByRole('combobox', { name: '反思引导重点', exact: true }).selectOption('verification');
   await page.getByRole('checkbox', { name: new RegExp(materialTitle) }).check();
+  if (model) await page.getByLabel('使用已开放模型生成有来源的候选').check();
   await page.getByRole('button', { name: '生成开发策略提案', exact: true }).click();
   await expect(page.locator('.strategy-detail').getByText('等待管理员审核', { exact: true })).toBeVisible();
 }
@@ -128,5 +129,42 @@ test('手机规划：临时空间隔离、退回提案、缺失量规与来源�
     await page.evaluate(() => window.scrollTo(0, 0));
     mkdirSync('test-results/screens', { recursive: true });
     await page.screenshot({ path: 'test-results/screens/student-strategy-mobile.png', fullPage: true });
+  } finally { await admin.close(); }
+});
+
+
+test('模型规划：来源引用、全局计数、审核后学生确认及回滚', async ({ page, browser }, testInfo) => {
+  test.setTimeout(60_000);
+  const admin = await browser.newPage(), stamp = Date.now(), title = '模型来源 ' + stamp, project = '模型规划 ' + stamp;
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  try {
+    await prepare(admin, title);
+    const cookies = await admin.context().cookies();
+    const headers = { 'X-Wenjin-Client': 'admin', 'X-CSRF-Token': cookies.find(c => c.name === 'wenjin_admin_csrf')!.value };
+    const config = await (await admin.request.get('/api/v1/admin/model-runtime', { headers })).json();
+    expect((await admin.request.post('/api/v1/admin/model-runtime/publish', { headers, data: { expected_revision: config.revision,
+      vendor: 'fake', prompt_version: 'probability.followup.v3', max_output_tokens: 512, account_daily_calls: 0,
+      site_daily_calls: 0, acknowledge_development_only: true } })).ok()).toBeTruthy();
+    await login(page, 'student', 's03.two');
+    await create(page, project);
+    await propose(page, title, true);
+    await expect(page.getByText('模型建议与来源引用', { exact: true })).toBeVisible();
+    await expect(page.getByText('全局宏观计数（包含当前项目）', { exact: true })).toBeVisible();
+    await expect(page.getByText('Fake 规划 · 仅工程验证', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText('模型建议与来源引用', { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('planning-sources.png'), fullPage: true });
+    await review(admin, project, true);
+    await expect(page.getByText('平台默认', { exact: true })).toBeVisible();
+    await page.getByLabel('我的确认或拒绝理由', { exact: true }).fill('阅读具体引用后，由我确认这次软策略建议。');
+    await page.getByRole('button', { name: '我确认，激活此策略', exact: true }).click();
+    await expect(page.getByText('已激活', { exact: true })).toBeVisible();
+    await page.getByText('查看激活历史与回滚', { exact: true }).click();
+    await page.getByLabel('回滚理由', { exact: true }).fill('测试完成，恢复默认建议。');
+    await page.getByRole('button', { name: '确认回滚', exact: true }).click();
+    await expect(page.getByText('平台默认', { exact: true })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    expect(errors).toEqual([]);
   } finally { await admin.close(); }
 });

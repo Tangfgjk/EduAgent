@@ -19,8 +19,14 @@ def test_provider(config, snapshot):
     """Test server never calls real providers; failure markers only exist in this script."""
     if config.vendor != 'fake':
         raise ProviderError('test_real_model_forbidden')
-    if '[开发故障：超时]' in snapshot['student_text']:
+    if '[开发故障：超时]' in snapshot.get('student_text', ''):
         return FakeProvider((ProviderError('timeout'),))
+    if snapshot.get('purpose') == 'planning':
+        from app.modules.planning.model import fake_proposal
+        return FakeProvider((json.dumps(fake_proposal(snapshot), ensure_ascii=False),))
+    if snapshot.get('purpose') == 'roundtable':
+        from app.modules.learning.roundtable_coaching import fake_proposal
+        return FakeProvider((json.dumps(fake_proposal(snapshot['student_text']), ensure_ascii=False),))
     proposal = {'quote': snapshot['student_text'][:80], 'focus': 'clarify'}
     if snapshot.get('purpose') == 'teach':
         proposal['question'] = '为什么在你的讲解中把颜色作为一个基本结果？'

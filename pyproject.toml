@@ -39,6 +39,10 @@ packages = ["app", "evolution"]
 "seeds/evaluation/probability_multiturn.v1.json" = "seeds/evaluation/probability_multiturn.v1.json"
 "seeds/evaluation/probability_multiturn_holdout.v1.json" = "seeds/evaluation/probability_multiturn_holdout.v1.json"
 "seeds/evaluation/probability_multiturn_regression.v1.json" = "seeds/evaluation/probability_multiturn_regression.v1.json"
+"seeds/evaluation/probability_teach.v1.json" = "seeds/evaluation/probability_teach.v1.json"
+"seeds/evaluation/probability_teach_multiturn.v1.json" = "seeds/evaluation/probability_teach_multiturn.v1.json"
+"seeds/evaluation/probability_roundtable.v1.json" = "seeds/evaluation/probability_roundtable.v1.json"
+"seeds/evaluation/planning_sources.v1.json" = "seeds/evaluation/planning_sources.v1.json"
 "seeds/evaluation/reports" = "seeds/evaluation/reports"
 
 [tool.hatch.build.targets.sdist]

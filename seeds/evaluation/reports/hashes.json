@@ -1,0 +1,19 @@
+{
+  "holdout-fake": "8089b141cfc11b51507b913a6e52daeb7fe09e38156283b8093b4ec10bd7fdb5",
+  "holdout-v2-live": "fc32e91ebdf9d0484756dd1667c34d9b62d572154a95ed0a373e349ca2524c76",
+  "holdout-v3-live": "5103d0425c60ad5031701e35350d869c0fdbd8264a37bd31aeb2ce3c9ae8b5fe",
+  "multiturn-fake": "5409c48c9b9259cad16fa54a1704c9272022e3892fa8b019164c7e6c75d2c7de",
+  "multiturn-v2-live": "adeac03bce4115789d2d07bb6877d207fb1de09d349aafc10c541a606b80723f",
+  "multiturn-v3-live": "8890876c2936ae62f6fe89021e8125bd7352c8a290ec55889b5ecb01b6ad10ef",
+  "regression-v2-live": "ceaf24f4fa06695258220f4850097bc85bb23f12720f76126fa63a06d2cfc4e0",
+  "regression-v3-live": "15be3aad5c3a3d034628e81dcaec8ab73aa52fd45018c5cceac60698d84e4ae1",
+  "single-baseline": "4c758e0ec50d4032653253d672ab03e1b86ae3066b1c5bc46dbff48f5a5ba910",
+  "teach-fake": "d6a51dd6b378a0c8b0c105b79071881e10394f6fced209f95961357c4079d160",
+  "teach-live": "9cc78d6fd4d9b64a370ef7a9196328a7b0be92a32192e9450ae4b2d2e8b935ca",
+  "teach-multiturn-fake": "db95c084cad11bbc206c9c966d23d47eda39c83d8aea404d09f56eacb4f7d0b2",
+  "teach-multiturn-live": "e384cf8437559ae521e55d6910a0892e75e823eeeb914f7c614e127224d5e784",
+  "roundtable-fake": "28f112024285d0b149a1dde6da993ffcdcb8df961a6f807c598adab92b1a1c54",
+  "roundtable-live": "81d7b1dab0859395297483fca50344e91916ce05d8dadb4d5e0ee83d3796e1b8",
+  "planning-fake": "393e13b6cc9bb4f872e6ae0a89021af26d112596145d4110b631619bf9fdcef7",
+  "planning-live": "0fb39899c44635bd8d68beeda34b32941631d30b4c6b3f810f62b959ae638d2d"
+}

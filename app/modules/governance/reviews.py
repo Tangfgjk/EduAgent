@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from app.infrastructure.db.models import AuditEvent, ContentApproval, DevelopmentReview, DevelopmentReviewScope
 from app.modules.errors import DomainError
 
-REQUIRED_CONTENT = {'math.g9.probability.counting.dev1', 'math.g7.statistics.frequency.dev1', 'math.g9.probability.teach.dev2'}
+REQUIRED_CONTENT = {'math.g9.probability.counting.dev1', 'math.g7.statistics.frequency.dev1', 'math.g9.probability.teach.dev2', 'math.g9.probability.roundtable.dev2'}
 
 
 def content_lock(session, actor, target, version):

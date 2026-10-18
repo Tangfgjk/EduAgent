@@ -152,14 +152,47 @@ def collect_context(session, account, run, config, policy):
     return history, sources
 
 
-def reserve(session, account, run, entry, text, *, teach_item=None):
-    if teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
+def collect_teach_context(session, account, run, config, policy, item):
+    from app.modules.learning.teach_coaching import validate_proposal as validate_teach, PROMPT_VERSION as TEACH_V1, MULTITURN_PROMPT_VERSION as TEACH_V2
+    ops = session.scalars(select(ModelOperation).join(LearningInput, LearningInput.id == ModelOperation.input_id).where(
+        ModelOperation.run_id == run.id, ModelOperation.workspace_id == run.workspace_id,
+        ModelOperation.account_id == account.id, ModelOperation.task_id == run.view['task']['task_id'],
+        ModelOperation.configuration_id == config.id, ModelOperation.policy_epoch == policy.stop_epoch,
+        ModelOperation.run_revision <= run.revision, ModelOperation.status == 'succeeded',
+        LearningInput.source_kind == account.source_kind, LearningInput.account_id == account.id,
+        LearningInput.workspace_id == run.workspace_id, LearningInput.conversation_id == run.conversation_id)
+        .order_by(ModelOperation.run_revision.desc()).limit(2))
+    history, sources = [], []
+    for op in reversed(list(ops)):
+        snapshot = op.request
+        if (snapshot.get('purpose') != 'teach' or snapshot.get('prompt_version') not in {TEACH_V1, TEACH_V2}
+                or snapshot.get('activity_version') != item.version or snapshot.get('content_version') != item.parent.version
+                or snapshot.get('activity_unit_id') != item.unit_id or request_hash(snapshot) != op.request_hash or not op.result):
+            continue
+        try:
+            result = validate_teach(json.dumps({k: op.result[k] for k in ('quote', 'focus', 'question')}, ensure_ascii=False), snapshot)
+            history.append({'student_text': snapshot['student_text'], 'focus': result['focus'], 'question': result['question']})
+            sources.append(op.id)
+        except (ProviderError, KeyError, TypeError):
+            continue
+    return history, sources
+
+
+def reserve(session, account, run, entry, text, *, teach_item=None, planning_bundle=None):
+    if planning_bundle is not None and (run.kind != 'strategy' or entry.payload.get('operation') != 'strategy_start' or not entry.payload.get('request_model')):
+        raise DomainError(409, 'model_scope_forbidden', '仅新规划可请求模型候选')
+    if planning_bundle is None and teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
         raise DomainError(409, "model_scope_forbidden", "模型追问目前仅开放概率练习，不用于诊断或独立检测")
     if teach_item is not None:
         from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
-        if (run.kind != 'teach' or teach_item.unit_id != TEACH_UNIT or run.view['phase'] != 'opening'
-                or entry.payload.get('action') != 'contribute'):
-            raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于首次概率讲解，不用于另一题验证')
+        from app.modules.learning.roundtable_coaching import UNIT as ROUNDTABLE_UNIT
+        initial = run.view['phase'] == 'opening' and entry.payload.get('action') == 'contribute'
+        followup = (run.view['phase'] == 'challenge' and entry.payload.get('action') == 'refine'
+            and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3)
+        teach_allowed = run.kind == 'teach' and teach_item.unit_id == TEACH_UNIT and (initial or followup)
+        roundtable_allowed = run.kind == 'roundtable' and teach_item.unit_id == ROUNDTABLE_UNIT and initial
+        if not (teach_allowed or roundtable_allowed):
+            raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于有界概率讲解，不用于另一题验证')
     if account.source_kind not in {"synthetic", "adult_test"}:
         raise DomainError(403, "model_source_forbidden", "当前模型仅用于模拟或成人开发测试")
     policy = session.get(ModelPolicy, 1, with_for_update=True)
@@ -178,17 +211,28 @@ def reserve(session, account, run, entry, text, *, teach_item=None):
         if limit > 0 and budget.calls >= limit:
             raise DomainError(429, "model_budget_exhausted", "今日模型调用额度已用完，可继续使用预设提示")
         budget.calls += 1
-    if teach_item is None:
+    if planning_bundle is not None:
+        from app.modules.planning.model import freeze_request as freeze_planning
+        snapshot = freeze_planning(planning_bundle, entry.payload['candidate'], account, config)
+    elif teach_item is None:
         history, sources = collect_context(session, account, run, config, policy)
         snapshot = freeze_request(run.view, text, account, config.max_output_tokens,
             prompt_version=config.prompt_version, history=history, context_sources=sources)
+    elif run.kind == 'roundtable':
+        from app.modules.learning.roundtable_coaching import freeze_request as freeze_roundtable
+        snapshot = freeze_roundtable(teach_item, text, entry.payload['answer'], account,
+            config.max_output_tokens, config.prompt_version)
     else:
         from app.modules.learning.teach_coaching import freeze_request as freeze_teach
+        context = {}
+        if entry.payload.get('action') == 'refine':
+            history, sources = collect_teach_context(session, account, run, config, policy, teach_item)
+            context = {'history': history, 'context_sources': sources}
         snapshot = freeze_teach(teach_item, text, entry.payload['answer'], account,
-            config.max_output_tokens, config.prompt_version)
+            config.max_output_tokens, config.prompt_version, **context)
     op = ModelOperation(input_id=entry.id, run_id=run.id, workspace_id=run.workspace_id, account_id=account.id,
-        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id=run.view["task"]["task_id"],
-        hint_level=len(run.view.get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
+        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
+        hint_level=len((run.view or {}).get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
     session.add(op)
     session.flush()
     return op
@@ -227,6 +271,12 @@ class ModelTaskRunner:
     @staticmethod
     def _provider(config, snapshot):
         if config.vendor == "fake":
+            if snapshot.get('purpose') == 'planning':
+                from app.modules.planning.model import fake_proposal
+                return FakeProvider((json.dumps(fake_proposal(snapshot), ensure_ascii=False),))
+            if snapshot.get('purpose') == 'roundtable':
+                from app.modules.learning.roundtable_coaching import fake_proposal
+                return FakeProvider((json.dumps(fake_proposal(snapshot['student_text']), ensure_ascii=False),))
             proposal = {"quote": snapshot["student_text"][:80], "focus": "clarify"}
             if snapshot.get('purpose') == 'teach':
                 proposal['question'] = '你能说明讲解中每个基本结果是怎样确定的吗？'
@@ -251,12 +301,26 @@ class ModelTaskRunner:
         if not reason:
             from app.modules.learning.content_service import require_content
             try:
-                if op.request.get('purpose') == 'teach':
+                if op.request.get('purpose') == 'planning':
+                    from app.modules.planning.graph import VERSION as PLANNING_VERSION
+                    from app.modules.planning.service import require_fresh
+                    from app.modules.learning.activity_service import require_idle
+                    body = session.get(LearningInput, op.input_id).payload
+                    if (run.kind != 'strategy' or not run.view or run.view['phase'] != 'model_pending' or run.version != PLANNING_VERSION
+                            or account.source_kind != body['bundle']['source_kind'] or request_hash(body['bundle']) != op.request.get('bundle_hash')
+                            or request_hash(op.request) != op.request_hash):
+                        raise DomainError(409, 'stale_result', '规划输入或来源已变化')
+                    require_fresh(session, run, body['bundle'], body['base_revision'], body['expires_at'])
+                    require_idle(session, run.workspace_id, ['tutor', 'teach', 'roundtable'])
+                elif op.request.get('purpose') in {'teach', 'roundtable'}:
                     from app.modules.learning.activity_catalog import activity_for_run
                     from app.modules.learning.content_service import require_activity_content
                     from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
+                    from app.modules.learning.roundtable_coaching import UNIT as ROUNDTABLE_UNIT
                     item = activity_for_run(run)
-                    if (run.kind != 'teach' or item.unit_id != TEACH_UNIT or run.view['phase'] != 'challenge'
+                    expected_kind = op.request['purpose']
+                    expected_unit = TEACH_UNIT if expected_kind == 'teach' else ROUNDTABLE_UNIT
+                    if (run.kind != expected_kind or item.unit_id != expected_unit or run.view['phase'] != 'challenge'
                             or item.version != op.request.get('activity_version')
                             or item.unit_id != op.request.get('activity_unit_id')
                             or item.parent.version != op.request.get('content_version')):
@@ -351,7 +415,13 @@ class ModelTaskRunner:
             try:
                 if result.finish_reason != "stop":
                     raise ProviderError("truncated_output")
-                if claim['request'].get('purpose') == 'teach':
+                if claim['request'].get('purpose') == 'planning':
+                    from app.modules.planning.model import validate_proposal as validate_planning
+                    proposal = validate_planning(result.text, claim['request'])
+                elif claim['request'].get('purpose') == 'roundtable':
+                    from app.modules.learning.roundtable_coaching import validate_proposal as validate_roundtable
+                    proposal = validate_roundtable(result.text, claim['request'])
+                elif claim['request'].get('purpose') == 'teach':
                     from app.modules.learning.teach_coaching import validate_proposal as validate_teach
                     proposal = validate_teach(result.text, claim['request'])
                 else:
@@ -361,6 +431,9 @@ class ModelTaskRunner:
             else:
                 op.result = proposal
                 self._end(op, "succeeded", None)
+                if claim['request'].get('purpose') == 'planning':
+                    from app.modules.planning.service import queue_model_candidate
+                    queue_model_candidate(session, op)
             return True
 
     async def _execute(self, claim):

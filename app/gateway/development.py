@@ -5,6 +5,8 @@ from pydantic import Field, field_validator
 
 from app.modules.learning.contracts import Contract
 from app.modules.governance import reviews, workbench
+from app.modules.learning.tutor_contracts import RoundtableVoiceOut
+from app.modules.planning.contracts import PlanningCitation, SoftPolicy
 
 
 class ReviewRecordOut(Contract):
@@ -22,6 +24,16 @@ class ReviewStateOut(Contract):
     professional_review: Literal[False] = False
 
 
+class EvaluationAssessmentOut(Contract):
+    state: Literal['simulation_only', 'blocked', 'needs_review', 'development_candidate']
+    engineering_failures: int
+    reference_mismatches: int
+    pending_reviews: int
+    review_issues: int
+    automatic_publish: Literal[False]
+    notice: str
+
+
 class EvaluationSummaryOut(Contract):
     report_id: str
     title: str
@@ -32,6 +44,10 @@ class EvaluationSummaryOut(Contract):
     cases: int
     needs_review: int
     reviewed_cases: int
+    report_kind: Literal['tutoring', 'teach', 'roundtable', 'planning']
+    corpus_sha256: str
+    model: str
+    assessment: EvaluationAssessmentOut
 
 
 class EvaluationIndexOut(Contract):
@@ -55,6 +71,15 @@ class EvaluationCaseOut(Contract):
     usage: dict | None
     context_turns: int | None
     error_code: str | None
+    category: str | None = None
+    answer: str | None = None
+    repeat_of: str | None = None
+    semantic_review_required: bool = False
+    outbound_identity_canary_absent: bool | None = None
+    voices: list[RoundtableVoiceOut] = Field(default_factory=list)
+    policy: SoftPolicy | None = None
+    citations: list[PlanningCitation] = Field(default_factory=list)
+    source_excerpts: dict[str, str] = Field(default_factory=dict)
 
 
 class EvaluationRowOut(Contract):
@@ -72,6 +97,37 @@ class EvaluationDetailOut(Contract):
     prompt_version: str
     cases: list[EvaluationRowOut]
     summary: dict
+    report_kind: Literal['tutoring', 'teach', 'roundtable', 'planning']
+    human_review_rubric: list[str]
+    assessment: EvaluationAssessmentOut
+
+
+class ComparisonCaseOut(Contract):
+    case_id: str
+    left_match: bool
+    right_match: bool
+    left_focus: str | None
+    right_focus: str | None
+    left_status: str
+    right_status: str
+    left_question: str | None
+    right_question: str | None
+
+
+class EvaluationComparisonOut(Contract):
+    left_id: str
+    right_id: str
+    left_sha256: str
+    right_sha256: str
+    left_prompt: str
+    right_prompt: str
+    cases: list[ComparisonCaseOut]
+    improved: int
+    regressed: int
+    unchanged: int
+    left_summary: dict
+    right_summary: dict
+    notice: str
 
 
 class ReviewInput(Contract):
@@ -97,6 +153,10 @@ def development_router(admin):
     @router.get('/evaluation-reports', response_model=EvaluationIndexOut)
     def reports(ctx=auth):
         return workbench.index(ctx.session)
+
+    @router.get('/evaluation-comparison', response_model=EvaluationComparisonOut)
+    def comparison(left_id: str, right_id: str, ctx=auth):
+        return workbench.compare(left_id, right_id)
 
     @router.get('/evaluation-reports/{report_id}', response_model=EvaluationDetailOut)
     def report(report_id: str, ctx=auth):

@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import Field, field_validator
 
 from app.modules.learning.contracts import Contract
-from app.modules.learning.tutor_contracts import ContentOut, GateInput, TaskOut, TutorRunOut
+from app.modules.learning.tutor_contracts import ContentOut, GateInput, TaskOut, TutorRunOut, CoachingOut
 
 
 class StartActivity(Contract):
@@ -11,7 +11,7 @@ class StartActivity(Contract):
 
 
 class ActivityInput(GateInput):
-    action: Literal["contribute", "conclude", "verify"]
+    action: Literal["contribute", "refine", "conclude", "verify"]
     answer: str = Field(min_length=1, max_length=128)
     reasoning: str = Field(min_length=2, max_length=1500)
     request_model: bool = Field(default=False, strict=True)
@@ -65,11 +65,13 @@ class ActivityView(Contract):
     verification_task: TaskOut | None = None
     verification_check: IndependentCheck | None = None
     model_requested: bool = False
+    model_rounds: int = Field(default=0, ge=0, le=3)
 
 
 class ActivityRunOut(TutorRunOut):
     kind: Literal["roundtable", "teach"]
     view: ActivityView | None
+    coaching_history: list[CoachingOut] = Field(default_factory=list)
 
 
 class ActivityRunsOut(Contract):
@@ -78,7 +80,7 @@ class ActivityRunsOut(Contract):
 
 class ActivityContentOut(ContentOut):
     parent_unit_id: str
-    flow: Literal['legacy', 'teach_cycle_v1'] = 'legacy'
+    flow: Literal['legacy', 'teach_cycle_v1', 'roundtable_cycle_v1'] = 'legacy'
 
 
 class ActivityCatalogOut(Contract):

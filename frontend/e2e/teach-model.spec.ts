@@ -9,7 +9,7 @@ async function login(page: Page, role: 'admin' | 'student', username: string) {
   await expect(page.locator('.app-shell')).toBeVisible();
 }
 
-test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅助', async ({ page, browser }) => {
+test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅助', async ({ page, browser }, testInfo) => {
   test.setTimeout(60_000);
   await login(page, 'admin', 's03.admin');
   const cookies = await page.context().cookies();
@@ -49,13 +49,24 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     await expect(student.getByText('模拟学伴', { exact: true })).toBeVisible();
-    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true })).toBeVisible();
+    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true }).last()).toBeVisible();
     await student.reload();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     mkdirSync('test-results/screens', { recursive: true });
     await student.screenshot({ path: 'test-results/screens/teach-model-question.png', fullPage: true });
     await student.getByLabel('我的数值表达', { exact: true }).fill('2/5');
     await student.getByLabel('我的比较、纠错与检查依据').fill('应按五个等可能的球计数，两个蓝球符合事件。');
+    for (const round of [2, 3]) {
+      await student.getByRole('button', { name: '保存回应，继续追问', exact: true }).click();
+      await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
+      await expect(student.getByText(`已请求 ${round} / 3 次追问。`, { exact: false })).toBeVisible();
+      await student.reload();
+      await expect(student.getByText(`已请求 ${round} / 3 次追问。`, { exact: false })).toBeVisible();
+      await student.getByLabel('我的数值表达', { exact: true }).fill('2/5');
+      await student.getByLabel('我的比较、纠错与检查依据').fill('按等可能的球计数，再识别符合事件的球，分子分母使用同一单位。');
+    }
+    await expect(student.getByRole('button', { name: '保存回应，继续追问', exact: true })).toHaveCount(0);
+    await student.screenshot({ path: testInfo.outputPath('teach-multiturn.png'), fullPage: true });
     await student.getByRole('button', { name: '保存修正，进入新题验证', exact: true }).click();
     await expect(student.getByLabel('本题独立检查依据')).toBeVisible();
     await expect(student.getByRole('heading', { name: '针对我的讲解提问', exact: true })).toHaveCount(0);
@@ -64,8 +75,8 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     await student.getByLabel('本题独立检查依据').fill('总共七个等可能的球，三个黑球符合条件。');
     await student.getByRole('button', { name: '提交本题验证，查看报告', exact: true }).click();
     await expect(student.getByText('另一题验证：数值通过', { exact: true })).toBeVisible();
-    await expect(student.getByText('学生原始贡献', { exact: true })).toHaveCount(3);
-    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true })).toBeVisible();
+    await expect(student.getByText('学生原始贡献', { exact: true })).toHaveCount(5);
+    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true }).last()).toBeVisible();
     await student.setViewportSize({ width: 390, height: 844 });
     expect(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   } finally { await context.close(); }

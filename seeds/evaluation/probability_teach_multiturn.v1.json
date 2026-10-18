@@ -1,0 +1,17 @@
+{
+  "version": "probability.teach.multiturn.eval.v1",
+  "source": "self_authored_development",
+  "professional_review": false,
+  "scenarios": [
+    {"id": "TM01", "turns": [
+      {"answer": "1/2", "text": "我先把红色和蓝色列成两个结果，认为颜色各一半，但还没想过每种颜色对应多少个球。", "expected_focus": ["sample_space", "equal_likelihood"], "rationale": "初次解释混淆颜色与等可能基本结果。"},
+      {"answer": "2/5", "text": "我改用每个球作为一个结果，因为题目说每个球被摸出的机会相同。我现在想说明怎样找出符合事件的结果。", "expected_focus": ["favorable"], "rationale": "已说明基本单位与等可能，追问应回应当前事件识别。"},
+      {"answer": "2/5", "text": "蓝球对应的编号就是符合事件的结果，总结果和符合事件结果都按球计数。我想进一步说明两种计数如何组合成概率。", "expected_focus": ["ratio"], "rationale": "事件识别已解释，继续讨论计数比值的依据。"}
+    ]},
+    {"id": "TM02", "turns": [
+      {"answer": "5/2", "text": "我把总球数除以蓝球数来表示概率，不知道为什么应该这样安排分子分母。", "expected_focus": ["ratio"], "rationale": "比例颠倒，围绕分子分母含义提问。"},
+      {"answer": "2/5", "text": "我修正为符合事件的结果数除以总结果数，但我还没说明为什么编号后每个结果的机会应该相同。", "expected_focus": ["equal_likelihood"], "rationale": "比值已修正，当前明确缺少等可能依据。"},
+      {"answer": "2/5", "text": "题干已经说明每个球被摸出的机会相同，所以我按球编号。不过我又想只按颜色列结果，这两种基本结果单位的区别还没讲清楚。", "expected_focus": ["sample_space", "equal_likelihood"], "rationale": "新修正再次提出计数单位混淆，需要结合本轮而非重复旧的比例问题。"}
+    ]}
+  ]
+}

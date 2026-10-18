@@ -214,8 +214,8 @@ try:
         client.headers['X-CSRF-Token'] = login.json()['csrf_token']
         reports = client.get('/api/v1/admin/evaluation-reports')
         assert reports.status_code == 200, reports.text
-        assert len(reports.json()['items']) == 3
-        print(json.dumps({'v8_wheel_smoke':'passed','packaged_evaluation_reports':3}))
+        assert len(reports.json()['items']) == 17
+        print(json.dumps({'v8_wheel_smoke':'passed','packaged_evaluation_reports':17}))
 
 
 finally:
@@ -234,7 +234,7 @@ def main() -> None:
                          "app/infrastructure/db/migrations/versions/p0_001.py",
                          "app/modules/learning/model_coaching.py", "app/gateway/model_runtime.py"})
         required.update({'app/gateway/development.py', 'app/modules/governance/reviews.py',
-            'app/infrastructure/db/migrations/versions/v8_001.py', 'seeds/evaluation/reports/holdout-fake.json'})
+            'app/infrastructure/db/migrations/versions/v8_001.py', 'seeds/evaluation/reports/holdout-fake.json', 'seeds/evaluation/reports/teach-live.json', 'seeds/evaluation/reports/hashes.json', 'seeds/evaluation/reports/planning-live.json', 'app/modules/planning/model.py', 'app/evaluation/planning.py', 'seeds/evaluation/planning_sources.v1.json', 'seeds/evaluation/reports/roundtable-live.json', 'app/evaluation/roundtable.py', 'seeds/evaluation/probability_roundtable.v1.json', 'app/evaluation/teach.py', 'seeds/evaluation/probability_teach.v1.json'})
         missing = required.difference(archive.namelist())
         if missing:
             raise SystemExit(f"Wheel 缺少运行依赖: {', '.join(sorted(missing))}")

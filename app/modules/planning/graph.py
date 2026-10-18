@@ -35,7 +35,8 @@ def student_confirm(state: PlanningState):
 def advance_strategy(run_id, payload, image):
     policy = SoftPolicy.model_validate(payload["candidate"]).model_dump() if not image else None
     initial = {"run_id": run_id, "gate_id": str(uuid5(NAMESPACE_URL, run_id + ":admin")),
-               "view": {"phase": "admin_review", "policy": policy, "checks": CHECKS, "source": "development_template"}}
+               "view": {"phase": "admin_review", "policy": policy, "checks": CHECKS,
+                        "source": "model_candidate" if payload.get('operation') == 'strategy_model_ready' else "development_template"}}
     graph = StateGraph(PlanningState)
     graph.add_node("admin_review", admin_review)
     graph.add_node("student_confirm", student_confirm)

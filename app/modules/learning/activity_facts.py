@@ -6,7 +6,7 @@ from app.modules.memory.projections import rebuild
 
 
 def publish_activity(session, run, entry, state):
-    if entry.payload.get("action") not in {"contribute", "conclude", "verify"}:
+    if entry.payload.get("action") not in {"contribute", "refine", "conclude", "verify"}:
         return
     if session.scalar(select(LearningFact.id).where(LearningFact.input_id == entry.id)):
         return

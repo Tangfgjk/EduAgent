@@ -1,0 +1,322 @@
+{
+  "run_id": "ad4aa8ef70ce45bb8511334f5035bee7",
+  "report_kind": "teach",
+  "mode": "fake",
+  "created_at": "2026-10-17T22:29:42+08:00",
+  "corpus_version": "probability.teach.multiturn.eval.v1",
+  "corpus_sha256": "7cd55dd842af9c49227a9323a041a55e82f4e23f6dcc35918fd2bf91ecedfee7",
+  "sources": {
+    "app/llm/provider.py": "24bc2762f38cb0e591ca282fc49ceca8dbfbb76277c9fa88c8050f2c6f99da66",
+    "app/modules/learning/model_coaching.py": "af42d0b3de5cf03854e2fc607b6580e65c5313ccc54355f541363b990d99f703",
+    "app/modules/learning/tutor_graph.py": "ff2583624ce91dff52a311b921ad784814b72660ef86777d186ea492f6eddab2",
+    "app/modules/learning/tutor_service.py": "9e809370e3f34a5e68cd8eae51fb203179991bc29c4e933c4e5459a198ba8bd1",
+    "app/modules/learning/tutor_history.py": "fef4f5a27a07cf23f95917e6ada563cbd06c0209c928041e41d883c103abfedf",
+    "app/modules/learning/tutor_contracts.py": "e146b7b8d554dcbca3fb37d53d429596858644607f9af2f10d53680cf82a2305",
+    "app/modules/learning/content_catalog.py": "fdf5c66cbe74c6bf279a2e2a46a7bc35ea9e568361540432711b584e3bf6237f",
+    "app/infrastructure/runtime/model_tasks.py": "a108bb7abd3435a115c478b517cfa9b28ca862abf2b92f3b1e3194f4eb2b2641",
+    "app/worker.py": "63d120e8b9304eb5475452c98f9f873c29cbebba13af01bb452d1969fea8351c",
+    "app/evaluation/probability.py": "303663443d2e4295c90f49eb5ba4bcce7c606962e172443438905b3572d458e7",
+    "app/evaluation/runner.py": "7763ff2c083e81e188da05779c69f1c5594562236aec6ddf8a59c80d091d1d67",
+    "scripts/evaluate_probability.py": "bd40fa958a6b11a1a633de0f9289e24f3cd9a4fbdbd62dc2a8764557da42a1c0",
+    "app/evaluation/teach.py": "255fa941b99fe2aa980373a80b7652d4b60124f36b56f502b1cb2013ceaf8c02",
+    "app/modules/learning/teach_coaching.py": "9941bef316f7eedcaf99744ce20e559875f794f5d93d15e903e6ec017a179e28",
+    "app/modules/learning/activity_service.py": "d3ac142075f54df84f2ad8fa7b3dc578e1b5df681f2b7824d6d81391509d74ca",
+    "app/modules/learning/activity_graph.py": "3f6d654f25b1cd8a3f19ccc2c4380a7e76df4e006c65709b808497aeebf41230",
+    "app/modules/learning/activity_catalog.py": "43f76e80df5abafde533792e1315ec77db60f18c20a86c7b38934af2e79c00eb",
+    "scripts/evaluate_teach.py": "e814c604cd70e51c2b6fdbd5220ec21b072a9fb1b212822953153941f3e4fd61",
+    "app/evaluation/teach_multiturn.py": "206499e76443f4ddf1fd3cd0b6b48f3d01e3f1cdc9705e0a167a8707918152d5",
+    "scripts/evaluate_teach_multiturn.py": "c13c73af2f37ccf4d37f9cd891698d3b1e3d56e9fa47cf7032f4548ec67cba58"
+  },
+  "content_version": "7097bc1c5090dca2f064bbdcbce58f0885d7543ea9b0d849d072408f4d0792fc",
+  "activity_version": "9ce8092dc77213513ee9ebbab855724a357e866c66d0fc0620d79487d7a403cf",
+  "prompt_version": "probability.teach.followup.v1+v2",
+  "configuration_id": "75a56097-aa58-4fac-89e6-528dad745d69",
+  "model": "scripted",
+  "human_review_rubric": [
+    "数学前提及措辞是否正确",
+    "是否针对引用的讲解而非泛泛提问",
+    "是否避免直接揭示答案和步骤",
+    "是否避免评分、掌握度或教学效果结论",
+    "问题是否清楚、单一且适合初中学生",
+    "注入或含糊输入是否得到合适处理"
+  ],
+  "daily_call_limits": "unlimited",
+  "planned_calls": 6,
+  "rows": [
+    {
+      "case_id": "TM01-1",
+      "attempt_id": "TM01-1",
+      "answer": "1/2",
+      "text": "我先把红色和蓝色列成两个结果，认为颜色各一半，但还没想过每种颜色对应多少个球。",
+      "expected_focus": [
+        "sample_space",
+        "equal_likelihood"
+      ],
+      "rationale": "初次解释混淆颜色与等可能基本结果。",
+      "category": "multiturn_TM01",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "我先把红色和蓝色列成两个结果，认为颜色各一半，但还没想过每种颜色对应多少个球。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "5968ef8fcd252bddd7339513722447f38d6cc453580ac1e7310ce89d6b3d45df",
+      "operation_id": "413a8aeb-506e-478c-ae8d-bdf7be867c7d",
+      "context_turns": 1,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    },
+    {
+      "case_id": "TM01-2",
+      "attempt_id": "TM01-2",
+      "answer": "2/5",
+      "text": "我改用每个球作为一个结果，因为题目说每个球被摸出的机会相同。我现在想说明怎样找出符合事件的结果。",
+      "expected_focus": [
+        "favorable"
+      ],
+      "rationale": "已说明基本单位与等可能，追问应回应当前事件识别。",
+      "category": "multiturn_TM01",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "我改用每个球作为一个结果，因为题目说每个球被摸出的机会相同。我现在想说明怎样找出符合事件的结果。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "5bbf60f8738171af56366a467e4d8c17c284d15751fae1443a677646f260a0b6",
+      "operation_id": "d4b7687f-cff6-4f0c-9b02-903d7f9addc5",
+      "context_turns": 2,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    },
+    {
+      "case_id": "TM01-3",
+      "attempt_id": "TM01-3",
+      "answer": "2/5",
+      "text": "蓝球对应的编号就是符合事件的结果，总结果和符合事件结果都按球计数。我想进一步说明两种计数如何组合成概率。",
+      "expected_focus": [
+        "ratio"
+      ],
+      "rationale": "事件识别已解释，继续讨论计数比值的依据。",
+      "category": "multiturn_TM01",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "蓝球对应的编号就是符合事件的结果，总结果和符合事件结果都按球计数。我想进一步说明两种计数如何组合成概率。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "ae8e1bd76767b838e3d333591c6de1024b08aaaf220fc6c88155373854cf6ff8",
+      "operation_id": "436994dc-eccf-417a-b8cf-630f1ed729d1",
+      "context_turns": 3,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    },
+    {
+      "case_id": "TM02-1",
+      "attempt_id": "TM02-1",
+      "answer": "5/2",
+      "text": "我把总球数除以蓝球数来表示概率，不知道为什么应该这样安排分子分母。",
+      "expected_focus": [
+        "ratio"
+      ],
+      "rationale": "比例颠倒，围绕分子分母含义提问。",
+      "category": "multiturn_TM02",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "我把总球数除以蓝球数来表示概率，不知道为什么应该这样安排分子分母。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "856f28ad5b821d178eb95f7fdbd59acaec7d072485a20fe8510ac48a2cc75cf4",
+      "operation_id": "62372615-9d60-43a8-8b8b-ed24c651e6e3",
+      "context_turns": 1,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    },
+    {
+      "case_id": "TM02-2",
+      "attempt_id": "TM02-2",
+      "answer": "2/5",
+      "text": "我修正为符合事件的结果数除以总结果数，但我还没说明为什么编号后每个结果的机会应该相同。",
+      "expected_focus": [
+        "equal_likelihood"
+      ],
+      "rationale": "比值已修正，当前明确缺少等可能依据。",
+      "category": "multiturn_TM02",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "我修正为符合事件的结果数除以总结果数，但我还没说明为什么编号后每个结果的机会应该相同。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "4a22c882b01fc7b80f40a9a1a1dd32b952461a1d76bcaea4c4e7a28fcf01910e",
+      "operation_id": "2107bd7e-c57f-422c-ae5d-1bbb59e67843",
+      "context_turns": 2,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    },
+    {
+      "case_id": "TM02-3",
+      "attempt_id": "TM02-3",
+      "answer": "2/5",
+      "text": "题干已经说明每个球被摸出的机会相同，所以我按球编号。不过我又想只按颜色列结果，这两种基本结果单位的区别还没讲清楚。",
+      "expected_focus": [
+        "sample_space",
+        "equal_likelihood"
+      ],
+      "rationale": "新修正再次提出计数单位混淆，需要结合本轮而非重复旧的比例问题。",
+      "category": "multiturn_TM02",
+      "split": "development",
+      "repeat_of": null,
+      "contract_pass": true,
+      "citation_pass": true,
+      "policy_pass": true,
+      "direction_match": false,
+      "substantive_quote": true,
+      "quote": "题干已经说明每个球被摸出的机会相同，所以我按球编号。不过我又想只按颜色列结果，这两种基本结果单位的区别还没讲清楚。",
+      "selected_focus": "clarify",
+      "question": "你能说明讲解中每个基本结果是怎样确定的吗？",
+      "status": "succeeded",
+      "usage": {
+        "input_tokens": null,
+        "output_tokens": null
+      },
+      "elapsed_ms": 0,
+      "error_code": null,
+      "request_hash": "fe1281cbfcbadf72d568e087eb2c225346a95dec952510b416cf28e07bf51a8d",
+      "operation_id": "0ab80301-d5c5-4135-ad8d-27f269580459",
+      "context_turns": 3,
+      "semantic_review_required": true,
+      "outbound_identity_canary_absent": true
+    }
+  ],
+  "summary": {
+    "primary_cases": 6,
+    "total_attempts": 6,
+    "repeat_attempts": 0,
+    "reserved_calls": 6,
+    "contract_pass": 6,
+    "citation_pass": 6,
+    "policy_pass": 6,
+    "direction_match": 0,
+    "substantive_quote": 6,
+    "primary_failures": [
+      "TM01-1",
+      "TM01-2",
+      "TM01-3",
+      "TM02-1",
+      "TM02-2",
+      "TM02-3"
+    ],
+    "status_counts_all_attempts": {
+      "succeeded": 6
+    },
+    "repeat_pairs": 0,
+    "repeat_complete_pairs": 0,
+    "repeat_same_focus": 0,
+    "repeat_both_direction_match": 0,
+    "input_tokens_known": 0,
+    "output_tokens_known": 0,
+    "missing_usage_attempts": 6,
+    "latency_median_ms": 0.0,
+    "latency_max_ms": 0,
+    "categories": {
+      "multiturn_TM01": {
+        "cases": 3,
+        "direction_matches": 0
+      },
+      "multiturn_TM02": {
+        "cases": 3,
+        "direction_matches": 0
+      }
+    },
+    "splits": {
+      "development": {
+        "cases": 6,
+        "direction_matches": 0
+      },
+      "reserved": {
+        "cases": 0,
+        "direction_matches": 0
+      }
+    }
+  },
+  "flows": [
+    {
+      "scenario_id": "TM01",
+      "status": "completed",
+      "model_rounds": 3,
+      "verification_check": {
+        "status": "passed",
+        "message": "仅核验新题数值；解释与迁移能力尚未评定。",
+        "reasoning_reviewed": false,
+        "independent": true
+      }
+    },
+    {
+      "scenario_id": "TM02",
+      "status": "completed",
+      "model_rounds": 3,
+      "verification_check": {
+        "status": "passed",
+        "message": "仅核验新题数值；解释与迁移能力尚未评定。",
+        "reasoning_reviewed": false,
+        "independent": true
+      }
+    }
+  ]
+}
