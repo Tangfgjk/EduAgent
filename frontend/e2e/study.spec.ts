@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -50,6 +51,7 @@ test('真实项目学习闭环：内容启用、诊断、提示、反思、检�
     await page.getByRole('button', { name: '我确认这份计划' }).click();
     await expect(page.getByText('计划已确认', { exact: true })).toBeVisible();
     await navigate(page, '津津陪学');
+    await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元' }).click();
     await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '给我一点提示', exact: true })).toBeDisabled();
@@ -105,6 +107,7 @@ test('手机临时陪学保存、项目隔离与取消', async ({ page, browser 
   await expect(page.locator('.context-bar')).toContainText('一次方程探索');
   const wid = new URL(page.url()).searchParams.get('workspace')!;
   await navigate(page, '津津陪学');
+  await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元' }).click();
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '3');

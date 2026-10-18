@@ -65,7 +65,7 @@ def test_new_pack_full_cycle_recall_and_evidence(env, unit):
     run = client.get(path).json()
     assert run['view']['unit_id'] == unit.unit_id
     assert run['view']['content_version'] == unit.version
-    assert set(run['view']['task']) == {'task_id', 'stem', 'answer_format'}
+    assert set(run['view']['task']) == {'task_id', 'stem', 'answer_format', 'exposure_status'}
     # 诊断错误保留卡片；练习故意使用提示；独立检测不借助提示。
     send(env, client, path, 'answer', answer='999')
     send(env, client, path, 'next')

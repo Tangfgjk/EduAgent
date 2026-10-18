@@ -59,7 +59,14 @@ def backfill(db, apply=False):
             if run.version == LEGACY_VERSION:
                 comparable.pop("strategy_version_id", None)
                 comparable.pop("reflection_prompt", None)
-            if comparable != run.view:
+            # Exposure is enriched from the DB after graph execution (G05), not
+            # replayed by the deterministic graph. Never invent a fresh exposure
+            # during backfill; compare the task body and all other saved fields.
+            stored_view = deepcopy(run.view)
+            for view in (comparable, stored_view):
+                if view.get('task'):
+                    view['task'].pop('exposure_status', None)
+            if comparable != stored_view:
                 counts["incomplete"] += 1
                 continue
             existing = set(session.scalars(select(LearningFact.input_id).where(LearningFact.run_id == rid)))

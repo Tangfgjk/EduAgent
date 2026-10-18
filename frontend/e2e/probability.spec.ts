@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -39,6 +40,7 @@ for (const kind of ['roundtable', 'teach'] as const) {
     const label = kind === 'teach' ? '我教 AI' : '圆桌讨论';
     await navigate(page, label);
     await page.getByLabel('选择互动单元').selectOption('math.g9.probability.activities.dev1');
+    await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始' + label, exact: true }).click();
     await expect(page.getByText('P-PRB-02', { exact: true })).toBeVisible();
     await expect(page.getByText('学生原始贡献', { exact: true })).toHaveCount(0);

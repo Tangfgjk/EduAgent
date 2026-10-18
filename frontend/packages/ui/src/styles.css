@@ -30,3 +30,5 @@
 .workspace-action { position: relative; }
 .workspace-action::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 7px); right: 0; padding: 6px 9px; border-radius: 6px; background: #273b30; color: #fff; font-size: 11px; line-height: 1.5; white-space: nowrap; pointer-events: none; opacity: 0; z-index: 5; }
 .workspace-action:hover::after, .workspace-action:focus-visible::after { opacity: 1; }
+
+.form-stack label.inline > input[type="checkbox"] { width:16px; height:16px; min-height:16px; flex:0 0 16px; padding:0; margin:0; }

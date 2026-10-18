@@ -1,0 +1,94 @@
+{
+  "schema_version": "content.v1",
+  "unit_id": "dynamic.rational.demo.v1",
+  "title": "有理数运算与依据 · 动态登记示例",
+  "grade": "七年级",
+  "domain": "数与式",
+  "knowledge_points": [
+    "有理数加减",
+    "有理数乘除",
+    "运算顺序"
+  ],
+  "prerequisites": [],
+  "sources": [
+    {
+      "source_id": "self-authored-rational-demo",
+      "version": "v1",
+      "locator": "开发者自编示例，人工核对题意与参考答案",
+      "authorization": "self_authored_development"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "DYN-D-RAT-01",
+      "stage": "diagnostic",
+      "stem": "计算 −3 + 8。",
+      "answer": "5",
+      "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+      "hints": [],
+      "misconception": ""
+    },
+    {
+      "id": "DYN-P-RAT-01",
+      "stage": "practice",
+      "stem": "计算 −6 ÷ 3 + 4，说明运算顺序。",
+      "answer": "2",
+      "format": "只填数值或分数，步骤与依据写在下方。",
+      "hints": [
+        "观察算式里有哪些运算。",
+        "先算除法，再算加法。",
+        "−6÷3=−2，再计算 −2+4。",
+        "−6÷3+4=−2+4=2。异号两数相除得负，随后再相加。"
+      ],
+      "misconception": "把负数相除的结果当成正数，或先加后除。"
+    },
+    {
+      "id": "DYN-P-RAT-02",
+      "stage": "practice",
+      "stem": "上午气温 −2℃，中午升高 7℃，晚上又降低 3℃。晚上气温是多少摄氏度？",
+      "answer": "2",
+      "format": "只填数值或分数，步骤与依据写在下方。",
+      "hints": [
+        "用正负数表示升高和降低。",
+        "从 −2 出发，先加 7，再减 3。",
+        "列式 −2+7−3，中午为 5℃。",
+        "−2+7−3=5−3=2，晚上为 2℃。可用数轴核对方向。"
+      ],
+      "misconception": "把降低也记为加法。"
+    },
+    {
+      "id": "DYN-C-RAT-01",
+      "stage": "checkpoint",
+      "stem": "独立检测：计算 −12 ÷ 4 + 8。",
+      "answer": "5",
+      "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+      "hints": [],
+      "misconception": ""
+    },
+    {
+      "id": "DYN-C-RAT-02",
+      "stage": "checkpoint",
+      "stem": "独立检测：气温 −4℃，升高 9℃后再降低 2℃，最终气温是多少摄氏度？",
+      "answer": "3",
+      "format": "只填数值或分数，单位、步骤与依据写在下方。检测提交后不能修改，不提供提示。",
+      "hints": [],
+      "misconception": ""
+    }
+  ],
+  "activities": [
+    {
+      "unit_id": "dynamic.rational.teach.v1",
+      "title": "有理数我教 AI · 动态开发活动",
+      "task_id": "DYN-P-RAT-01",
+      "verification_task_id": "DYN-C-RAT-01",
+      "kind": "teach"
+    },
+    {
+      "unit_id": "dynamic.rational.roundtable.v1",
+      "title": "有理数圆桌 · 动态开发活动",
+      "task_id": "DYN-P-RAT-02",
+      "verification_task_id": "DYN-C-RAT-02",
+      "kind": "roundtable"
+    }
+  ]
+}

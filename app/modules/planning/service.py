@@ -82,8 +82,8 @@ def material_snapshot(session, ids):
 
 
 def skill_text(policy):
-    policy = SoftPolicy.model_validate(policy).model_dump()
-    return "# 项目学习策略 · 开发候选\n\n- 每日建议：" + str(policy["daily_minutes"]) + " 分钟（学生仍可自行决定）。\n- 反思引导：" + PROMPTS[policy["reflection_focus"]] + "\n\n教学硬规则、内容审核、考试隔离、验证与权限保持由平台执行。\n本文件是受限配置的可读导出，不作为任意代码或指令加载。\n"
+    from app.modules.planning.compiler import compile_policy
+    return compile_policy(policy)['markdown']
 
 
 def version_valid(session, version):
@@ -94,6 +94,12 @@ def version_valid(session, version):
         fail("version_invalid", "策略字段不符合受限配置")
     if request_hash({"bundle": version.bundle, "policy": version.policy, "rules": version.hard_rules_hash}) != version.content_hash:
         fail("version_invalid", "策略版本校验失败")
+    if version.bundle.get('skill_compilation'):
+        from app.modules.planning.compiler import compile_policy
+        if version.bundle['skill_compilation']!=compile_policy(version.policy):fail('version_invalid','Skill编译产物与策略不一致')
+    if version.bundle.get('evolution_reference'):
+        from app.modules.skill_evolution.service import validate_reference
+        validate_reference(session,version.bundle['evolution_reference'],version.policy)
     for material in version.bundle["materials"]:
         release = session.get(MaterialRelease, material["material_id"], with_for_update=True)
         if release is None or not release.enabled: fail("material_unavailable", "策略引用的资料已停用")
@@ -103,6 +109,12 @@ def require_fresh(session, run, bundle, base_revision, expires_at):
     if bundle["workspace_id"] != run.workspace_id: fail("scope_conflict", "来源与提案项目不一致")
     if now() >= expires_at: fail("proposal_expired", "提案已过期，请重新生成")
     if bundle["rules_hash"] != registry_hash(): fail("rules_changed", "教学规则已更新，请重新生成")
+    if bundle.get('course_baseline') is not None:
+        from app.modules.planning.runtime import course_baseline
+        if course_baseline(session,run.workspace_id)!=bundle['course_baseline']:fail('course_changed','课程绑定已变化，请重新生成策略')
+    if bundle.get('evolution_reference'):
+        from app.modules.skill_evolution.service import validate_reference
+        validate_reference(session,bundle['evolution_reference'],bundle['skill_compilation']['policy'])
     current = session.get(ActiveStrategy, run.workspace_id)
     if (current.revision if current else 0) != base_revision: fail("strategy_base_changed", "当前生效版本已变化，请重新生成")
     if evidence_snapshot(session, run.workspace_id)["fingerprint"] != bundle["evidence"]["fingerprint"]:
@@ -123,6 +135,8 @@ def effective_policy(session, wid):
     version = session.get(StrategyVersion, pointer.version_id)
     try:
         if version is None or version.workspace_id != wid: fail("version_invalid", "策略范围无效")
+        owner=session.get(Account,session.get(Workspace,wid).owner_id)
+        if owner.source_kind=='real_student' or owner.source_kind!=version.bundle['source_kind']:fail('source_changed','来源变化，开发策略不生效')
         version_valid(session, version)
     except DomainError as error:
         return None, DEFAULT.copy(), error.code
@@ -142,6 +156,7 @@ def public_strategy(session, run, detail=True):
     return {"run_id": run.id, **{key: getattr(run, key) for key in ("workspace_id", "status", "revision", "gate_id", "error_code", "created_at", "view")},
         "workspace_title": session.get(Workspace, run.workspace_id).title,
         "workspace_status": session.get(Workspace, run.workspace_id).status,
+        "compilation": version.bundle.get('skill_compilation') if version and detail else None,
         "version_hash": version.content_hash if version else None, "bundle": version.bundle if version and detail else pending_bundle,
         'generation': generation,
         "expires_at": version.expires_at if version else None, "skill_markdown": skill_text(version.policy) if version and detail else None,
@@ -170,8 +185,9 @@ class Planning(Learning):
             .order_by(AgentRun.created_at.desc(), AgentRun.id.desc()).offset(offset).limit(20))
         return {"items": [public_strategy(session, row, False) for row in rows]}
 
-    def start(self, session, actor, wid, body, key):
+    def start(self, session, actor, wid, body, key, *, evolution_reference=None):
         body = dict(body)
+        if evolution_reference:body['_evolution_reference']=evolution_reference
         if not body.get('request_model'):
             body.pop('request_model', None)
         workspace = self.spaces.owned(session, actor, wid)
@@ -193,6 +209,8 @@ class Planning(Learning):
         bundle = {"workspace_id": wid, "rules_hash": registry_hash(), "student_experience": body["learning_experience"],
             "evidence": evidence_snapshot(session, wid), "materials": snapshot, "source_kind": actor.account.source_kind,
             "base_version_id": pointer.version_id if pointer else None, "created_at": now()}
+        from app.modules.evidence.insights import report as learning_insights
+        bundle['learning_observations']=learning_insights(session,actor,wid,days=30,source=actor.account.source_kind)['planning_summary']
         if body.get('request_model'):
             from app.modules.planning.model import global_snapshot
             bundle['global_summary'] = global_snapshot(session, actor.account)
@@ -200,7 +218,16 @@ class Planning(Learning):
         run = AgentRun(workspace_id=wid, conversation_id=conversation.id, kind="strategy", version=VERSION,
             creation_key=key, creation_hash=request_hash(body))
         session.add(run); session.flush()
-        candidate = SoftPolicy(daily_minutes=body["daily_minutes"], reflection_focus=body["reflection_focus"]).model_dump()
+        candidate = SoftPolicy(daily_minutes=body["daily_minutes"], reflection_focus=body["reflection_focus"],execution=body.get('execution')).model_dump()
+        if evolution_reference:
+            from app.modules.skill_evolution.service import validate_reference
+            validate_reference(session,evolution_reference,candidate)
+            bundle['evolution_reference']=evolution_reference
+        if candidate.get('execution'):
+            from app.modules.planning.compiler import compile_policy,changes
+            from app.modules.planning.runtime import course_baseline
+            _,base,_=effective_policy(session,wid)
+            bundle.update(skill_compilation=compile_policy(candidate),policy_base=base,policy_changes=changes(base,candidate),course_baseline=course_baseline(session,wid))
         entry = self.enqueue(session, run, actor.account.id, "start:" + run.id, {"operation": "strategy_start", "bundle": bundle,
             "candidate": candidate, "base_revision": pointer.revision if pointer else 0, "expires_at": now() + 7*86400,
             **({'request_model': True} if body.get('request_model') else {})})
@@ -307,6 +334,10 @@ def queue_model_candidate(session, op):
         'requested_policy': body['candidate'], 'citations': op.result['citations'],
         'source_refs': op.request['source_refs'], 'source_excerpts': op.request['sources'],
         'limitation': '只读取所列有界片段与全局计数，引用命中不代表正确理解来源或教学有效。'}}
+    if bundle.get('skill_compilation'):
+        from app.modules.planning.compiler import compile_policy,changes
+        bundle['skill_compilation']=compile_policy(op.result['policy'])
+        bundle['policy_changes']=changes(bundle['policy_base'],op.result['policy'])
     run.revision += 1
     Planning().enqueue(session, run, op.account_id, 'model-ready:' + op.id, {'operation': 'strategy_model_ready',
         'bundle': bundle, 'candidate': op.result['policy'], 'base_revision': body['base_revision'],

@@ -10,10 +10,11 @@ def publish_activity(session, run, entry, state):
         return
     if session.scalar(select(LearningFact.id).where(LearningFact.input_id == entry.id)):
         return
-    item = activity_for_version(state["view"]["activity_version"])
-    independent = entry.payload.get('action') == 'verify'
-    task = item.verification_task if independent else item.task
-    check = state['view']['verification_check'] if independent else state["view"]["check"]
+    item = activity_for_version(state["view"]["activity_version"], session)
+    verification = entry.payload.get('action') == 'verify'
+    independent = bool(verification and state['view']['verification_check']['independent'])
+    task = item.verification_task if verification else item.task
+    check = state['view']['verification_check'] if verification else state["view"]["check"]
     # 只收学生原始贡献；模板发言不进入 L1，不计入数值正确率或独立检测。
     fact = LearningFact(workspace_id=run.workspace_id, run_id=run.id, input_id=entry.id,
         kind="activity_contribution", source_kind=entry.source_kind, task_id=task["id"],

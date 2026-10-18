@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, BookOpen, Check, ChevronRight, CircleHelp, Compass, Leaf, LoaderCircle, LogOut, Menu, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -113,7 +113,7 @@ export function Shell({ role, navigation, sidebar, context, children, search = '
   const { account, logout, loggingOut } = useAuth();
   const location = useLocation();
   const [menu, setMenu] = useState(false), [error, setError] = useState<unknown>(null);
-  useEffect(() => { setMenu(false); document.getElementById('main-content')?.focus(); }, [location.pathname]);
+  useLayoutEffect(() => { setMenu(false); document.getElementById('main-content')?.focus(); }, [location.pathname]);
   const current = navigation.find(item => location.pathname === '/' + item.path) ?? navigation[0];
   return <div className={`app-shell ${menu ? 'menu-open' : ''}`}><a className="skip-link" href="#main-content">跳到主要内容</a>
     {menu && <button className="rail-overlay" aria-label="关闭导航" onClick={() => setMenu(false)}/>}
@@ -126,3 +126,7 @@ export function Shell({ role, navigation, sidebar, context, children, search = '
 }
 
 export { StrategyDetails, strategyPhases } from './strategy';
+
+export { SkillExecution } from './skill-execution';
+
+export { EvolutionWorkbench } from './skill-evolution';

@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -34,15 +35,23 @@ async function prepare(admin: Page, title: string) {
   await card.getByRole('button', { name: '发布资料', exact: true }).click();
   await expect(card.getByText('资料已发布', { exact: true })).toBeVisible();
 }
-async function propose(page: Page, materialTitle: string, model = false) {
+async function propose(page: Page, materialTitle: string, model = false, execution = false) {
   await navigate(page, '规划与策略');
   await page.getByLabel('我的学习体验', { exact: false }).fill('我希望先核验数值，再反思为什么这样变形。');
   await page.getByLabel('每日建议时长', { exact: true }).fill('20');
   await page.getByRole('combobox', { name: '反思引导重点', exact: true }).selectOption('verification');
   await page.getByRole('checkbox', { name: new RegExp(materialTitle) }).check();
+  if (execution) {
+    await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).check();
+    await page.getByLabel('练习顺序',{exact:true}).selectOption('errors_first');
+    await page.getByLabel('复习列表排序',{exact:true}).selectOption('due_errors_first');
+    await page.getByLabel('生成课程支持方式',{exact:true}).selectOption('step_first');
+    await page.getByLabel('通用追问重点',{exact:true}).selectOption('verification');
+  }
   if (model) await page.getByLabel('使用已开放模型生成有来源的候选').check();
   await page.getByRole('button', { name: '生成开发策略提案', exact: true }).click();
   await expect(page.locator('.strategy-detail').getByText('等待管理员审核', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading',{name:'冻结的学情观察摘要',exact:true})).toBeVisible();
 }
 async function review(admin: Page, project: string, approve: boolean) {
   await admin.getByRole('tab', { name: '提案评审', exact: true }).click();
@@ -68,7 +77,8 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await navigate(admin, '策略评审');
     await login(page, 'student', 's03.one');
     await create(page, project);
-    await propose(page, materialTitle);
+    await propose(page, materialTitle,false,true);
+    await expect(page.getByRole('heading',{name:'执行策略编译与差异',exact:true})).toBeVisible();
     await page.reload();
     await expect(page.locator('.strategy-detail').getByText('等待管理员审核', { exact: true })).toBeVisible();
     await review(admin, project, true);
@@ -91,7 +101,9 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await page.getByRole('button', { name: '我确认这份计划', exact: true }).click();
     await expect(page.getByText('计划已确认', { exact: true })).toBeVisible();
     await navigate(page, '津津陪学');
+    await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
+    await expect(page.getByText('本任务冻结的执行策略',{exact:true})).toBeVisible();
     await page.getByLabel('我的数值答案', { exact: true }).fill('3');
     await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
     await page.getByRole('button', { name: '继续下一步', exact: true }).click();
@@ -167,4 +179,24 @@ test('模型规划：来源引用、全局计数、审核后学生确认及回�
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
     expect(errors).toEqual([]);
   } finally { await admin.close(); }
+});
+
+
+test('手机执行策略：四项可选择、说明可读且无横向溢出',async({page,browser})=>{
+  await page.setViewportSize({width:390,height:844});
+  const admin=await browser.newPage(),title='手机执行参考 '+Date.now();
+  try{await prepare(admin,title);}finally{await admin.close();}
+  await login(page,'student','s03.two');
+  await create(page,'手机执行项目 '+Date.now());
+  await navigate(page,'规划与策略');
+  await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).check();
+  await page.getByLabel('练习顺序',{exact:true}).selectOption('errors_first');
+  await page.getByLabel('复习列表排序',{exact:true}).selectOption('due_errors_first');
+  await page.getByLabel('生成课程支持方式',{exact:true}).selectOption('step_first');
+  await page.getByLabel('通用追问重点',{exact:true}).selectOption('verification');
+  await expect(page.getByLabel('通用追问重点',{exact:true})).toHaveValue('verification');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).scrollIntoViewIfNeeded();
+  mkdirSync('test-results/screens',{recursive:true});
+  await page.screenshot({path:'test-results/screens/student-execution-mobile.png'});
 });

@@ -31,3 +31,28 @@ wheel 包含 app 与 evolution，通过 force-include 精确纳入题库、旧�
 #### 验证方法
 
 从 sdist 构建 wheel；运行 `python scripts/check_wheel.py .local/dist/rsi_platform-0.1.0-py3-none-any.whl`，临时目录隔离运行真实 API，结果 wheel_smoke passed、bank_items 12、external_http blocked；新增及原有 64 项回归通过。
+
+
+## 2026-10-18：Windows pnpm嵌套链接进入Docker构建上下文
+
+状态：已解决；关键词：invalid file request、packages/node_modules、Docker、pnpm。
+
+### 现象
+
+OpenMAIC Docker构建在传输上下文时报 `invalid file request packages/@openmaic/dsl/node_modules/ajv`。
+
+### 定位过程
+
+官方基础镜像已下载成功，失败发生在加载源码上下文；检查发现本机pnpm已在workspace子包创建Windows链接，原ignore没有排除嵌套node_modules。
+
+### 根因
+
+把本机依赖链接带入Linux构建；构建应该传源码，在容器内按锁文件重新安装Linux依赖。
+
+### 解决方案
+
+门禁准备脚本同时补充 `**/node_modules`、`**/.next` 排除规则。保留 `.env*`/openmaic.yml 排除，凭据只运行时挂载。
+
+### 验证方法
+
+固定版本Linux镜像成功构建，独立容器4004健康与门禁通过，真实三场景生成成功；没有重用Windows原生依赖或把密钥打入镜像。

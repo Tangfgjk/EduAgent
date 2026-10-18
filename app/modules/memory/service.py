@@ -68,8 +68,15 @@ class Memory:
         query = select(ReviewCard).where(ReviewCard.workspace_id == wid)
         if status == "due": query = query.where(ReviewCard.next_due_at <= now())
         if status == "scheduled": query = query.where(ReviewCard.next_due_at > now())
-        rows = session.scalars(query.order_by(ReviewCard.next_due_at, ReviewCard.id).offset(offset).limit(20))
-        return {"items": [self.card_out(session, row) for row in rows], "interval_days": list(INTERVAL_DAYS),
+        from app.modules.planning.service import effective_policy
+        version,policy,reason=effective_policy(session,wid)
+        ordering=(policy.get('execution') or {}).get('review_order','due_first')
+        if ordering=='due_errors_first':
+            stamp=now()
+            from app.modules.planning.runtime import order_review_cards
+            rows=order_review_cards(list(session.scalars(query)),ordering,stamp)[offset:offset+20]
+        else:rows=session.scalars(query.order_by(ReviewCard.next_due_at,ReviewCard.id).offset(offset).limit(20))
+        return {"strategy": {"strategy_version_id":version,"review_order":ordering,"reason":reason},"items": [self.card_out(session, row) for row in rows], "interval_days": list(INTERVAL_DAYS),
             "due_count": session.scalar(select(func.count()).select_from(ReviewCard).where(ReviewCard.workspace_id == wid, ReviewCard.next_due_at <= now()))}
 
     def recall(self, session, actor, wid, cid, payload, key):
@@ -83,18 +90,18 @@ class Memory:
         self.spaces.owned(session, actor, wid, active=True)
         if card.revision != payload["expected_revision"]:
             raise DomainError(409, "revision_conflict", "复习条目已更新，请刷新后重试")
-        pack = pack_for_task(card.task_id, card.content_version)
-        require_content(session, actor.account.source_kind, pack.unit_id, pack.version)
+        pack = pack_for_task(card.task_id, card.content_version, session)
+        require_content(session, actor.account.source_kind, pack.unit_id, pack.version, wid)
         # 互动产生的复习来源仍受该互动版本的撤回约束；不重新开放已撤回内容。
         sources = session.scalars(select(LearningFact).where(LearningFact.id.in_(card.source_fact_ids)))
         for source in sources:
             activity_version = source.payload.get("activity_version")
             if activity_version:
-                activity = activity_for_version(activity_version)
+                activity = activity_for_version(activity_version, session)
                 source_task = activity.verification_task if source.payload.get('action') == 'verify' else activity.task
                 if activity.parent.version != card.content_version or not source_task or source_task["id"] != card.task_id:
                     raise DomainError(409, "source_version_conflict", "互动来源与内容版本不一致，暂不能复做")
-                require_activity_content(session, actor.account.source_kind, activity.unit_id)
+                require_activity_content(session, actor.account.source_kind, activity.unit_id, wid)
 
         require_idle(session, wid, ["roundtable", "teach"])
         if card.source_kind != actor.account.source_kind:

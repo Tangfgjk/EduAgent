@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -40,6 +41,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     const response = await student.request.post('/api/v1/student/workspaces', { headers: { ...studentHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: '模型追问独立验收' } });
     const workspace = await response.json();
     await student.goto(`/student/study?workspace=${workspace.workspace_id}&unit=${unitId}`);
+    await confirmFixtureCourse(student);
     await student.getByRole('button', { name: '开始开发单元', exact: true }).click();
     await expect(student.getByText('先试一题', { exact: true })).toBeVisible();
     await expect(student.getByRole('button', { name: '提交思路并请求追问' })).toHaveCount(0);
@@ -106,6 +108,7 @@ test('模型超时后保留提示，耗尽额度可继续作答，独立检测�
   const studentHeaders = await headers(page, 'student');
   const workspace = await (await page.request.post('/api/v1/student/workspaces', { headers: { ...studentHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: '故障降级验收' } })).json();
   await page.goto(`/student/study?workspace=${workspace.workspace_id}&unit=${unitId}`);
+  await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
   await page.getByLabel('我的数值答案').fill('1/6');
   await page.getByRole('button', { name: '检查我的解答' }).click();

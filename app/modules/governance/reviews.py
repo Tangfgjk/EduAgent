@@ -30,14 +30,16 @@ def records(session, kind, target, version):
 
 def check_content(session, target, version):
     rows = records(session, 'content', target, version)
-    if (rows and rows[0]['conclusion'] != 'development_ready') or (target in REQUIRED_CONTENT and not rows):
+    if (rows and rows[0]['conclusion'] != 'development_ready') or ((target in REQUIRED_CONTENT or target.startswith('dynamic.')) and not rows):
         raise DomainError(409, 'development_review_required', '此版本尚未通过开发内容核对，请先填写审核依据')
 
 
-def content_target(target):
+def content_target(target, session=None):
     from app.modules.learning.content_catalog import PACKS
     from app.modules.learning.activity_catalog import ACTIVITY_PACKS
-    item = next((item for item in (*PACKS, *ACTIVITY_PACKS) if item.unit_id == target), None)
+    from app.modules.learning.content_repository import ContentRepository
+    repo = ContentRepository(session, include_private=True)
+    item = next((item for item in (*repo.packs(), *repo.activities()) if item.unit_id == target), None)
     if item is None:
         raise DomainError(404, 'not_found', '未找到此内容版本')
     return item
@@ -46,7 +48,7 @@ def content_target(target):
 def save(session, actor, body):
     kind, target, version = body['kind'], body['target_id'], body['version']
     if kind == 'content':
-        item = content_target(target)
+        item = content_target(target, session)
         actual = item.version
         allowed = {'development_ready', 'needs_revision'}
     else:

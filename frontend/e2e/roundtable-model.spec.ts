@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 
 async function login(page: Page, role: 'admin' | 'student', username: string) {
@@ -39,13 +40,14 @@ test('模型圆桌：审核启用、三视角、刷新、学生比较及另一�
     const space = await (await student.request.post('/api/v1/student/workspaces', { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
       data: { kind: 'temporary', title: '圆桌三视角验收' } })).json();
     await student.goto(`/student/roundtable?workspace=${space.workspace_id}&activity=math.g9.probability.roundtable.dev2`);
+    await confirmFixtureCourse(student);
     await student.getByRole('button', { name: '开始圆桌讨论', exact: true }).click();
-    await expect(student.getByLabel('让 AI 根据本次思路生成三种圆桌视角')).toBeChecked();
+    await expect(student.getByLabel('让 AI 根据本次思路选择讨论方向')).toBeChecked();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的初步思路', { exact: true }).fill('我把红和蓝两种颜色作为两个结果，各一半。');
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('圆桌视角已保存', { exact: true })).toBeVisible();
-    for (const role of ['思路提出者', '质疑者', '整理者']) await expect(student.getByRole('heading', { name: `${role} · 模型观点待核验`, exact: true })).toBeVisible();
+    for (const role of ['思路提出者', '质疑者', '整理者']) await expect(student.getByRole('heading', { name: `${role} · 安全模板追问`, exact: true })).toBeVisible();
     await student.reload();
     await expect(student.getByText('圆桌视角已保存', { exact: true })).toBeVisible();
     await student.screenshot({ path: testInfo.outputPath('roundtable-three-voices.png'), fullPage: true });

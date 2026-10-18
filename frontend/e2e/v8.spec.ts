@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 
 async function login(page: Page, role: 'student' | 'admin', username: string) {
@@ -62,10 +63,11 @@ test('V8：内容核对开放、评测分类复核、我教 AI 新题验证与�
     const auth = await headers(student, 'student');
     const space = await (await student.request.post('/api/v1/student/workspaces', { headers: { ...auth, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: 'V8 我教 AI 验收' } })).json();
     await student.goto(`/student/teach?workspace=${space.workspace_id}&activity=math.g9.probability.teach.dev2`);
+    await confirmFixtureCourse(student);
     await student.getByRole('button', { name: '开始我教 AI', exact: true }).click();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的讲解', { exact: true }).fill('我先用颜色列结果，再检查这样是否等可能。');
-    const modelChoice = student.getByLabel('让 AI 根据本次讲解提出一个问题', { exact: true });
+    const modelChoice = student.getByLabel('让 AI 根据本次讲解选择追问方向', { exact: true });
     if (await modelChoice.count()) await modelChoice.uncheck();
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('预设误区 · 待纠正', { exact: true })).toBeVisible();

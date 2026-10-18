@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -47,6 +48,7 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await page.getByRole('button', { name: '我确认这份计划', exact: true }).click();
   await expect(page.getByText('计划已确认', { exact: true })).toBeVisible();
   await navigate(page, '津津陪学');
+  await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
   await answer(page, '3');
   await page.getByRole('button', { name: '继续下一步', exact: true }).click();
@@ -67,6 +69,16 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await expect(page.getByText('当前筛选 7 条。', { exact: false })).toBeVisible();
   const overview = page.locator('section.card').filter({ has: page.getByRole('heading', { name: '模拟数据 · 过程概览', exact: true }) });
   await expect(overview.locator('.evidence-kpis')).toContainText('1 / 1');
+  await expect(page.getByRole('heading',{name:'知识点地图 · 记录覆盖'})).toBeVisible();
+  await expect(page.locator('.observation-bars')).toContainText('辅助后练习');
+  await expect(page.locator('.observation-bars')).toContainText('首次曝光检测');
+  await expect(page.getByRole('group',{name:'六个观察方向候选材料条数'}).getByRole('button')).toHaveCount(6);
+  await expect(page.getByRole('heading',{name:'支架时间线'})).toBeVisible();
+  await page.getByRole('button',{name:/一元一次方程与应用.*7条事实/}).click();
+  await expect(page.getByRole('region',{name:'图形来源钻取'})).toContainText('共7条');
+  await page.getByRole('region',{name:'图形来源钻取'}).getByRole('button',{name:'查看这条原始材料'}).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button',{name:'关闭弹窗',exact:true}).click();
   await page.getByRole('combobox', { name: '趋势指标', exact: true }).selectOption('hints');
   await page.getByRole('button', { name: /提示请求 1 次$/ }).click();
   await expect(page.getByRole('status').filter({ hasText: '提示请求 1 次' })).toBeVisible();
@@ -80,6 +92,7 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await page.getByRole('button', { name: '保存我的说明', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('学生自述：这一次我先独立代入核验');
   await page.getByRole('button', { name: '关闭弹窗', exact: true }).click();
+  await expect(page.getByText('窗口内 7 条事实、1 条自述、0 条人工数值复核，分别保存。',{exact:true})).toBeVisible();
   await page.getByRole('combobox', { name: '记录类型', exact: true }).selectOption('self_report');
   await expect(page.locator('.evidence-records')).toContainText('这一次我先独立代入核验');
   await navigate(page, '项目与会话');
@@ -93,6 +106,12 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await expect(page.getByRole('button', { name: '保存我的说明', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: '关闭弹窗', exact: true }).click();
   await page.getByRole('combobox', { name: '记录类型', exact: true }).selectOption('all');
+  await page.getByRole('tab',{name:'全局宏观',exact:true}).click();
+  await page.getByRole('checkbox',{name:'全局包含归档项目'}).uncheck();
+  await expect(page.getByText('当前范围还没有过程证据',{exact:true})).toBeVisible();
+  await expect(page.locator('.knowledge-node.has-evidence')).toHaveCount(0);
+  await page.getByRole('checkbox',{name:'全局包含归档项目'}).check();
+  await expect(page.locator('.knowledge-node.has-evidence')).toHaveCount(1);
   mkdirSync('test-results/screens', { recursive: true });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'test-results/screens/student-evidence-live.png', fullPage: true });

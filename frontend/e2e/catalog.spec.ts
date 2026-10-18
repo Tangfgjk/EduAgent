@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -46,6 +47,7 @@ for (const mobile of [false, true]) {
     await page.screenshot({ path: `test-results/screens/student-catalog${mobile ? '-mobile' : ''}.png`, fullPage: true });
     await page.locator('section.card').filter({ has: page.getByRole('heading', { name: '等可能事件概率 · 开发单元', exact: true }) }).getByRole('link', { name: '查看与学习', exact: true }).click();
     await expect(page.getByLabel('选择开发单元')).toHaveValue('math.g9.probability.dev1');
+    await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
     await expect(page.getByText('D-PRB-01', { exact: true })).toBeVisible();
     await page.getByLabel('我的数值答案').fill('1/6');

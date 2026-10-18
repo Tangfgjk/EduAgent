@@ -7,7 +7,8 @@ from fastapi.responses import Response
 
 from app.modules.learning.activity_content import UNIT_ID, TITLE, CONTENT_VERSION, admin_tasks
 from app.modules.learning.activity_contracts import ActivityCatalogOut, ActivityContentOut, ActivityInput, ActivityRunOut, ActivityRunsOut, StartActivity
-from app.modules.learning.activity_catalog import ACTIVITY_PACKS, get_activity
+from app.modules.learning.activity_catalog import get_activity
+from app.modules.learning.content_repository import ContentRepository
 from app.modules.learning.activity_service import Activities, public_activity
 from app.modules.learning.content_service import Content
 from app.modules.learning.contracts import EventOut, RunRevision
@@ -23,16 +24,19 @@ def activity_router(student, admin):
         return {**Content(item.unit_id, item.title, item.version, item.admin_tasks()).view(session, admin), "parent_unit_id": item.parent_unit_id, 'flow': item.flow}
 
     @router.get("/student/activity-catalog", response_model=ActivityCatalogOut)
-    def student_catalog(ctx=student_auth):
-        return {"items": [catalog_item(ctx.session, item) for item in ACTIVITY_PACKS]}
+    def student_catalog(ctx=student_auth, workspace_id: UUID | None = None):
+        if workspace_id:
+            from app.modules.workspaces.service import Workspaces
+            Workspaces().owned(ctx.session, ctx.actor, str(workspace_id))
+        return {"items": [catalog_item(ctx.session, item) for item in ContentRepository(ctx.session, workspace_id=str(workspace_id) if workspace_id else None).activities()]}
 
     @router.get("/admin/activity-catalog", response_model=ActivityCatalogOut)
     def admin_catalog(ctx=admin_auth):
-        return {"items": [catalog_item(ctx.session, item, True) for item in ACTIVITY_PACKS]}
+        return {"items": [catalog_item(ctx.session, item, True) for item in ContentRepository(ctx.session, include_private=True).activities()]}
 
     @router.post("/admin/activity-catalog/{unit_id}/development-release", response_model=ActivityContentOut)
     def release(unit_id: str, body: ContentToggle, ctx=admin_auth):
-        item = get_activity(unit_id)
+        item = get_activity(unit_id, ctx.session)
         Content(item.unit_id, item.title, item.version, item.admin_tasks()).toggle(ctx.session, ctx.actor, body.model_dump())
         return catalog_item(ctx.session, item, True)
 

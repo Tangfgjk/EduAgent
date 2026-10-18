@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--env-file", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("migrate")
+    sub.add_parser("set-search-key", help="隐藏输入 Tavily 密钥，只保存到本机忽略文件")
     sub.add_parser("set-model-key", help="隐藏输入 DeepSeek 密钥，保存到被 Git 忽略的本机文件")
     materialize = sub.add_parser("backfill-learning-facts", help="停服后核对旧 S05 运行；默认仅报告")
     materialize.add_argument("--apply", action="store_true")
@@ -33,12 +34,12 @@ def main():
     legacy.add_argument("--snapshot", type=Path, required=True)
     args = parser.parse_args()
     settings = Settings.load(args.env_file)
-    if args.command == "set-model-key":
+    if args.command in {"set-model-key", "set-search-key"}:
         import os
-        value = getpass.getpass("DeepSeek API Key（不回显）：").strip()
+        value = getpass.getpass(("Tavily" if args.command == "set-search-key" else "DeepSeek")+" API Key（不回显）：").strip()
         if not value or "\n" in value or len(value) > 1024:
             parser.error("密钥格式无效")
-        target = Path(os.getenv("WENJIN_DEEPSEEK_KEY_FILE", ".local/deepseek.key"))
+        target = Path(os.getenv("WENJIN_TAVILY_KEY_FILE", ".local/tavily.key")) if args.command == "set-search-key" else Path(os.getenv("WENJIN_DEEPSEEK_KEY_FILE", ".local/deepseek.key"))
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(value, encoding="utf-8")
         target.chmod(0o600)

@@ -216,6 +216,23 @@ try:
         assert reports.status_code == 200, reports.text
         assert len(reports.json()['items']) == 17
         print(json.dumps({'v8_wheel_smoke':'passed','packaged_evaluation_reports':17}))
+        login=client.post('/api/v1/auth/login',json={'username':'wheel.student','password':'Wheel-test-only-123456'})
+        client.headers['X-CSRF-Token']=login.json()['csrf_token']
+        observations=client.get('/api/v1/student/learning-insights')
+        assert observations.status_code==200,observations.text
+        assert len(observations.json()['competencies'])==6
+        assert observations.json()['planning_summary']['delivery']=='local_only'
+        print(json.dumps({'g06_wheel_smoke':'passed','evidence_scoring':'not_claimed'}))
+        from app.modules.planning.compiler import compile_policy
+        compiled=compile_policy({'daily_minutes':20,'reflection_focus':'basis','execution':{'practice_order':'errors_first'}})
+        assert compiled['policy_hash'] in compiled['markdown']
+        assert len(compiled['markdown'].splitlines())>10
+        print(json.dumps({'g07_wheel_smoke':'passed','typed_execution_compiler':'bundled'}))
+        from app.modules.skill_evolution.evaluator import evaluate
+        from copy import deepcopy
+        base=compiled['policy'];candidate=deepcopy(base);candidate['execution']['review_order']='due_errors_first'
+        assert evaluate(base,candidate)['eligible_for_review']
+        print(json.dumps({'g08_wheel_smoke':'passed','offline_corpus_and_consumers':'bundled'}))
 
 
 finally:
@@ -235,6 +252,10 @@ def main() -> None:
                          "app/modules/learning/model_coaching.py", "app/gateway/model_runtime.py"})
         required.update({'app/gateway/development.py', 'app/modules/governance/reviews.py',
             'app/infrastructure/db/migrations/versions/v8_001.py', 'seeds/evaluation/reports/holdout-fake.json', 'seeds/evaluation/reports/teach-live.json', 'seeds/evaluation/reports/hashes.json', 'seeds/evaluation/reports/planning-live.json', 'app/modules/planning/model.py', 'app/evaluation/planning.py', 'seeds/evaluation/planning_sources.v1.json', 'seeds/evaluation/reports/roundtable-live.json', 'app/evaluation/roundtable.py', 'seeds/evaluation/probability_roundtable.v1.json', 'app/evaluation/teach.py', 'seeds/evaluation/probability_teach.v1.json'})
+        required.update({'app/gateway/courses.py', 'app/modules/learning/content_repository.py', 'app/modules/learning/content_contracts.py', 'app/modules/learning/output_gate.py', 'app/modules/learning/courses.py', 'app/infrastructure/db/migrations/versions/g01_001.py'})
+        required.update({'app/gateway/generation.py', 'app/modules/knowledge/service.py', 'app/modules/knowledge/search.py', 'app/modules/generation/service.py', 'app/modules/generation/mathematics.py', 'app/modules/generation/interaction.py', 'app/modules/resources/openmaic.py', 'app/modules/resources/proxy.py', 'app/modules/resources/service.py', 'app/infrastructure/db/migrations/versions/g05_001.py', 'app/infrastructure/db/migrations/versions/g05_002.py', 'app/modules/learning/exposure.py'})
+        required.update({'app/modules/evidence/insights.py', 'app/modules/evidence/insight_contracts.py', 'app/modules/planning/compiler.py', 'app/modules/planning/runtime.py'})
+        required.update({'app/gateway/skill_evolution.py','app/modules/skill_evolution/service.py','app/modules/skill_evolution/evaluator.py','app/modules/skill_evolution/graph.py','app/modules/skill_evolution/corpus.json','app/infrastructure/db/migrations/versions/g08_001.py'})
         missing = required.difference(archive.namelist())
         if missing:
             raise SystemExit(f"Wheel 缺少运行依赖: {', '.join(sorted(missing))}")

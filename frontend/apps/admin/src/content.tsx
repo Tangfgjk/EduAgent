@@ -1,5 +1,6 @@
 import { ProbabilityActivityPanel } from './probability-activity';
 import { CatalogPanel } from './catalog';
+import { DynamicContentPanel } from './dynamic-content';
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, ClipboardCheck } from 'lucide-react';
@@ -18,6 +19,7 @@ export function ContentPage() {
       <section className="card section-gap"><div className="card-head"><h2>{query.data.title}</h2><span className="badge">{query.data.enabled ? '开发测试已启用' : '未启用'}</span></div><p className="card-note">内容版本：<code style={{ overflowWrap: 'anywhere' }}>{query.data.content_version}</code></p><label className="field section-gap"><span><input type="checkbox" checked={acknowledged} onChange={e => setAcknowledged(e.target.checked)} style={{ width: 'auto', marginRight: 8 }} disabled={release.isPending}/>我已核对开发内容，并了解它尚未通过专业教学审核</span></label><button className="button primary" disabled={!acknowledged || release.isPending} onClick={() => release.mutate()}>{release.isPending ? '正在保存…' : query.data.enabled ? '停用开发单元' : '启用开发测试'}</button>{release.isError && <ErrorNotice error={release.error}/>}</section>
       <div className="grid two section-gap">{(query.data.tasks ?? []).map(task => <section className="card align-start" key={String(task.id)}><div className="card-head"><h2>{String(task.id)}</h2><span className="badge neutral">{String(task.stage)}</span></div><p className="body-copy">{String(task.stem)}</p><p className="card-note">数值真值：{String(task.answer)}</p><p className="card-note">输入要求：{String(task.format)}</p>{Array.isArray(task.hints) && task.hints.length > 0 && <ol className="detail-list">{task.hints.map((hint, index) => <li key={index}>L{index}：{String(hint)}</li>)}</ol>}</section>)}</div>
     </>}
+    <DynamicContentPanel/>
     <CatalogPanel/>
     <ActivityContentPanel/>
     <ProbabilityActivityPanel/>

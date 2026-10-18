@@ -21,6 +21,10 @@ def test_provider(config, snapshot):
         raise ProviderError('test_real_model_forbidden')
     if '[开发故障：超时]' in snapshot.get('student_text', ''):
         return FakeProvider((ProviderError('timeout'),))
+    if snapshot.get('purpose') == 'course_generation':
+        return FakeProvider((json.dumps(snapshot['fake_candidate'], ensure_ascii=False),))
+    if snapshot.get('purpose','').startswith('generic_'):
+        return FakeProvider((json.dumps({'quote':snapshot['student_text'][:80],'focus':'basis'},ensure_ascii=False),))
     if snapshot.get('purpose') == 'planning':
         from app.modules.planning.model import fake_proposal
         return FakeProvider((json.dumps(fake_proposal(snapshot), ensure_ascii=False),))

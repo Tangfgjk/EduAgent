@@ -6,7 +6,17 @@ from app.modules.errors import DomainError
 from app.modules.learning.development_content import CONTENT_VERSION, TASKS, TITLE, UNIT_ID
 
 
-def require_content(session, source_kind, unit_id=UNIT_ID, version=CONTENT_VERSION):
+def require_content(session, source_kind, unit_id=UNIT_ID, version=CONTENT_VERSION, workspace_id=None):
+    from app.infrastructure.db.models import GeneratedContentVersion, ActivityVersion, CourseBuild
+    activity = session.get(ActivityVersion, unit_id)
+    private = session.get(GeneratedContentVersion, activity.parent_unit_id if activity else unit_id)
+    if private and private.workspace_id is not None:
+        if private.workspace_id != workspace_id:
+            raise DomainError(404, "content_not_found", "未找到本空间内容")
+        build = session.scalar(select(CourseBuild).where(CourseBuild.unit_id == private.unit_id))
+        if build:
+            from app.modules.knowledge.service import check_snapshot
+            check_snapshot(session, build.sources)
     approval = session.get(ContentApproval, unit_id, with_for_update=True)
     if source_kind == "real_student":
         raise DomainError(409, "development_content_only", "当前为开发题库，完成专业内容审核前暂不面向真实学生开放")
@@ -16,13 +26,13 @@ def require_content(session, source_kind, unit_id=UNIT_ID, version=CONTENT_VERSI
     check_content(session, unit_id, version)
 
 
-def require_activity_content(session, source_kind, unit_id=None):
+def require_activity_content(session, source_kind, unit_id=None, workspace_id=None):
     from app.modules.learning.activity_catalog import get_activity
     from app.modules.learning.activity_content import UNIT_ID as default_id
-    item = get_activity(unit_id or default_id)
-    require_content(session, source_kind, item.unit_id, item.version)
-    if item.flow == 'teach_cycle_v1':
-        require_content(session, source_kind, item.parent.unit_id, item.parent.version)
+    item = get_activity(unit_id or default_id, session)
+    require_content(session, source_kind, item.unit_id, item.version, workspace_id)
+    if item.flow in {'teach_cycle_v1', 'roundtable_cycle_v1'}:
+        require_content(session, source_kind, item.parent.unit_id, item.parent.version, workspace_id)
 
 
 class Content:
@@ -33,7 +43,7 @@ class Content:
         approval = session.get(ContentApproval, self.unit_id)
         return {"unit_id": self.unit_id, "title": self.title, "content_version": self.version,
             "enabled": bool(approval and approval.enabled and approval.version == self.version),
-            "revision": approval.revision if approval else 0, "source": "self_authored_development",
+            "revision": approval.revision if approval else 0, "source": "registered_development" if self.unit_id.startswith('dynamic.') else "self_authored_development",
             "professional_review": False, "allowed_sources": ["synthetic", "adult_test"],
             "tasks": self.tasks if admin else []}
 
@@ -94,7 +104,8 @@ def catalog_unit(session, item, admin=False):
         "prerequisites": item.prerequisites, "task_count": len(item.tasks), "boundary": item.boundary}
 
 
-def catalog(session, admin=False):
-    from app.modules.learning.content_catalog import PACKS
+def catalog(session, admin=False, workspace_id=None):
+    from app.modules.learning.content_repository import ContentRepository
+    PACKS = ContentRepository(session, workspace_id=workspace_id, include_private=admin).packs()
     return {"items": [catalog_unit(session, item, admin) for item in PACKS],
         "coverage_note": f"当前有 {len(PACKS)} 个自编开发单元，共 {sum(len(p.tasks) for p in PACKS)} 题；不是七至九年级完整课程。新增概率计数、平均数与频率，新增内容须先保存开发审核依据再启用；全部未经专业教师审核，不面向真实学生。年级与先修关系仅供编排参考，不表示已掌握。圆桌与我教 AI 独立管理版本和开放。"}

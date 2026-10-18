@@ -20,6 +20,183 @@ class Base(DeclarativeBase):
     pass
 
 
+class GeneratedContentVersion(Base):
+    __tablename__ = 'generated_content_versions'
+    unit_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    version: Mapped[str] = mapped_column(String(64), unique=True)
+    spec: Mapped[dict] = mapped_column(JSON)
+    validation: Mapped[dict] = mapped_column(JSON)
+    creator_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    workspace_id: Mapped[str | None] = mapped_column(ForeignKey('workspaces.id'), nullable=True, index=True)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class AssessmentExposure(Base):
+    __tablename__ = 'assessment_exposures'
+    __table_args__ = (UniqueConstraint('run_id','task_id','content_version'),)
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'),index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey('agent_runs.id'))
+    task_id: Mapped[str] = mapped_column(String(100))
+    content_version: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class KnowledgeDocument(Base):
+    __tablename__ = 'knowledge_documents'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    version: Mapped[str] = mapped_column(String(64))
+    workspace_id: Mapped[str | None] = mapped_column(ForeignKey('workspaces.id'), nullable=True)
+    body: Mapped[dict] = mapped_column(JSON)
+    creator_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class KnowledgeSourceState(Base):
+    __tablename__ = 'knowledge_source_states'
+    source_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class GenerationPolicy(Base):
+    __tablename__ = 'generation_policy'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    courses: Mapped[bool] = mapped_column(Boolean, default=False)
+    interaction: Mapped[bool] = mapped_column(Boolean, default=False)
+    search: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class CourseBuild(Base):
+    __tablename__ = 'course_builds'
+    __table_args__ = (UniqueConstraint('workspace_id', 'creation_key'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    run_id: Mapped[str | None] = mapped_column(ForeignKey('agent_runs.id'), nullable=True)
+    creation_key: Mapped[str] = mapped_column(String(128))
+    topic: Mapped[str] = mapped_column(String(600))
+    intent: Mapped[dict] = mapped_column(JSON)
+    sources: Mapped[list] = mapped_column(JSON)
+    diagnostics: Mapped[list] = mapped_column(JSON)
+    attempts: Mapped[list] = mapped_column(JSON, default=list)
+    plan: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    candidate: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    validation: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    status: Mapped[str] = mapped_column(String(40))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    unit_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    repair_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class ResourceArtifact(Base):
+    __tablename__ = 'resource_artifacts'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    build_id: Mapped[str] = mapped_column(ForeignKey('course_builds.id'))
+    body: Mapped[dict] = mapped_column(JSON)
+    sha256: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24), default='pending_review')
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class SearchOperation(Base):
+    __tablename__ = 'search_operations'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    build_id: Mapped[str] = mapped_column(ForeignKey('course_builds.id'))
+    query: Mapped[str] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(24))
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    credits: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class ProductionReview(Base):
+    __tablename__ = 'production_reviews'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=new_id)
+    target_kind: Mapped[str] = mapped_column(String(24))
+    target_id: Mapped[str] = mapped_column(String(36),index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    decision: Mapped[str] = mapped_column(String(24))
+    note: Mapped[str] = mapped_column(String(2000))
+    reviewer_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class ResourceBudget(Base):
+    __tablename__ = 'resource_budgets'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=new_id)
+    secret_hash: Mapped[str] = mapped_column(String(64),unique=True)
+    enabled: Mapped[bool] = mapped_column(Boolean,default=False)
+    calls: Mapped[int] = mapped_column(Integer,default=0)
+    input_reserved: Mapped[int] = mapped_column(Integer,default=0)
+    output_reserved: Mapped[int] = mapped_column(Integer,default=0)
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class ResourceModelCall(Base):
+    __tablename__ = 'resource_model_calls'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=new_id)
+    budget_id: Mapped[str] = mapped_column(ForeignKey('resource_budgets.id'),index=True)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(24))
+    input_reserved: Mapped[int] = mapped_column(Integer)
+    output_reserved: Mapped[int] = mapped_column(Integer)
+    usage: Mapped[dict | None] = mapped_column(JSON,nullable=True)
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class OpenMAICJob(Base):
+    __tablename__ = 'openmaic_jobs'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'),index=True)
+    build_id: Mapped[str] = mapped_column(ForeignKey('course_builds.id'))
+    budget_id: Mapped[str] = mapped_column(ForeignKey('resource_budgets.id'),unique=True)
+    owner_id: Mapped[str] = mapped_column(String(36),default=new_id)
+    remote_id: Mapped[str | None] = mapped_column(String(100),nullable=True)
+    classroom_id: Mapped[str | None] = mapped_column(String(100),nullable=True)
+    status: Mapped[str] = mapped_column(String(24),default='pending')
+    next_poll_at: Mapped[int] = mapped_column(BigInteger,default=now)
+    lease_until: Mapped[int | None] = mapped_column(BigInteger,nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(64),nullable=True)
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class TaskVersion(Base):
+    __tablename__ = 'task_versions'
+    unit_id: Mapped[str] = mapped_column(ForeignKey('generated_content_versions.unit_id'), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    spec: Mapped[dict] = mapped_column(JSON)
+
+
+class ActivityVersion(Base):
+    __tablename__ = 'activity_versions'
+    unit_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    parent_unit_id: Mapped[str] = mapped_column(ForeignKey('generated_content_versions.unit_id'))
+    version: Mapped[str] = mapped_column(String(64), unique=True)
+    spec: Mapped[dict] = mapped_column(JSON)
+
+
+class CurriculumVersion(Base):
+    __tablename__ = 'curriculum_versions'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    version: Mapped[str] = mapped_column(String(64))
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class CourseBinding(Base):
+    __tablename__ = 'course_bindings'
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), primary_key=True)
+    curriculum_id: Mapped[str] = mapped_column(ForeignKey('curriculum_versions.id'))
+    active_unit_id: Mapped[str] = mapped_column(String(100))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
 class DevelopmentReviewScope(Base):
     __tablename__ = 'development_review_scopes'
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -277,7 +454,7 @@ class AgentEvent(Base):
 
 class ContentApproval(Base):
     __tablename__ = "content_approvals"
-    unit_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    unit_id: Mapped[str] = mapped_column(String(100), primary_key=True)
     version: Mapped[str] = mapped_column(String(64))
     enabled: Mapped[bool] = mapped_column(Boolean)
     revision: Mapped[int] = mapped_column(Integer)
@@ -439,3 +616,30 @@ class StrategyActivation(Base):
     idempotency_key: Mapped[str] = mapped_column(String(128))
     request_hash: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class EvolutionDataset(Base):
+    __tablename__='evolution_datasets'
+    id: Mapped[str] = mapped_column(ForeignKey('agent_runs.id'),primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'),index=True)
+    body: Mapped[dict] = mapped_column(JSON)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class EvolutionCandidate(Base):
+    __tablename__='evolution_candidates'
+    id: Mapped[str] = mapped_column(ForeignKey('agent_runs.id'),primary_key=True)
+    dataset_id: Mapped[str] = mapped_column(ForeignKey('evolution_datasets.id'),unique=True)
+    parent_strategy_id: Mapped[str] = mapped_column(ForeignKey('strategy_versions.id'))
+    body: Mapped[dict] = mapped_column(JSON)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class EvolutionEvaluation(Base):
+    __tablename__='evolution_evaluations'
+    id: Mapped[str] = mapped_column(ForeignKey('evolution_candidates.id'),primary_key=True)
+    body: Mapped[dict] = mapped_column(JSON)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger,default=now)

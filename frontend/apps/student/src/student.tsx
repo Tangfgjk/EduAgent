@@ -1,4 +1,7 @@
+import { EvolutionWorkbench } from '@wenjin/ui';
 import { Units } from './units';
+import { CourseBar } from './course';
+import { GenerationPage } from './generation';
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
@@ -16,6 +19,7 @@ import { PlannerPage } from './planner';
 const navigation: NavItem[] = [
   { path: 'home', label: '今日学习', icon: Compass, section: '学习空间' },
   { path: 'spaces', label: '项目与会话', icon: FolderOpen },
+  { path: 'courses', label: '主题与课程', icon: Sparkles },
   { path: 'units', label: '数学单元', icon: BookOpen },
   { path: 'plan', label: '学习计划', icon: CalendarDays, section: '在项目中学习' },
   { path: 'study', label: '津津陪学', icon: MessageCircle },
@@ -23,6 +27,7 @@ const navigation: NavItem[] = [
   { path: 'roundtable', label: '圆桌讨论', icon: MessagesSquare },
   { path: 'teach', label: '我教 AI', icon: GraduationCap },
   { path: 'evidence', label: '成长证据', icon: ChartNoAxesCombined, section: '回望与调整' },
+  { path: 'skill-evolution', label: 'Skill 离线改进', icon: Sparkles },
   { path: 'planner', label: '规划与策略', icon: Sparkles },
   { path: 'settings', label: '偏好与账号', icon: Settings },
 ];
@@ -51,13 +56,15 @@ export function StudentApp({ account }: { account: Account }) {
   const sidebar = <div className="workspace-picker"><label htmlFor="workspace-picker">当前工作空间</label><select id="workspace-picker" value={current?.workspace_id ?? ''} disabled={spaces.isPending || spaces.isError} onChange={event => choose(items.find(item => item.workspace_id === event.target.value))}><option value="" disabled>选择一个项目或临时会话</option>{items.map(item => <option key={item.workspace_id} value={item.workspace_id}>{item.kind === 'temporary' ? '临时 · ' : ''}{item.title}{item.status === 'archived' ? '（已归档）' : ''}</option>)}</select><div className="picker-actions"><button className="button small" onClick={() => setAction({ mode: 'create', kind: 'project' })}><Plus size={13}/>项目</button><button className="button small" onClick={() => setAction({ mode: 'create', kind: 'temporary' })}><MessageCirclePlus size={13}/>临时会话</button></div></div>;
   const context = current ? <div className={`context-bar ${current.kind === 'temporary' ? 'temporary' : ''}`}><div className="inline"><span className="context-icon">{current.kind === 'project' ? <FolderOpen size={20}/> : <MessageCircle size={20}/>}</span><div><strong>{current.title}</strong><small>{current.kind === 'temporary' ? '临时空间 · 不自动进入正式项目的长期学习画像' : '正式项目 · 陪学、复习与讨论将围绕此项目展开'}</small></div></div><span className={`badge ${current.status === 'archived' ? 'gold' : ''}`}>{current.status === 'archived' ? '已归档 · 只读' : current.kind === 'project' ? '项目空间' : '临时会话'}</span></div> : undefined;
   const target = action && action.mode !== 'create' ? items.find(item => item.workspace_id === action.id) : undefined;
-  return <Shell role="student" navigation={navigation} sidebar={sidebar} context={context} search={search}>
+  return <Shell role="student" navigation={navigation} sidebar={sidebar} context={<>{context}{current && <CourseBar key={current.workspace_id} workspace={current}/>}</>} search={search}>
     {notice && <Success>{notice}</Success>}
     {spaces.isPending ? <Loading text="正在读取你的工作空间…"/> : spaces.isError ? <ErrorNotice error={spaces.error} retry={() => { void spaces.refetch(); }}/> : unavailable ? <Empty title="这个工作空间暂不可访问" action={<button className="button" onClick={() => { choose(); navigate('/spaces'); }}>返回项目列表</button>}>它可能不属于当前账号。请从自己的项目列表重新选择。</Empty> : <Routes>
       <Route path="home" element={<Home account={account} items={items} current={current} search={search} create={kind => setAction({ mode: 'create', kind })} enter={enter}/>}/>
       <Route path="spaces" element={<Spaces items={items} current={current} enter={enter} action={setAction}/>}/>
+      <Route path="courses" element={current ? <GenerationPage key={current.workspace_id} workspace={current}/> : <Empty title="先创建或选择学习空间">主题准备和生成课程归属于自己的项目或临时会话。</Empty>}/>
       <Route path="units" element={<Units search={search}/>}/>
       <Route path="settings" element={<SettingsView account={account}/>}/>
+      <Route path="skill-evolution" element={current?<EvolutionWorkbench key={current.workspace_id} workspace={current}/>:<Empty title="先选择正式项目">请先选择自己的项目。</Empty>}/>
       <Route path="evidence" element={<EvidencePage key={current?.workspace_id ?? 'global'} workspace={current}/>}/>
       {['plan', 'study', 'review', 'roundtable', 'teach', 'planner'].map(page => <Route key={page} path={page} element={current ? page === 'plan' ? <PlanPage key={current.workspace_id} workspace={current}/> : page === 'study' ? <StudyPage key={current.workspace_id} workspace={current}/> : page === 'review' ? <ReviewPage key={current.workspace_id} workspace={current}/> : page === 'roundtable' || page === 'teach' ? <ActivityPage key={current.workspace_id + page} workspace={current} kind={page}/> : <PlannerPage key={current.workspace_id} workspace={current}/> : <Empty title="先选择一个学习空间" action={<button className="button primary" onClick={() => setAction({ mode: 'create', kind: 'project' })}><Plus size={16}/>新建学习项目</button>}>正式项目帮助你持续推进目标；临时会话适合一次探索。</Empty>}/>)}
       <Route path="*" element={<Navigate to={{ pathname: '/home', search }} replace/>}/>

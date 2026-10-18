@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -45,6 +46,7 @@ for (const kind of ['roundtable', 'teach'] as const) {
     await navigate(page, label);
     // This suite covers the original equation template, independent of the newest default pack.
     await page.getByLabel('选择互动单元').selectOption('math.g7.equations.activities.dev1');
+    await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始' + label, exact: true }).click();
     await expect(page.getByText('等待你的第一段表达', { exact: true })).toBeVisible();
     await page.getByLabel('我的数值表达', { exact: true }).fill('6');

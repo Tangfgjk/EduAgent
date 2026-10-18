@@ -16,8 +16,9 @@ def request(**changes):
     return GenerationRequest(messages=(Message(role="user", content="2+3"),), **changes)
 
 
+@pytest.mark.parametrize('mode',['text','json_object'])
 @pytest.mark.asyncio
-async def test_deepseek_contract_and_no_reasoning_leak():
+async def test_deepseek_contract_and_no_reasoning_leak(mode):
     def handle(req):
         import json
         body = json.loads(req.content)
@@ -25,10 +26,11 @@ async def test_deepseek_contract_and_no_reasoning_leak():
         assert req.headers["authorization"] == "Bearer test-secret"
         assert body["max_tokens"] == 128 and body["stream"] is False
         assert body["thinking"] == {"type": "disabled"}
+        assert body.get('response_format') == ({'type':'json_object'} if mode=='json_object' else None)
         return httpx.Response(200, json={"model": "resolved-model", "choices": [{
             "finish_reason": "stop", "message": {"content": "5", "reasoning_content": "private"}}],
             "usage": {"prompt_tokens": 5, "completion_tokens": 1}})
-    result = await ChatCompletionsProvider(config(), httpx.MockTransport(handle)).generate(request())
+    result = await ChatCompletionsProvider(config(), httpx.MockTransport(handle)).generate(request(response_format=mode))
     assert result.text == "5" and result.returned_model == "resolved-model"
     assert result.usage.input_tokens == 5 and not result.simulated
     assert "private" not in result.model_dump_json() and "text=" not in repr(result)

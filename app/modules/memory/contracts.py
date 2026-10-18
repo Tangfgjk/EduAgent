@@ -87,6 +87,7 @@ class CardOut(Contract):
 
 
 class CardsOut(Contract):
+    strategy: dict | None = None
     items: list[CardOut]
     due_count: int
     schedule_policy: Literal["fixed-recall.v1"] = "fixed-recall.v1"

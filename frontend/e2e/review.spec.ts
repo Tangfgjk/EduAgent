@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -48,6 +49,7 @@ test('真实复习、来源自述、局部记忆和归档项目全局追溯', as
   await page.getByRole('button', { name: '我确认这份计划' }).click();
   await expect(page.getByText('计划已确认', { exact: true })).toBeVisible();
   await navigate(page, '津津陪学');
+  await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元' }).click();
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '3');
@@ -97,6 +99,7 @@ test('手机临时复习、独立诊断隔离、全局排除临时空间', async
   const title = '仅局部复习 ' + Date.now();
   await space(page, title, true);
   await navigate(page, '津津陪学');
+  await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元' }).click();
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '0');

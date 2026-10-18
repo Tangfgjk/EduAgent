@@ -9,12 +9,14 @@ import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.infrastructure.db.models import (Account, AgentRun, AuditEvent, ModelConfiguration,
     ModelDailyBudget, ModelOperation, ModelPolicy, LearningInput, OutboxJob, Workspace, new_id, now)
 from app.llm.provider import (FakeProvider, GenerationRequest, ProviderConfig, ProviderError, create_provider)
 from app.modules.errors import DomainError
+from app.modules.learning.output_gate import render_result
+from app.modules.learning.content_repository import content_hash
 from app.modules.learning.model_coaching import (PROMPT_VERSION, MULTITURN_PROMPTS, SUPPORTED_PROMPTS,
     UNIT, freeze_request, validate_proposal)
 from app.modules.learning.service import request_hash
@@ -62,7 +64,7 @@ def public_operation(op, config, run=None, include_result=True):
     return {"operation_id": op.id, "configuration_id": op.configuration_id,
             "status": op.status, "task_id": op.task_id, "hint_level": op.hint_level,
             "vendor": config.vendor, "model": config.model, "simulated": config.vendor == "fake",
-            "current": current, "result": op.result if current and include_result else None,
+            "current": current, "result": (render_result(op.result) if (op.request.get('purpose') in {'teach', 'roundtable'} or op.request.get('purpose','').startswith('generic_')) else op.result) if current and include_result else None,
             "prompt_version": op.request.get("prompt_version", PROMPT_VERSION),
             "context_turns": op.request.get("context_turns", 1),
             "context": op.request.get("context", []) if current and include_result else [],
@@ -78,7 +80,8 @@ def runtime_status(session):
     budget = session.get(ModelDailyBudget, (day, "global"))
     midnight = int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=BUSINESS_TIMEZONE).timestamp())
     today = list(session.scalars(select(ModelOperation).where(ModelOperation.created_at >= midnight)))
-    return {"revision": policy.revision, "active": public_configuration(config),
+    from app.modules.learning.purpose_scopes import scopes
+    return {"purpose_scopes": scopes(config,session), "revision": policy.revision, "active": public_configuration(config),
             "deepseek_key_configured": bool(model_key()), "budget_day": day, "budget_timezone": "Asia/Shanghai",
             "reserved_calls": budget.calls if budget else 0,
             "input_tokens_known": sum((op.usage or {}).get("input_tokens") or 0 for op in today),
@@ -178,10 +181,12 @@ def collect_teach_context(session, account, run, config, policy, item):
     return history, sources
 
 
-def reserve(session, account, run, entry, text, *, teach_item=None, planning_bundle=None):
+def reserve(session, account, run, entry, text, *, teach_item=None, planning_bundle=None, course_build=None):
     if planning_bundle is not None and (run.kind != 'strategy' or entry.payload.get('operation') != 'strategy_start' or not entry.payload.get('request_model')):
         raise DomainError(409, 'model_scope_forbidden', '仅新规划可请求模型候选')
-    if planning_bundle is None and teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
+    from app.modules.generation.interaction import enabled as generic_enabled
+    generic = course_build is None and planning_bundle is None and generic_enabled(session) and (run.kind in {"tutor", "teach", "roundtable"})
+    if not generic and course_build is None and planning_bundle is None and teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
         raise DomainError(409, "model_scope_forbidden", "模型追问目前仅开放概率练习，不用于诊断或独立检测")
     if teach_item is not None:
         from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
@@ -191,8 +196,14 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
             and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3)
         teach_allowed = run.kind == 'teach' and teach_item.unit_id == TEACH_UNIT and (initial or followup)
         roundtable_allowed = run.kind == 'roundtable' and teach_item.unit_id == ROUNDTABLE_UNIT and initial
-        if not (teach_allowed or roundtable_allowed):
+        if not (teach_allowed or roundtable_allowed or (generic and (initial or (run.kind == "teach" and followup)))):
             raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于有界概率讲解，不用于另一题验证')
+    if generic:
+        if run.kind == 'tutor' and (run.view['phase'] != 'practice' or not run.view['can_hint']):
+            raise DomainError(409, 'independent_check', '诊断和独立检测不开放模型辅助')
+        count = session.scalar(select(func.count()).select_from(ModelOperation).where(
+            ModelOperation.run_id == run.id, ModelOperation.request['purpose'].as_string().like('generic_%')))
+        if count >= 3: raise DomainError(429, 'activity_budget_exhausted', '每次学习活动最多三次通用模型追问')
     if account.source_kind not in {"synthetic", "adult_test"}:
         raise DomainError(403, "model_source_forbidden", "当前模型仅用于模拟或成人开发测试")
     policy = session.get(ModelPolicy, 1, with_for_update=True)
@@ -211,7 +222,18 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
         if limit > 0 and budget.calls >= limit:
             raise DomainError(429, "model_budget_exhausted", "今日模型调用额度已用完，可继续使用预设提示")
         budget.calls += 1
-    if planning_bundle is not None:
+    if course_build is not None:
+        from app.modules.generation.service import freeze_request as freeze_course, fake_proposal
+        from app.infrastructure.db.models import GenerationPolicy
+        if run.kind != 'course_build' or not session.get(GenerationPolicy, 1).courses:
+            raise DomainError(409, 'model_scope_forbidden', '课程生成用途未开放')
+        snapshot = freeze_course(course_build, account, config)
+        if config.vendor == 'fake': snapshot['fake_candidate'] = fake_proposal(course_build)
+    elif generic:
+        from app.modules.generation.interaction import freeze as freeze_generic
+        from app.modules.learning.content_catalog import get_pack
+        snapshot = freeze_generic(run, teach_item or get_pack(run.view['unit_id'], session), text, entry.payload.get('answer', ''), account, config, session)
+    elif planning_bundle is not None:
         from app.modules.planning.model import freeze_request as freeze_planning
         snapshot = freeze_planning(planning_bundle, entry.payload['candidate'], account, config)
     elif teach_item is None:
@@ -231,7 +253,7 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
         snapshot = freeze_teach(teach_item, text, entry.payload['answer'], account,
             config.max_output_tokens, config.prompt_version, **context)
     op = ModelOperation(input_id=entry.id, run_id=run.id, workspace_id=run.workspace_id, account_id=account.id,
-        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
+        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='course.production.v1' if course_build is not None else 'planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
         hint_level=len((run.view or {}).get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
     session.add(op)
     session.flush()
@@ -271,6 +293,10 @@ class ModelTaskRunner:
     @staticmethod
     def _provider(config, snapshot):
         if config.vendor == "fake":
+            if snapshot.get('purpose', '').startswith('generic_'):
+                return FakeProvider((json.dumps({'quote':snapshot['student_text'][:80], 'focus':'basis'},ensure_ascii=False),))
+            if snapshot.get('purpose') == 'course_generation':
+                return FakeProvider((json.dumps(snapshot['fake_candidate'], ensure_ascii=False),))
             if snapshot.get('purpose') == 'planning':
                 from app.modules.planning.model import fake_proposal
                 return FakeProvider((json.dumps(fake_proposal(snapshot), ensure_ascii=False),))
@@ -282,7 +308,7 @@ class ModelTaskRunner:
                 proposal['question'] = '你能说明讲解中每个基本结果是怎样确定的吗？'
             return FakeProvider((json.dumps(proposal, ensure_ascii=False),))
         return create_provider(ProviderConfig(vendor="deepseek", model=config.model,
-            api_key=model_key(), max_output_tokens=config.max_output_tokens, timeout_seconds=30))
+            api_key=model_key(), max_output_tokens=4096 if snapshot.get('purpose') == 'course_generation' else config.max_output_tokens, timeout_seconds=30))
 
     def _locked(self, session, op_id):
         candidate = session.get(ModelOperation, op_id)
@@ -301,7 +327,33 @@ class ModelTaskRunner:
         if not reason:
             from app.modules.learning.content_service import require_content
             try:
-                if op.request.get('purpose') == 'planning':
+                if op.request.get('purpose') == 'course_generation':
+                    from app.infrastructure.db.models import CourseBuild, GenerationPolicy
+                    from app.modules.knowledge.service import check_snapshot
+                    row = session.get(CourseBuild, op.request['build_id'])
+                    if (not row or row.run_id != run.id or row.workspace_id != run.workspace_id or row.status not in {'queued', 'generating'}
+                            or not session.get(GenerationPolicy, 1).courses or content_hash(row.sources) != op.request.get('sources_hash')):
+                        raise DomainError(409, 'stale_result', '课程生成范围或来源已变更')
+                    check_snapshot(session, row.sources)
+                elif op.request.get('purpose', '').startswith('generic_'):
+                    from app.modules.generation.interaction import enabled
+                    from app.modules.learning.content_catalog import get_pack
+                    from app.modules.learning.content_service import require_activity_content
+                    if not enabled(session): raise DomainError(409,'model_paused','通用互动用途已停用')
+                    if run.kind == 'tutor':
+                        item = get_pack(run.view['unit_id'], session)
+                        if run.view['phase'] != 'practice': raise DomainError(409,'independent_check','不提供检测辅助')
+                        require_content(session, account.source_kind, item.unit_id, item.version, run.workspace_id)
+                        current_version = item.version
+                    else:
+                        from app.modules.learning.activity_catalog import activity_for_run
+                        item = activity_for_run(run, session=session)
+                        if run.view['phase'] != 'challenge': raise DomainError(409,'stale_result','互动步骤已更新')
+                        require_activity_content(session, account.source_kind, item.unit_id, run.workspace_id)
+                        current_version = item.parent.version
+                    if current_version != op.request.get('content_version') or item.unit_id != op.request.get('unit_id'):
+                        raise DomainError(409,'stale_result','内容版本已变化')
+                elif op.request.get('purpose') == 'planning':
                     from app.modules.planning.graph import VERSION as PLANNING_VERSION
                     from app.modules.planning.service import require_fresh
                     from app.modules.learning.activity_service import require_idle
@@ -312,12 +364,12 @@ class ModelTaskRunner:
                         raise DomainError(409, 'stale_result', '规划输入或来源已变化')
                     require_fresh(session, run, body['bundle'], body['base_revision'], body['expires_at'])
                     require_idle(session, run.workspace_id, ['tutor', 'teach', 'roundtable'])
-                elif op.request.get('purpose') in {'teach', 'roundtable'}:
+                elif (op.request.get('purpose') in {'teach', 'roundtable'} or op.request.get('purpose','').startswith('generic_')):
                     from app.modules.learning.activity_catalog import activity_for_run
                     from app.modules.learning.content_service import require_activity_content
                     from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
                     from app.modules.learning.roundtable_coaching import UNIT as ROUNDTABLE_UNIT
-                    item = activity_for_run(run)
+                    item = activity_for_run(run, session=session)
                     expected_kind = op.request['purpose']
                     expected_unit = TEACH_UNIT if expected_kind == 'teach' else ROUNDTABLE_UNIT
                     if (run.kind != expected_kind or item.unit_id != expected_unit or run.view['phase'] != 'challenge'
@@ -326,7 +378,7 @@ class ModelTaskRunner:
                             or item.parent.version != op.request.get('content_version')):
                         raise DomainError(409, 'stale_result', '讲解步骤已更新')
                     # Match HTTP/teaching-worker order: activity approval, then parent approval.
-                    require_activity_content(session, account.source_kind, item.unit_id)
+                    require_activity_content(session, account.source_kind, item.unit_id, run.workspace_id)
                 else:
                     require_content(session, account.source_kind, UNIT, op.request["content_version"])
             except DomainError as error:
@@ -337,6 +389,15 @@ class ModelTaskRunner:
     def _end(op, status, error):
         op.status, op.error_code, op.finished_at = status, error, now()
         op.lease_token, op.lease_until = None, None
+        if op.request.get('purpose') == 'course_generation' and status != 'succeeded':
+            from sqlalchemy.orm import object_session
+            from app.infrastructure.db.models import CourseBuild
+            session = object_session(op)
+            row = session.get(CourseBuild, op.request['build_id'])
+            if row and row.run_id == op.run_id:
+                row.status = 'unknown' if status == 'unknown' else 'cancelled' if status == 'cancelled' else 'failed'
+                row.revision += 1
+                session.get(AgentRun, op.run_id).status = 'cancelled' if status == 'cancelled' else 'failed'
 
     def recover(self):
         with self.db.transaction() as session:
@@ -415,7 +476,13 @@ class ModelTaskRunner:
             try:
                 if result.finish_reason != "stop":
                     raise ProviderError("truncated_output")
-                if claim['request'].get('purpose') == 'planning':
+                if claim['request'].get('purpose') == 'course_generation':
+                    from app.modules.generation.service import validate_result
+                    proposal = validate_result(session, result.text, claim['request'])
+                elif claim['request'].get('purpose', '').startswith('generic_'):
+                    from app.modules.generation.interaction import validate as validate_generic
+                    proposal = validate_generic(result.text, claim['request'])
+                elif claim['request'].get('purpose') == 'planning':
                     from app.modules.planning.model import validate_proposal as validate_planning
                     proposal = validate_planning(result.text, claim['request'])
                 elif claim['request'].get('purpose') == 'roundtable':
@@ -431,7 +498,10 @@ class ModelTaskRunner:
             else:
                 op.result = proposal
                 self._end(op, "succeeded", None)
-                if claim['request'].get('purpose') == 'planning':
+                if claim['request'].get('purpose') == 'course_generation':
+                    from app.modules.generation.service import accept_result
+                    accept_result(session, op)
+                elif claim['request'].get('purpose') == 'planning':
                     from app.modules.planning.service import queue_model_candidate
                     queue_model_candidate(session, op)
             return True
@@ -467,6 +537,10 @@ class ModelTaskRunner:
     def step(self, operation_id=None):
         claim = self.claim(operation_id)
         if claim is None:
+            if operation_id is None:
+                from app.modules.knowledge.search import SearchRunner
+                from app.modules.resources.openmaic import OpenMAICRunner
+                return SearchRunner(self.db).step() or OpenMAICRunner(self.db).step()
             return False
         asyncio.run(self._execute(claim))
         return True

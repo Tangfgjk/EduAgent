@@ -1,3 +1,4 @@
+import { EvolutionWorkbench } from '@wenjin/ui';
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
@@ -9,14 +10,17 @@ import { ContentPage, ReviewsPage } from './content';
 import { StrategiesPage } from './strategies';
 import { ModelRuntimePanel } from './model-runtime';
 import { EvaluationsPage } from './evaluations';
+import { GenerationManagement } from './generation';
 
 const navigation: NavItem[] = [
   { path: 'overview', label: '试点概览', icon: LayoutDashboard, section: '教学支持' },
   { path: 'students', label: '学生账号', icon: Users },
   { path: 'content', label: '知识点与题库', icon: BookOpen, section: '质量与依据' },
+  { path: 'generation', label: '课程生成与资源', icon: Sparkles },
   { path: 'review', label: '内容与解答复核', icon: ClipboardCheck },
   { path: 'runs', label: '运行记录', icon: ListChecks },
   { path: 'evaluations', label: '评测工作台', icon: ClipboardCheck },
+  { path: 'skill-evolution', label: 'Skill 进化评测', icon: Sparkles },
   { path: 'strategies', label: '策略评审', icon: FileCheck2 },
   { path: 'config', label: '配置与权限', icon: Settings, section: '管理' },
 ];
@@ -24,8 +28,10 @@ const navigation: NavItem[] = [
 export function AdminApp({ account }: { account: Account }) {
   return <Shell role="admin" navigation={navigation}><Routes>
     <Route path="overview" element={<Overview account={account}/>}/><Route path="students" element={<Students account={account}/>}/>
+    <Route path="skill-evolution" element={<EvolutionWorkbench admin/>}/>
     <Route path="content" element={<ContentPage/>}/><Route path="review" element={<ReviewsPage/>}/>
     <Route path="runs" element={<Preparation page="runs"/>}/><Route path="strategies" element={<StrategiesPage/>}/>
+    <Route path="generation" element={<GenerationManagement/>}/>
     <Route path="evaluations" element={<EvaluationsPage/>}/>
     <Route path="config" element={<Configuration account={account}/>}/><Route path="*" element={<Navigate to="/overview" replace/>}/>
   </Routes></Shell>;

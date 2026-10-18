@@ -24,7 +24,7 @@ def category(fact):
     if fact.kind == "activity_contribution": return "activity"
     if fact.kind == "reflection": return "reflection"
     if fact.kind == "hint": return "hint"
-    if fact.kind == "answer" and fact.payload["stage"] == "checkpoint": return "checkpoint"
+    if fact.kind == "answer" and fact.payload["stage"] == "checkpoint" and fact.payload.get("assessment_exposure") == "fresh": return "checkpoint"
     if fact.kind in {"answer", "review_answer"}: return "answer"
     return "process"
 
@@ -32,14 +32,14 @@ def category(fact):
 class Evidence:
     spaces = Workspaces()
 
-    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0):
+    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0, include_archived=True):
         self.spaces._student(actor)
         if wid:
             workspaces = [self.spaces.owned(session, actor, wid)]
         else:
             # 全局固定为本人正式项目；按固定顺序锁，与写入/归档互斥，多个读取顺序一致。
             workspaces = list(session.scalars(select(Workspace).where(Workspace.owner_id == actor.account.id,
-                Workspace.kind == "project").order_by(Workspace.id).with_for_update()))
+                Workspace.kind == "project", *([] if include_archived else [Workspace.status == "active"])).order_by(Workspace.id).with_for_update()))
         by_id = {workspace.id: workspace for workspace in workspaces}
         timestamp = now()
         midnight = datetime.fromtimestamp(timestamp, LOCAL_ZONE).replace(hour=0, minute=0, second=0, microsecond=0)

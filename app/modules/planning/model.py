@@ -51,6 +51,8 @@ def freeze_request(bundle, candidate, account, config):
         add('self:' + str(index), note['text'][:200], {'kind': 'student_self_report', 'note_id': note['note_id']}, 200)
     counts = bundle['global_summary']['counts']
     add('global', '同账号正式项目计数：' + json.dumps(counts, ensure_ascii=False, sort_keys=True), {'kind': 'global_counts'})
+    execution=candidate.get('execution')
+    candidate={k:v for k,v in candidate.items() if k!='execution'}
     payload = {'requested_policy': candidate, 'sources': sources,
         'limits': 'facts<=6（每条原文200字），self<=3（200字），material<=5（每份800字），仅全局计数；不是全文或能力诊断。'}
     request = GenerationRequest(messages=(Message(role='system', content=(
@@ -66,12 +68,13 @@ def freeze_request(bundle, candidate, account, config):
     )), Message(role='user', content=json.dumps(payload, ensure_ascii=False))), max_output_tokens=config.max_output_tokens)
     return {'purpose': 'planning', 'prompt_version': PROMPT_VERSION, 'configuration_prompt_version': config.prompt_version,
         'bundle_hash': request_hash(bundle), 'sources': sources, 'source_refs': refs, 'generation': request.model_dump(),
-        'content_version': 'planning.sources.v1', 'requested_policy': candidate}
+        'content_version': 'planning.sources.v1', 'requested_policy': candidate, 'execution_policy': execution}
 
 
 def validate_proposal(text, snapshot):
     try:
         result = Proposal.model_validate_json(text)
+        if result.policy.execution is not None:raise ValueError('unapproved_model_execution')
         seen = set()
         for citation in result.citations:
             source = snapshot['sources'].get(citation.source_id)
@@ -84,7 +87,9 @@ def validate_proposal(text, snapshot):
             raise ValueError('missing objective or subjective evidence')
         if any(s.startswith('fact:') for s in snapshot['sources']) and not any(s.startswith('fact:') for s in seen):
             raise ValueError('missing fact evidence')
-        return result.model_dump()
+        output=result.model_dump()
+        if snapshot.get('execution_policy'):output['policy']['execution']=snapshot['execution_policy']
+        return output
     except ValueError:
         raise ProviderError('invalid_planning_proposal') from None
 

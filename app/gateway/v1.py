@@ -21,8 +21,12 @@ from app.gateway.memory import memory_router
 from app.gateway.activities import activity_router
 from app.gateway.evidence import evidence_router
 from app.gateway.planning import planning_router
+from app.gateway.skill_evolution import evolution_router
 from app.gateway.model_runtime import model_runtime_router
 from app.gateway.development import development_router
+from app.gateway.courses import course_router
+from app.gateway.generation import generation_router
+from app.modules.resources.proxy import proxy_router
 from app.infrastructure.db.database import Database
 from app.infrastructure.db.models import Account
 from app.modules.errors import DomainError
@@ -144,7 +148,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             if database is None:
                 db.close()
 
-    app = FastAPI(title="桂子问津", version="0.13.0", lifespan=lifespan,
+    app = FastAPI(title="桂子问津", version="0.18.0", lifespan=lifespan,
                   responses={status: {"model": ErrorOut} for status in (401, 403, 409, 422, 429, 503)})
 
     @app.middleware("http")
@@ -296,7 +300,11 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app.include_router(activity_router(student, admin))
     app.include_router(evidence_router(student))
     app.include_router(planning_router(student, admin))
+    app.include_router(evolution_router(student,admin))
     app.include_router(model_runtime_router(admin))
     app.include_router(development_router(admin))
+    app.include_router(course_router(student, admin))
+    app.include_router(generation_router(student, admin))
+    app.include_router(proxy_router(db))
     mount_frontends(app, Path(settings.frontend_dir) if settings.frontend_dir else Path(__file__).resolve().parents[2] / "frontend" / "dist")
     return app

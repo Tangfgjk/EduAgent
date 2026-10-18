@@ -85,15 +85,17 @@ PACKS = (
 )
 
 
-def get_pack(unit_id=original.UNIT_ID):
-    for item in PACKS:
-        if item.unit_id == unit_id:
-            return item
-    raise DomainError(404, "content_not_found", "未找到此开发内容包")
+def get_pack(unit_id=original.UNIT_ID, session=None):
+    from app.modules.learning.content_repository import ContentRepository
+    return ContentRepository(session, include_private=True).pack(unit_id)
 
 
-def pack_for_task(task_id, version):
-    for item in PACKS:
+def pack_for_task(task_id, version, session=None):
+    from app.modules.learning.content_repository import ContentRepository
+    for item in ContentRepository(session, include_private=True).packs():
         if item.version == version and any(task["id"] == task_id for task in item.tasks):
             return item
+    for activity in ContentRepository(session, include_private=True).activities():
+        if activity.parent.version == version and activity.verification_task and activity.verification_task['id'] == task_id:
+            return activity.parent
     raise DomainError(409, "source_version_conflict", "内容版本已变化，不能自动执行此历史任务")

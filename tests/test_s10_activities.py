@@ -40,7 +40,7 @@ def test_probability_two_contributions_exact_versions_and_evidence(env, kind):
     client, wid, path = start(env,kind)
     run=client.get(path).json()
     assert run['view']['task']['task_id']=='P-PRB-02'
-    assert set(run['view']['task'])=={'task_id','stem','answer_format'}
+    assert set(run['view']['task'])=={'task_id','stem','answer_format','exposure_status'}
     assert run['view']['messages']==[] and run['view']['activity_version']==PROB.version
     challenge=send(env,client,path,'contribute','1/2')
     assert challenge['view']['phase']=='challenge'

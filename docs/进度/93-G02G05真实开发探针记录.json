@@ -1,0 +1,201 @@
+{
+  "schema": "development_probe.v1",
+  "date": "2026-10-18",
+  "source_kind": "synthetic",
+  "topic": "负数乘除和运算顺序",
+  "real_learners": false,
+  "teaching_effect_evaluated": false,
+  "human_semantic_review": "self_authored_development_only_not_professional",
+  "workspace_id": "10f0f005-078f-44b6-b04c-f3b2f8eabac4",
+  "build_id": "6fed7dd1-2ace-471e-ab83-a2d14e1f7eae",
+  "calls": [
+    {
+      "purpose": "course_generation",
+      "attempt": "initial",
+      "operation": {
+        "operation_id": "995cca9c-1ca6-4039-b8e1-a2383b35e753",
+        "configuration_id": "1b46761f-91ff-46ce-a616-108bf01477e2",
+        "status": "failed",
+        "task_id": "course.production.v1",
+        "hint_level": 0,
+        "vendor": "deepseek",
+        "model": "deepseek-flash",
+        "simulated": false,
+        "current": true,
+        "result": null,
+        "prompt_version": "course-build.v1",
+        "context_turns": 1,
+        "context": [],
+        "error_code": "invalid_course_proposal",
+        "usage": {
+          "input_tokens": 884,
+          "output_tokens": 358
+        },
+        "elapsed_ms": 4113,
+        "billing_unknown": false
+      }
+    },
+    {
+      "purpose": "course_generation",
+      "attempt": "one_manual_repair",
+      "operation": {
+        "operation_id": "a796a93d-b7ed-46cd-afed-1815db9fddf2",
+        "configuration_id": "1b46761f-91ff-46ce-a616-108bf01477e2",
+        "status": "succeeded",
+        "task_id": "course.production.v1",
+        "hint_level": 0,
+        "vendor": "deepseek",
+        "model": "deepseek-flash",
+        "simulated": false,
+        "current": true,
+        "result": null,
+        "prompt_version": "course-build.v1",
+        "context_turns": 1,
+        "context": [],
+        "error_code": null,
+        "usage": {
+          "input_tokens": 884,
+          "output_tokens": 406
+        },
+        "elapsed_ms": 3971,
+        "billing_unknown": false
+      }
+    },
+    {
+      "purpose": "tutor",
+      "operation": {
+        "operation_id": "5dbc6cfd-e68a-4fb5-a06c-67f61dcefd13",
+        "configuration_id": "1b46761f-91ff-46ce-a616-108bf01477e2",
+        "status": "succeeded",
+        "task_id": "GEN-6fed7dd1-1",
+        "hint_level": 0,
+        "vendor": "deepseek",
+        "model": "deepseek-flash",
+        "simulated": false,
+        "current": true,
+        "result": {
+          "rendering_mode": "generic-intent.v1",
+          "diagnostic_code": "intent_only",
+          "quote": "自编测试：我先看除数非零，异号相除得负，再处理加法。",
+          "focus": "basis",
+          "question": "你使用了哪条关系或运算法则，它的适用条件是什么？",
+          "judgment": "模型选择讨论方向，安全模板展示；数值另行核验，不评定解释、素养或教学效果",
+          "voices": []
+        },
+        "error_code": null,
+        "usage": {
+          "input_tokens": 223,
+          "output_tokens": 32
+        },
+        "elapsed_ms": 1183,
+        "billing_unknown": false,
+        "prompt_version": "generic-interaction.v1",
+        "context_turns": 1,
+        "context": []
+      },
+      "verification": null
+    },
+    {
+      "purpose": "teach",
+      "operation": {
+        "operation_id": "80d88bb8-be90-4a53-a601-cf8e98baff6b",
+        "configuration_id": "1b46761f-91ff-46ce-a616-108bf01477e2",
+        "status": "succeeded",
+        "task_id": "GEN-6fed7dd1-1",
+        "hint_level": 0,
+        "vendor": "deepseek",
+        "model": "deepseek-flash",
+        "simulated": false,
+        "current": true,
+        "result": {
+          "rendering_mode": "generic-intent.v1",
+          "diagnostic_code": "intent_only",
+          "quote": "自编测试：先核对除数不为零，处理除法符号，再进行加法，最后用分数检查结果。",
+          "focus": "basis",
+          "question": "你使用了哪条关系或运算法则，它的适用条件是什么？",
+          "judgment": "模型选择讨论方向，安全模板展示；数值另行核验，不评定解释、素养或教学效果",
+          "voices": []
+        },
+        "error_code": null,
+        "usage": {
+          "input_tokens": 209,
+          "output_tokens": 34
+        },
+        "elapsed_ms": 1427,
+        "billing_unknown": false,
+        "prompt_version": "generic-interaction.v1",
+        "context_turns": 1,
+        "context": []
+      },
+      "verification": {
+        "status": "passed",
+        "message": "仅核验新题数值；解释与迁移能力尚未评定。",
+        "reasoning_reviewed": false,
+        "independent": true
+      }
+    },
+    {
+      "purpose": "roundtable",
+      "operation": {
+        "operation_id": "1629398a-a808-41e6-b8a0-680324ca756b",
+        "configuration_id": "1b46761f-91ff-46ce-a616-108bf01477e2",
+        "status": "succeeded",
+        "task_id": "GEN-6fed7dd1-2",
+        "hint_level": 0,
+        "vendor": "deepseek",
+        "model": "deepseek-flash",
+        "simulated": false,
+        "current": true,
+        "result": {
+          "rendering_mode": "generic-intent.v1",
+          "diagnostic_code": "intent_only",
+          "quote": "自编测试：先核对除数不为零，处理除法符号，再进行加法，最后用分数检查结果。",
+          "focus": "basis",
+          "question": "你准备怎样整理已有依据，并独立检查自己的结论？",
+          "judgment": "模型选择讨论方向，安全模板展示；数值另行核验，不评定解释、素养或教学效果",
+          "voices": [
+            {
+              "role": "proposer",
+              "quote": "自编测试：先核对除数不为零，处理除法符号，再进行加法，最后用分数检查结果。",
+              "text": "你使用了哪条关系或运算法则，它的适用条件是什么？"
+            },
+            {
+              "role": "critic",
+              "quote": "自编测试：先核对除数不为零，处理除法符号，再进行加法，最后用分数检查结果。",
+              "text": "目前哪些依据你已说明，是否还有需要核对的前提？"
+            },
+            {
+              "role": "organizer",
+              "quote": "自编测试：先核对除数不为零，处理除法符号，再进行加法，最后用分数检查结果。",
+              "text": "你准备怎样整理已有依据，并独立检查自己的结论？"
+            }
+          ]
+        },
+        "error_code": null,
+        "usage": {
+          "input_tokens": 209,
+          "output_tokens": 34
+        },
+        "elapsed_ms": 917,
+        "billing_unknown": false,
+        "prompt_version": "generic-interaction.v1",
+        "context_turns": 1,
+        "context": []
+      },
+      "verification": {
+        "status": "passed",
+        "message": "仅核验新题数值；解释与迁移能力尚未评定。",
+        "reasoning_reviewed": false,
+        "independent": true
+      }
+    }
+  ],
+  "known_input_tokens": 2409,
+  "known_output_tokens": 864,
+  "notes": [
+    "Developer knew reference answers; verification pass checks engineering only, not student performance.",
+    "First rejection raw body was not retained; exact first rejection cause is unknown.",
+    "One explicit manual repair passed independent numerical checks; no automatic retries.",
+    "No live Tavily or OpenMAIC generation performed."
+  ]
+}

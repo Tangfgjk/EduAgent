@@ -1,0 +1,82 @@
+{
+  "tavily": {
+    "date": "2026-10-18",
+    "scope_confirmed": true,
+    "provider": "tavily",
+    "depth": "basic",
+    "query": "初中数学 有理数运算",
+    "operation_id": "bf333fed-7390-5537-85f2-f71708de46ea",
+    "status": "succeeded",
+    "credits": 1,
+    "results": [
+      {
+        "title": "数学·七年级上册",
+        "url": "https://www.pep.com.cn/products/jc/czjks/201510/t20151026_1250813.shtml",
+        "authorization": "discovery_only",
+        "usable_for_generation": false
+      },
+      {
+        "title": "数学 八年级上册/义务教育教科书",
+        "url": "https://www.pep.com.cn/products/jc/czjks/201602/t20160228_1258417.shtml",
+        "authorization": "discovery_only",
+        "usable_for_generation": false
+      }
+    ],
+    "no_automatic_retry": true,
+    "student_text_sent": false,
+    "key_in_ignored_local_file": true,
+    "search_enabled": true
+  },
+  "openmaic": {
+    "date": "2026-10-18",
+    "scope_confirmed": true,
+    "runtime": "Docker",
+    "ref": "a9da60b3b4adb429369c0da13d5637a904ead2b0",
+    "job": {
+      "job_id": "36674bd4-f2e6-4276-a0bd-e1cada8ed529",
+      "build_id": "6fed7dd1-2ace-471e-ab83-a2d14e1f7eae",
+      "status": "completed",
+      "remote_id": "run--5lMXitpawiMH6vX",
+      "error_code": null
+    },
+    "budget": {
+      "budget_id": "124dd133-4706-4635-b70f-24fd01c9379a",
+      "enabled": false,
+      "calls": 8,
+      "input_reserved_or_known": 42450,
+      "output_reserved_or_known": 6181,
+      "max_calls": 20,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 32768
+    },
+    "approved_course_build": "6fed7dd1-2ace-471e-ab83-a2d14e1f7eae",
+    "generated_courses": 1,
+    "media_enabled": false,
+    "search_enabled": false,
+    "no_blind_recreation": true,
+    "status": "accepted_development_only",
+    "remote_scene_count": 3,
+    "model_calls": 8,
+    "known_input_tokens": 42450,
+    "known_output_tokens": 6181,
+    "all_usage_known": true,
+    "resource_id": "bb840e57-87b9-4552-ad36-8affbabbdea1",
+    "resource_sha256": "ce6b4a502472627e9f32f8245fd5bd6348afd31927debb46d1dc4894836af59c",
+    "resource_status": "approved",
+    "converter_version": "canvas-text.v2",
+    "cards": 3,
+    "card_characters": [
+      217,
+      186,
+      188
+    ],
+    "original_title_only_version_rejected": true,
+    "reimport_additional_model_calls": 0,
+    "admin_ui_review": true,
+    "student_desktop_mobile_preview": true,
+    "professional_teaching_review": false,
+    "teaching_effect_evaluated": false,
+    "image": "wenjin-openmaic:1.2.0-text",
+    "image_id": "sha256:372f10c486d36d68bcb8dc08f4eadb84cf040d2a09ca31b6cec33e735dec9247"
+  }
+}

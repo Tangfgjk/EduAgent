@@ -21,20 +21,29 @@ LEGACY_VERSION = "tutor.v1:" + CONTENT_VERSION[:12] + ":" + registry_hash() + ":
 VERSION = "tutor.v2:" + CONTENT_VERSION[:12] + ":" + registry_hash() + ":" + VERIFIER_VERSION
 
 
-def version_for(unit_id=UNIT_ID):
-    item = get_pack(unit_id)
+def version_for(unit_id=UNIT_ID, item=None):
+    item = item or get_pack(unit_id)
     return VERSION if unit_id == UNIT_ID else "tutor.v3:" + item.version[:12] + ":" + registry_hash() + ":" + VERIFIER_VERSION
 
 
 def content_for(data):
-    return get_pack(data.get("unit_id", UNIT_ID))
+    if data.get("content_snapshot"):
+        from app.modules.learning.content_catalog import ContentPack
+        from app.modules.planning.runtime import apply_task_order
+        return apply_task_order(ContentPack(**data["content_snapshot"]),data.get("skill_runtime"))
+    from app.modules.planning.runtime import apply_task_order
+    return apply_task_order(get_pack(data.get("unit_id", UNIT_ID)),data.get("skill_runtime"))
 
 
 def public_view(data):
     item = content_for(data)
     phase, index = data["phase"], data["index"]
     practice = phase == "practice"
-    return TutorView(strategy_version_id=data.get("strategy_version_id"), reflection_prompt=PROMPTS[data.get("reflection_focus", "basis")], unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
+    unassisted = sum(r["stage"] == "practice" and r["status"] == "passed" and r["hints_used"] == 0 for r in data["records"])
+    if not data.get("adaptive_support") or (data.get("skill_runtime") or {}).get("execution",{}).get("support_mode")=="step_first":
+        unassisted = 0
+    support = {"mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
+    return TutorView(support_decision=support, strategy_version_id=data.get("strategy_version_id"), reflection_prompt=PROMPTS[data.get("reflection_focus", "basis")], unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
         task=None if phase == "summary" else item.task_public(index), task_index=min(index + 1, len(item.tasks)),
         task_count=len(item.tasks), attempts=data["attempts"], hints=data["hints"], feedback=data["feedback"],
         can_answer=phase in {"diagnostic", "practice", "checkpoint"} and not data["answered"],
@@ -109,7 +118,10 @@ def interaction(state: TutorState):
             if data["phase"] == "practice":
                 data["phase"] = "reflection"
     elif action == "hint":
-        data["hints"].append(task["hints"][len(data["hints"])])
+        if not data['hints'] and public_view(data)['support_decision']['mode'] == 'socratic_first':
+            data['hints'].append('先由你提出一个可以检查自己思路的问题：需要核对哪项条件或依据？若仍困难，可再次请求具体支持。')
+        else:
+            data["hints"].append(task["hints"][len(data["hints"])])
     elif action == "skip":
         record(data, "skipped")
         data["answered"], data["phase"] = True, "reflection"
@@ -123,9 +135,15 @@ def interaction(state: TutorState):
             "gate_id": str(uuid5(NAMESPACE_URL, state["run_id"] + ":tutor:" + str(turn)))}
 
 
-def advance_tutor(run_id, learner_id, payload, image):
+def advance_tutor(run_id, learner_id, payload, image, *, item=None):
     data = {"unit_id": payload.get("unit_id", UNIT_ID), "strategy_version_id": payload.get("strategy_version_id"), "reflection_focus": payload.get("reflection_focus", "basis"), "index": 0, "phase": "diagnostic", "attempts": 0, "hints": [], "feedback": None,
             "answered": False, "unknowns": 0, "records": []}
+    data["skill_runtime"]=payload.get("skill_runtime")
+    if item is not None:
+        from dataclasses import asdict
+        data["unit_id"] = item.unit_id
+        data["adaptive_support"] = item.unit_id.startswith("dynamic.generated.")
+        data["content_snapshot"] = asdict(item)
     initial = {"run_id": run_id, "learner_id": learner_id, "turn": 0, "data": data,
         "view": public_view(data), "gate_id": str(uuid5(NAMESPACE_URL, run_id + ":tutor:0")), "review_task": None}
     graph = StateGraph(TutorState)

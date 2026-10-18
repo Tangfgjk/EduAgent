@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import Field
 
 from app.modules.learning.contracts import Contract
+from app.modules.learning.purpose_scopes import PurposeScope
 from app.modules.learning.tutor_contracts import CoachingOut
 from app.infrastructure.runtime.model_tasks import runtime_status, publish_configuration, pause_configuration
 
@@ -21,6 +22,8 @@ class ModelConfigurationOut(Contract):
 
 
 class ModelRuntimeOut(Contract):
+    purpose_scopes: list[PurposeScope] = Field(default_factory=list)
+    verification_boundary: str = "仅比较有界有理数表达式与已审核参考值；不理解题意、不验证证明或评定教学效果。"
     revision: int
     active: ModelConfigurationOut | None
     deepseek_key_configured: bool

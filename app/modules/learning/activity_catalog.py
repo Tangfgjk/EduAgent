@@ -5,7 +5,7 @@ import json
 
 from app.modules.errors import DomainError
 from app.modules.learning import activity_content as original
-from app.modules.learning.content_catalog import get_pack
+from app.modules.learning.content_catalog import ContentPack, get_pack
 
 
 @dataclass(frozen=True)
@@ -19,9 +19,11 @@ class ActivityPack:
     flow: str = 'legacy'
     verification_task: dict | None = None
 
+    parent_snapshot: ContentPack | None = None
+
     @property
     def parent(self):
-        return get_pack(self.parent_unit_id)
+        return self.parent_snapshot or get_pack(self.parent_unit_id)
 
     def admin_tasks(self):
         return [{**self.task, 'activity_templates': self.templates, 'flow': self.flow,
@@ -57,19 +59,15 @@ ACTIVITY_PACKS = (
 )
 
 
-def get_activity(unit_id=original.UNIT_ID):
-    for item in ACTIVITY_PACKS:
-        if item.unit_id == unit_id:
-            return item
-    raise DomainError(404, 'activity_not_found', '未找到此开发互动包')
+def get_activity(unit_id=original.UNIT_ID, session=None):
+    from app.modules.learning.content_repository import ContentRepository
+    return ContentRepository(session, include_private=True).activity(unit_id)
 
 
-def activity_for_version(version):
-    for item in ACTIVITY_PACKS:
-        if item.version == version:
-            return item
-    raise DomainError(409, 'version_conflict', '互动版本已变化，请重新开始；历史记录仍保留')
+def activity_for_version(version, session=None):
+    from app.modules.learning.content_repository import ContentRepository
+    return ContentRepository(session, include_private=True).activity(version=version)
 
 
-def activity_for_run(run, payload=None):
-    return activity_for_version(run.view['activity_version']) if run.view else get_activity((payload or {}).get('unit_id', original.UNIT_ID))
+def activity_for_run(run, payload=None, session=None):
+    return activity_for_version(run.view['activity_version'], session) if run.view else get_activity((payload or {}).get('unit_id', original.UNIT_ID), session)

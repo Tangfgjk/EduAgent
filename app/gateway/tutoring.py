@@ -22,8 +22,11 @@ def tutoring_router(student, admin):
     prefix = "/student/workspaces/{wid}/tutoring"
 
     @router.get("/student/content-catalog", response_model=CatalogOut)
-    def student_catalog(ctx=student_auth):
-        return catalog(ctx.session)
+    def student_catalog(ctx=student_auth, workspace_id: UUID | None = None):
+        if workspace_id:
+            from app.modules.workspaces.service import Workspaces
+            Workspaces().owned(ctx.session, ctx.actor, str(workspace_id))
+        return catalog(ctx.session, workspace_id=str(workspace_id) if workspace_id else None)
 
     @router.get("/admin/content-catalog", response_model=CatalogOut)
     def admin_catalog(ctx=admin_auth):
@@ -31,7 +34,7 @@ def tutoring_router(student, admin):
 
     @router.post("/admin/content-catalog/{unit_id}/development-release", response_model=CatalogUnit)
     def release_unit(unit_id: str, body: ContentToggle, ctx=admin_auth):
-        item = get_pack(unit_id)
+        item = get_pack(unit_id, ctx.session)
         Content(item.unit_id, item.title, item.version, item.tasks).toggle(ctx.session, ctx.actor, body.model_dump())
         return catalog_unit(ctx.session, item, admin=True)
 

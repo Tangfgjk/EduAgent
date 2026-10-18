@@ -49,7 +49,7 @@ class IndependentCheck(Contract):
     status: Literal['passed', 'failed', 'unverifiable']
     message: str
     reasoning_reviewed: Literal[False] = False
-    independent: Literal[True] = True
+    independent: bool = True
 
 
 class ActivityView(Contract):

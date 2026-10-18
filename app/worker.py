@@ -8,9 +8,10 @@ from sqlalchemy import select
 
 from app.config import Settings
 from app.infrastructure.db.database import Database
-from app.infrastructure.db.models import Account, AgentCheckpoint, AgentRun, AnswerReview, LearningInput, OutboxJob, Workspace, now
+from app.infrastructure.db.models import Account, AgentCheckpoint, AgentRun, AnswerReview, LearningInput, OutboxJob, Workspace, LearningFact, now
 from app.infrastructure.jobs.outbox import Outbox
 from app.modules.errors import DomainError
+from app.modules.learning.exposure import seen_before, present
 from app.modules.learning.graph import VERSION, advance
 from app.modules.learning.service import event
 from app.modules.learning.content_service import require_content
@@ -87,23 +88,30 @@ class Worker:
                 self.check_lease(job, claimed)
                 if run is None:
                     job.error_code = "unsupported_input"
+                elif run.status == "queued" and run.kind == "course_build":
+                    run.status = 'awaiting_input'
+                    run.revision += 1
+                    activate_model_task(session, run, entry)
+                elif run.status == "queued" and run.kind == "skill_evolution":
+                    from app.modules.skill_evolution.service import process as process_evolution
+                    process_evolution(session,run,entry,account,workspace)
                 elif run.status == "queued" and run.kind == "strategy":
                     process_strategy(session, run, entry, account, workspace)
                 elif run.status == "queued":
                     try:
-                        tutor_pack = get_pack(run.view["unit_id"] if run.view else entry.payload.get("unit_id", UNIT_ID)) if run.kind == "tutor" else None
-                        activity_pack = activity_for_run(run, entry.payload) if run.kind in {"roundtable", "teach"} else None
-                        expected_version = {"plan": VERSION, "tutor": version_for(tutor_pack.unit_id) if tutor_pack else None, "roundtable": activity_version_for(activity_pack.unit_id) if activity_pack else None, "teach": activity_version_for(activity_pack.unit_id) if activity_pack else None}.get(run.kind)
+                        tutor_pack = get_pack(run.view["unit_id"] if run.view else entry.payload.get("unit_id", UNIT_ID), session) if run.kind == "tutor" else None
+                        activity_pack = activity_for_run(run, entry.payload, session) if run.kind in {"roundtable", "teach"} else None
+                        expected_version = {"plan": VERSION, "tutor": version_for(tutor_pack.unit_id, tutor_pack) if tutor_pack else None, "roundtable": activity_version_for(activity_pack.unit_id, activity_pack) if activity_pack else None, "teach": activity_version_for(activity_pack.unit_id, activity_pack) if activity_pack else None}.get(run.kind)
                         reason = "account_disabled" if not account.enabled else "workspace_archived" if workspace.status != "active" else "version_conflict" if run.version != expected_version else None
                     except DomainError as error:
                         reason = error.code
                     if run.kind in {"tutor", "roundtable", "teach"} and reason is None:
                         try:
                             if run.kind == "tutor":
-                                require_content(session, account.source_kind, tutor_pack.unit_id, tutor_pack.version)
+                                require_content(session, account.source_kind, tutor_pack.unit_id, tutor_pack.version, workspace.id)
                                 require_idle(session, workspace.id, ["roundtable", "teach"])
                             else:
-                                require_activity_content(session, account.source_kind, activity_pack.unit_id)
+                                require_activity_content(session, account.source_kind, activity_pack.unit_id, workspace.id)
                                 require_idle(session, workspace.id, ["tutor"])
                         except DomainError as error:
                             reason = error.code
@@ -113,14 +121,22 @@ class Worker:
                     else:
                         checkpoint = session.get(AgentCheckpoint, run.id)
                         execute = {"plan": advance, "tutor": advance_tutor, "roundtable": advance_activity, "teach": advance_activity}[run.kind]
-                        state, image, paused = execute(run.id, account.learner_id, entry.payload,
-                                                      checkpoint.image if checkpoint else None)
+                        invocation = dict(entry.payload)
+                        if run.kind in {'teach','roundtable'} and run.view and run.view.get('phase') == 'verification':
+                            task_id = run.view['verification_task']['task_id']
+                            invocation['assessment_seen_before'] = seen_before(session,workspace.id,run.id,task_id)
+                        state, image, paused = execute(run.id, account.learner_id, invocation,
+                                                      checkpoint.image if checkpoint else None,
+                                                      **({"item": tutor_pack or activity_pack} if run.kind != "plan" else {}))
                         if checkpoint:
                             checkpoint.image = image
                         else:
                             session.add(AgentCheckpoint(run_id=run.id, image=image))
                         if run.kind == "tutor":
                             previous_view = run.view
+                            if state['view'].get('phase') in {'diagnostic','checkpoint'} and state['view'].get('task'):
+                                task_id = state['view']['task']['task_id']
+                                present(session,run,state['view']['task'],state['view']['content_version'])
                             run.view = state["view"]
                             publish_turn(session, run, entry, previous_view, state)
                             if state.get("review_task"):
@@ -128,6 +144,9 @@ class Worker:
                                 session.add(AnswerReview(input_id=entry.id, run_id=run.id, task_id=task["id"],
                                     content_version=tutor_pack.version, task_snapshot=task))
                         elif run.kind in {"roundtable", "teach"}:
+                            if state['view'].get('phase') == 'verification':
+                                task_id = state['view']['verification_task']['task_id']
+                                present(session,run,state['view']['verification_task'],state['view']['activity_version'])
                             run.view = state["view"]
                             publish_activity(session, run, entry, state)
                         else:

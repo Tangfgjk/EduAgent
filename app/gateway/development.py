@@ -164,13 +164,13 @@ def development_router(admin):
 
     @router.get('/development-reviews', response_model=ReviewStateOut)
     def inspect(target_id: str, version: str, ctx=auth):
-        item = reviews.content_target(target_id)
+        item = reviews.content_target(target_id, ctx.session)
         if item.version != version:
             from app.modules.errors import DomainError
             raise DomainError(409, 'version_conflict', '当前内容版本已变化')
         rows = reviews.records(ctx.session, 'content', target_id, version)
         return {'revision': rows[0]['revision'] if rows else 0, 'reviews': rows,
-            'required': target_id in reviews.REQUIRED_CONTENT, 'professional_review': False}
+            'required': target_id in reviews.REQUIRED_CONTENT or target_id.startswith('dynamic.'), 'professional_review': False}
 
     @router.post('/development-reviews', response_model=ReviewStateOut)
     def review(body: ReviewInput, ctx=auth):

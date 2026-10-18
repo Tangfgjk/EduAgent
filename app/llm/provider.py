@@ -28,6 +28,7 @@ class Message(Value):
 
 
 class GenerationRequest(Value):
+    response_format: Literal["text", "json_object"] = "text"
     messages: tuple[Message, ...] = Field(min_length=1, max_length=32, repr=False)
     max_output_tokens: int = Field(default=128, ge=1, le=4096, strict=True)
     temperature: float = Field(default=0.2, ge=0, le=2)
@@ -100,6 +101,8 @@ class ChatCompletionsProvider:
             "temperature": request.temperature,
             "stream": False,
         }
+        if request.response_format == "json_object":
+            body["response_format"] = {"type": "json_object"}
         if self.config.vendor == "deepseek":
             body["thinking"] = {"type": "disabled"}
         started = perf_counter()

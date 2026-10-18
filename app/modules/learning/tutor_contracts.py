@@ -46,6 +46,7 @@ TutorInput = Annotated[AnswerInput | HintInput | ReflectInput | NextInput, Field
 
 
 class TaskOut(Contract):
+    exposure_status: str | None = None
     task_id: str
     stem: str
     answer_format: str
@@ -67,6 +68,7 @@ class TaskRecord(Contract):
 
 
 class TutorView(Contract):
+    support_decision: dict = Field(default_factory=dict)
     strategy_version_id: str | None = None
     reflection_prompt: str = "这一步用到了什么依据？下次准备怎么检查？"
     unit_id: str
@@ -95,6 +97,8 @@ class RoundtableVoiceOut(Contract):
 
 
 class CoachingResultOut(Contract):
+    rendering_mode: str | None = None
+    diagnostic_code: str | None = None
     quote: str
     focus: str
     question: str
@@ -137,6 +141,7 @@ class TutorQueueOut(Contract):
 
 
 class TutorRunOut(Contract):
+    skill_execution: dict | None = None
     run_id: UUID
     workspace_id: UUID
     conversation_id: UUID
@@ -198,7 +203,7 @@ class ContentOut(Contract):
     content_version: str
     enabled: bool
     revision: int
-    source: Literal["self_authored_development"] = "self_authored_development"
+    source: Literal["self_authored_development", "registered_development"] = "self_authored_development"
     professional_review: Literal[False] = False
     allowed_sources: list[str]
     tasks: list[dict] = Field(default_factory=list)

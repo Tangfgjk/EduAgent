@@ -1,15 +1,30 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_serializer
 
 from app.modules.learning.contracts import Contract
 from app.modules.learning.tutor_contracts import GateInput
 
 
+class ExecutionPolicy(Contract):
+    schema_version: Literal['teaching-policy.v1'] = 'teaching-policy.v1'
+    practice_order: Literal['original', 'errors_first'] = 'original'
+    review_order: Literal['due_first', 'due_errors_first'] = 'due_first'
+    support_mode: Literal['step_first', 'adaptive'] = 'adaptive'
+    question_focus: Literal['basis', 'representation', 'verification'] = 'basis'
+
+
 class SoftPolicy(Contract):
     daily_minutes: int = Field(ge=5, le=60, strict=True)
     reflection_focus: Literal["basis", "verification"]
+    execution: ExecutionPolicy | None = None
+
+    @model_serializer(mode='wrap')
+    def compatible_dump(self, handler):
+        value=handler(self)
+        if value.get('execution') is None:value.pop('execution',None)
+        return value
 
 
 class MaterialIn(Contract):
@@ -112,7 +127,16 @@ class GlobalPlanningSummary(Contract):
     scope: str
 
 
+from app.modules.evidence.insight_contracts import PlanningObservations
+
+
 class PlanningBundle(Contract):
+    learning_observations: PlanningObservations | None = None
+    skill_compilation: dict | None = None
+    policy_changes: list[dict] | None = None
+    policy_base: dict | None = None
+    evolution_reference: dict | None = None
+    course_baseline: dict | None = None
     workspace_id: UUID
     rules_hash: str
     student_experience: str
@@ -137,6 +161,7 @@ class PlanningModelOut(Contract):
 
 
 class StrategyOut(Contract):
+    compilation: dict | None = None
     run_id: UUID
     workspace_id: UUID
     workspace_title: str

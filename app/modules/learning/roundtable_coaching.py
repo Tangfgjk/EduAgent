@@ -65,8 +65,8 @@ def validate_proposal(text, snapshot):
         for voice in proposal.voices:
             validate_question(json.dumps({'quote': voice.quote, 'focus': proposal.focus, 'question': voice.text}, ensure_ascii=False), snapshot)
             voices.append(voice.model_dump())
-        return {'quote': proposal.quote, 'focus': proposal.focus, 'question': voices[-1]['text'], 'voices': voices,
-            'judgment': '同一模型生成的三个待核验视角，不是独立专家、教师结论或学生能力评价'}
+        from app.modules.learning.output_gate import render_result
+        return render_result({'quote': proposal.quote, 'focus': proposal.focus, 'question': voices[-1]['text'], 'voices': voices})
     except (ValueError, ProviderError):
         raise ProviderError('invalid_roundtable_proposal') from None
 

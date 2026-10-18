@@ -1,3 +1,4 @@
+import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -42,14 +43,15 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     const space = await (await student.request.post('/api/v1/student/workspaces', { headers: { ...auth, 'Idempotency-Key': crypto.randomUUID() },
       data: { kind: 'temporary', title: '模型讲解验收' } })).json();
     await student.goto(`/student/teach?workspace=${space.workspace_id}&activity=${activityId}`);
+    await confirmFixtureCourse(student);
     await student.getByRole('button', { name: '开始我教 AI', exact: true }).click();
-    await expect(student.getByLabel('让 AI 根据本次讲解提出一个问题')).toBeChecked();
+    await expect(student.getByLabel('让 AI 根据本次讲解选择追问方向')).toBeChecked();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的讲解', { exact: true }).fill('我把颜色当基本结果，红蓝两种就各一半。');
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     await expect(student.getByText('模拟学伴', { exact: true })).toBeVisible();
-    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true }).last()).toBeVisible();
+    await expect(student.getByText('你能先说明自己的思路，以及仍不确定的地方吗？', { exact: true }).last()).toBeVisible();
     await student.reload();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     mkdirSync('test-results/screens', { recursive: true });
@@ -76,7 +78,7 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     await student.getByRole('button', { name: '提交本题验证，查看报告', exact: true }).click();
     await expect(student.getByText('另一题验证：数值通过', { exact: true })).toBeVisible();
     await expect(student.getByText('学生原始贡献', { exact: true })).toHaveCount(5);
-    await expect(student.getByText('为什么在你的讲解中把颜色作为一个基本结果？', { exact: true }).last()).toBeVisible();
+    await expect(student.getByText('你能先说明自己的思路，以及仍不确定的地方吗？', { exact: true }).last()).toBeVisible();
     await student.setViewportSize({ width: 390, height: 844 });
     expect(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   } finally { await context.close(); }

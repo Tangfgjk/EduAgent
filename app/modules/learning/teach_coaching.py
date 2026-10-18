@@ -60,7 +60,7 @@ def validate_proposal(text, snapshot):
                 or re.search(r'[0-9０-９=＝<>《》`\[\]{}]|https?://|www\.', question)
                 or any(word in question for word in ('正确答案', '标准答案', '满分', '掌握了', '已经掌握', '独立检测', '独立验证', '系统提示', '执行命令'))):
             raise ValueError('unsupported teach question')
-        return {'quote': result.quote, 'focus': result.focus, 'question': question,
-            'judgment': '模型生成的待核验追问，不是讲解质量、掌握度或教学效果评价'}
+        from app.modules.learning.output_gate import render_result
+        return render_result({'quote': result.quote, 'focus': result.focus, 'question': question})
     except ValueError:
         raise ProviderError('invalid_teach_proposal') from None
