@@ -1,0 +1,113 @@
+{
+  "scope": "one self-authored rational course; no real student data; no retry; no publication",
+  "max_output_tokens": 4096,
+  "provider": "deepseek",
+  "status": "succeeded",
+  "error_code": null,
+  "usage": {
+    "input_tokens": 1783,
+    "output_tokens": 692
+  },
+  "billing_unknown": false,
+  "operation_id": "a19049fd-48a8-47a2-9b4a-ee9583fd3e94",
+  "course_status": "pending_review",
+  "math_validation": {
+    "status": "passed",
+    "scope": "compiled_numeric_tasks",
+    "verifier": "rational-agent.v2",
+    "professional_review": false,
+    "lesson_reviewed": false
+  },
+  "operation_count": 1,
+  "teaching_design": {
+    "profile": "rational-agent.v2",
+    "generator": "model_candidate_requires_review",
+    "designs": [
+      {
+        "concept": "absolute",
+        "rationale": "先以距离直观建立绝对值非负，再用数轴核对。",
+        "nudge": "先问这个数离原点几步，再决定符号。",
+        "representation": "在数轴上标出原数与到原点的线段长度。",
+        "self_check": "结果能否为负？与数轴上的距离一致吗？",
+        "discuss": "比较两个不同数的绝对值，距离大小与数的大小一定同向吗？",
+        "teach": "把绝对值读作到原点的距离，距离没有负值。"
+      },
+      {
+        "concept": "opposite",
+        "rationale": "用关于原点对称理解相反数，并联系和为零。",
+        "nudge": "先找原点另一侧等距的点，再写符号。",
+        "representation": "在数轴上画出关于原点对称的两点。",
+        "self_check": "两数相加是否为零？零的相反数是什么？",
+        "discuss": "相反数与绝对值都会改变符号吗？举例说明区别。",
+        "teach": "相反数是符号相反、到原点距离相同的数。"
+      }
+    ],
+    "sequence": [
+      {
+        "concept": "absolute",
+        "stage": "diagnostic",
+        "form": "absolute"
+      },
+      {
+        "concept": "opposite",
+        "stage": "diagnostic",
+        "form": "opposite"
+      },
+      {
+        "concept": "absolute",
+        "stage": "practice",
+        "form": "distance"
+      },
+      {
+        "concept": "opposite",
+        "stage": "practice",
+        "form": "opposite"
+      },
+      {
+        "concept": "absolute",
+        "stage": "practice",
+        "form": "absolute"
+      },
+      {
+        "concept": "opposite",
+        "stage": "practice",
+        "form": "opposite"
+      },
+      {
+        "concept": "absolute",
+        "stage": "checkpoint",
+        "form": "distance"
+      },
+      {
+        "concept": "opposite",
+        "stage": "checkpoint",
+        "form": "opposite"
+      }
+    ],
+    "task_count": 8,
+    "limitation": "教学设计是候选理由，数值检查不证明解释质量或教学效果。"
+  },
+  "title": "绝对值与相反数：数轴上的距离与对称",
+  "stems": [
+    "求(1)的绝对值，并说明数轴含义。",
+    "(1)的相反数是多少？请说明如何检查。",
+    "数轴上坐标为(5)与(-3)的两点距离是多少？",
+    "(-9)的相反数是多少？请说明如何检查。",
+    "求(-14)的绝对值，并说明数轴含义。",
+    "(0)的相反数是多少？请说明如何检查。",
+    "数轴上坐标为(-6)与(4)的两点距离是多少？",
+    "(23)的相反数是多少？请说明如何检查。"
+  ],
+  "lesson": "数轴向右为正方向。相反数是与原数相加得零的数，在数轴上关于原点对称；零的相反数是零。绝对值表示一个数到原点的距离，距离不为负，所以绝对值非负。求绝对值时先看数在原点哪一侧，再取它到原点的距离；求相反数时改变符号，不改变到原点的距离。检查时可在数轴上标出原数与结果：相反数应在原点另一侧且距离相同，绝对值应给出非负距离。",
+  "activity_titles": [
+    "绝对值与相反数：数轴上的距离与对称 · 讲清绝对值与距离",
+    "绝对值与相反数：数轴上的距离与对称 · 比较相反数"
+  ],
+  "review": {
+    "status": "needs_semantic_revision_before_publication",
+    "note": "数值与条件检查通过；讲解中关于原点另一侧的说法需要明确零的例外，不能据工程通过直接发布。当前未专业审核。",
+    "followup": "后续请求提示已强调零的例外；未重复付费调用。"
+  },
+  "current_state": "Isolated development candidate, never published or copied to main student workspaces.",
+  "request_sha256": "395f75d744f72c7413ff3f9471f8ddbf9161fb3ef6f7dbb84860ee766096fded"
+}

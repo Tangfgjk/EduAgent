@@ -97,6 +97,7 @@ class RoundtableVoiceOut(Contract):
 
 
 class CoachingResultOut(Contract):
+    approved_questions: dict[str,str] | None = None
     rendering_mode: str | None = None
     diagnostic_code: str | None = None
     quote: str

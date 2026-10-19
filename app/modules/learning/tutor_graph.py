@@ -23,6 +23,8 @@ VERSION = "tutor.v2:" + CONTENT_VERSION[:12] + ":" + registry_hash() + ":" + VER
 
 def version_for(unit_id=UNIT_ID, item=None):
     item = item or get_pack(unit_id)
+    if any((task.get('pedagogy') or {}).get('profile')=='rational-agent.v2' for task in item.tasks):
+        return 'tutor.v4:'+item.version[:12]+':'+registry_hash()+':'+VERIFIER_VERSION
     return VERSION if unit_id == UNIT_ID else "tutor.v3:" + item.version[:12] + ":" + registry_hash() + ":" + VERIFIER_VERSION
 
 
@@ -43,6 +45,13 @@ def public_view(data):
     if not data.get("adaptive_support") or (data.get("skill_runtime") or {}).get("execution",{}).get("support_mode")=="step_first":
         unassisted = 0
     support = {"mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
+    pedagogy=item.tasks[index].get('pedagogy') if index<len(item.tasks) else None
+    if practice and pedagogy and pedagogy.get('profile')=='rational-agent.v2':
+        status=(data.get('feedback') or {}).get('status')
+        focus='representation' if status in {'failed','unverifiable'} else 'basis' if len(data['hints'])>=2 else 'verification' if unassisted else 'basis'
+        support.update(profile='rational-agent.v2',concept=pedagogy['concept_label'],action=focus,
+            question=pedagogy['questions'][focus],plan_rationale=pedagogy['rationale'],
+            basis='本题数值未通过或不可验证，先换表示核对；未判定具体语义误区。' if status in {'failed','unverifiable'} else '依据本轮实际提示和数值记录选择已审核的概念支持，允许继续求助。')
     return TutorView(support_decision=support, strategy_version_id=data.get("strategy_version_id"), reflection_prompt=PROMPTS[data.get("reflection_focus", "basis")], unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
         task=None if phase == "summary" else item.task_public(index), task_index=min(index + 1, len(item.tasks)),
         task_count=len(item.tasks), attempts=data["attempts"], hints=data["hints"], feedback=data["feedback"],
@@ -118,10 +127,16 @@ def interaction(state: TutorState):
             if data["phase"] == "practice":
                 data["phase"] = "reflection"
     elif action == "hint":
-        if not data['hints'] and public_view(data)['support_decision']['mode'] == 'socratic_first':
+        support=public_view(data)['support_decision']
+        if not data['hints'] and support.get('profile')=='rational-agent.v2':
+            data['hints'].append(support['question'])
+        elif not data['hints'] and public_view(data)['support_decision']['mode'] == 'socratic_first':
             data['hints'].append('先由你提出一个可以检查自己思路的问题：需要核对哪项条件或依据？若仍困难，可再次请求具体支持。')
         else:
-            data["hints"].append(task["hints"][len(data["hints"])])
+            hint=task['hints'][len(data['hints'])]
+            if len(data['hints'])==1 and hint==data['hints'][0] and task.get('pedagogy'):
+                hint=task['hints'][0]
+            data['hints'].append(hint)
     elif action == "skip":
         record(data, "skipped")
         data["answered"], data["phase"] = True, "reflection"

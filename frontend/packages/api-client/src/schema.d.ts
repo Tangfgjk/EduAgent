@@ -2410,6 +2410,11 @@ export interface components {
             build_id: string;
             /** Workspace Id */
             workspace_id: string;
+            /**
+             * Workspace Title
+             * @default
+             */
+            workspace_title: string;
             /** Topic */
             topic: string;
             /** Status */
@@ -2625,6 +2630,10 @@ export interface components {
         };
         /** CoachingResultOut */
         CoachingResultOut: {
+            /** Approved Questions */
+            approved_questions?: {
+                [key: string]: string;
+            } | null;
             /** Rendering Mode */
             rendering_mode?: string | null;
             /** Diagnostic Code */
@@ -3931,6 +3940,31 @@ export interface components {
             /** Expected Revision */
             expected_revision: number;
         };
+        /** Pedagogy */
+        Pedagogy: {
+            /**
+             * Profile
+             * @constant
+             */
+            profile: "rational-agent.v2";
+            /**
+             * Concept
+             * @enum {string}
+             */
+            concept: "number_line" | "opposite" | "absolute" | "comparison" | "add_subtract" | "multiply_divide" | "mixed_order";
+            /** Concept Label */
+            concept_label: string;
+            /** Rationale */
+            rationale: string;
+            /** Questions */
+            questions: {
+                [key: string]: string;
+            };
+            /** Activity Questions */
+            activity_questions: {
+                [key: string]: string;
+            };
+        };
         /** PlanDecision */
         PlanDecision: {
             /** Expected Revision */
@@ -4870,11 +4904,25 @@ export interface components {
              * @default
              */
             misconception: string;
+            pedagogy?: components["schemas"]["Pedagogy"] | null;
         };
         /** TopicIn */
         TopicIn: {
             /** Topic */
             topic: string;
+            /**
+             * Agent Mode
+             * @default bounded_v1
+             * @enum {string}
+             */
+            agent_mode: "bounded_v1" | "rational_agent_v2";
+            /**
+             * Learning Goal
+             * @default
+             */
+            learning_goal: string;
+            /** Target Concepts */
+            target_concepts?: ("number_line" | "opposite" | "absolute" | "comparison" | "add_subtract" | "multiply_divide" | "mixed_order")[];
         };
         /** TutorHistoryItem */
         TutorHistoryItem: {
@@ -15615,6 +15663,7 @@ export interface operations {
         parameters: {
             query?: {
                 offset?: number;
+                build_id?: string | null;
             };
             header?: never;
             path?: never;

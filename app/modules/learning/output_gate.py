@@ -26,6 +26,16 @@ def render_result(result):
     """Idempotent, also used at history read boundaries; preserves student quotes."""
     if not result:
         return result
+    if result.get('rendering_mode')=='rational-agent-intent.v2':
+        bank=result.get('approved_questions') or {}
+        if set(bank)!={'clarify','basis','representation','verification','compare'} or result.get('focus') not in bank:
+            return None
+        value=deepcopy(result); value['question']=bank[value['focus']]
+        if value.get('voices'):
+            value['voices']=[{'role':role,'quote':voice.get('quote',''),'text':text} for voice,(role,text) in zip(value['voices'],[
+                ('proposer',bank[value['focus']]),('critic',bank['basis']),('organizer',bank['verification'])])]
+            value['question']=bank['verification']
+        return value
     if result.get('rendering_mode') == 'generic-intent.v1':
         from app.modules.generation.interaction import QUESTIONS as generic_questions
         value = deepcopy(result)

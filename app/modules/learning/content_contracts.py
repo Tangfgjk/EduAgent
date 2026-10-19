@@ -23,6 +23,23 @@ class SourceReference(Contract):
     authorization: Literal['self_authored_development', 'licensed_local']
 
 
+class Pedagogy(Contract):
+    profile: Literal['rational-agent.v2']
+    concept: Literal['number_line','opposite','absolute','comparison','add_subtract','multiply_divide','mixed_order']
+    concept_label: str = Field(min_length=2,max_length=80)
+    rationale: str = Field(min_length=5,max_length=160)
+    questions: dict[str,str]
+    activity_questions: dict[str,str]
+
+    @model_validator(mode='after')
+    def bounded(self):
+        if set(self.questions)!={'clarify','basis','representation','verification','compare'} or set(self.activity_questions)!={'teach','roundtable'}:
+            raise ValueError('invalid teaching question bank')
+        if any(not text.strip() or len(text)>120 for text in [*self.questions.values(),*self.activity_questions.values()]):
+            raise ValueError('invalid teaching question length')
+        return self
+
+
 class TaskSpec(Contract):
     id: str = Field(min_length=1, max_length=100, pattern=r'^[A-Za-z0-9._-]+$')
     stage: Literal['diagnostic', 'practice', 'checkpoint']
@@ -31,6 +48,7 @@ class TaskSpec(Contract):
     format: str = Field(default='数值、分数或四则运算', min_length=1, max_length=120)
     hints: list[str] = Field(default_factory=list, max_length=4)
     misconception: str = Field(default='', max_length=600)
+    pedagogy: Pedagogy | None = None
 
     @model_validator(mode='after')
     def supported(self):

@@ -32,6 +32,8 @@ def resolve(topic):
     if any(word in topic for word in ('导数', '微积分', '高等数学', '量子', '英语', '编程', '化学')):
         return {'status': 'out_of_scope', 'nodes': [], 'message': '目前限定初中数学，请重新选择主题。'}
     matches = [key for key, node in NODES.items() if any(alias in topic for alias in node['aliases'])]
+    if any(word in topic for word in ('数轴','相反数','绝对值','有理数大小')) and 'MATH.G7.RATIONAL' not in matches:
+        matches.append('MATH.G7.RATIONAL')
     if ('函数' in topic and 'MATH.G8.LINEAR' not in matches) or any(word in topic for word in ('二次函数', '几何证明', '二元方程', '三角函数', '中位数', '众数')):
         return {'status':'needs_clarification','nodes':matches,'message':'该主题尚需知识点与核验范围确认，不能直接用另一种题型替代。'}
     if len(matches)>1 and any(word in topic for word in ('和','与','、','以及')):
@@ -76,8 +78,9 @@ def check_snapshot(session, sources):
         if not source_enabled(session, source['source_id']):
             raise DomainError(409, 'source_revoked', '课程使用的来源已撤回，请重新检索并生成新版本')
         if source['source_id'].startswith('builtin.'):
+            from app.modules.generation.rational_agent import SOURCE_ID, source as rational_source
             key = source['source_id'][8:]
-            current = sha256(NODES[key]['text'].encode()).hexdigest() if key in NODES else None
+            current = rational_source()['version'] if source['source_id']==SOURCE_ID else sha256(NODES[key]['text'].encode()).hexdigest() if key in NODES else None
         else:
             row = session.get(KnowledgeDocument, source['source_id'])
             current = row.version if row else None

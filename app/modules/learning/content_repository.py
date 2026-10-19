@@ -75,6 +75,12 @@ class ContentRepository:
             'teach': [{'speaker': '虚拟学伴', 'text': '你能说明这个方法的依据，以及如何检查它吗？', 'category': 'role_opinion'}],
             'roundtable': [{'speaker': name, 'text': text, 'category': 'role_opinion'} for name, text in zip(('思路提出者', '质疑者', '整理者'), ROLE_QUESTIONS.values())],
         }
+        pedagogy=tasks[spec['task_id']].get('pedagogy')
+        if pedagogy and pedagogy.get('profile')=='rational-agent.v2':
+            bank=pedagogy['questions']
+            templates={'teach':[{'speaker':'虚拟学伴','text':pedagogy['activity_questions']['teach'],'category':'role_opinion'}],
+                'roundtable':[{'speaker':name,'text':text,'category':'role_opinion'} for name,text in (
+                    ('思路提出者',pedagogy['activity_questions']['roundtable']),('质疑者',bank['basis']),('整理者',bank['verification']))]}
         return ActivityPack(row.unit_id, spec['title'], parent.unit_id, tasks[spec['task_id']], templates, row.version,
             spec['kind'] + '_cycle_v1', spec.get('verification_task') or tasks[spec['verification_task_id']], parent)
 

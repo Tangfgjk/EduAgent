@@ -149,7 +149,8 @@ def generation_router(student,admin):
         def state(identifier):
             row=ctx.session.get(KnowledgeSourceState,identifier)
             return {'enabled':row.enabled if row else True,'revision':row.revision if row else 0}
-        return {'knowledge_points':knowledge.NODES,'documents':[{'source_id':'builtin.'+key,'title':node['title']+'（自编开发依据）',**state('builtin.'+key)} for key,node in knowledge.NODES.items()]+[{'source_id':row.id,'version':row.version,**row.body,**state(row.id)} for row in ctx.session.scalars(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc()).limit(100))]}
+        rational=service.rational.source()
+        return {'knowledge_points':knowledge.NODES,'documents':[{'source_id':'builtin.'+key,'title':node['title']+'（自编开发依据）',**state('builtin.'+key)} for key,node in knowledge.NODES.items()]+[{**rational,**state(rational['source_id'])}]+[{'source_id':row.id,'version':row.version,**row.body,**state(row.id)} for row in ctx.session.scalars(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc()).limit(100))]}
 
     @router.post('/admin/knowledge-sources',status_code=201)
     def source(body:knowledge.SourceIn,ctx=aa):
@@ -161,7 +162,7 @@ def generation_router(student,admin):
     @router.post('/admin/knowledge-sources/{identifier}/state')
     def source_state(identifier:str,body:SourceState,ctx=aa):
         ctx.session.get(GenerationPolicy,1,with_for_update=True)
-        if identifier not in {'builtin.'+k for k in knowledge.NODES} and not ctx.session.get(KnowledgeDocument,identifier): raise DomainError(404,'not_found','未找到来源')
+        if identifier not in {'builtin.'+k for k in knowledge.NODES}|{service.rational.SOURCE_ID} and not ctx.session.get(KnowledgeDocument,identifier): raise DomainError(404,'not_found','未找到来源')
         state=ctx.session.get(KnowledgeSourceState,identifier,with_for_update=True)
         if (state.revision if state else 0)!=body.expected_revision: raise DomainError(409,'revision_conflict','来源状态已变更')
         if not state: state=KnowledgeSourceState(source_id=identifier,enabled=body.enabled,revision=1);ctx.session.add(state)
@@ -211,8 +212,10 @@ def generation_router(student,admin):
         return {'status':row.status,'revision':row.revision}
 
     @router.get('/admin/resources')
-    def resources_pending(ctx=aa,offset:int=Query(0,ge=0)):
-        return {'items':[{'resource_id':r.id,'build_id':r.build_id,'workspace_id':r.workspace_id,'body':r.body,'status':r.status,'revision':r.revision,'sha256':r.sha256,'html':resources.render(r.body)} for r in ctx.session.scalars(select(ResourceArtifact).order_by(ResourceArtifact.created_at.desc()).offset(offset).limit(20))]}
+    def resources_pending(ctx=aa,offset:int=Query(0,ge=0),build_id:UUID|None=None):
+        query=select(ResourceArtifact)
+        if build_id is not None: query=query.where(ResourceArtifact.build_id==str(build_id))
+        return {'items':[{'resource_id':r.id,'build_id':r.build_id,'workspace_id':r.workspace_id,'body':r.body,'status':r.status,'revision':r.revision,'sha256':r.sha256,'html':resources.render(r.body)} for r in ctx.session.scalars(query.order_by(ResourceArtifact.created_at.desc(),ResourceArtifact.id).offset(offset).limit(20))]}
 
     @router.post('/admin/course-builds/{bid}/openmaic',status_code=202)
     def openmaic(bid:UUID,ctx=aa):
@@ -250,7 +253,7 @@ def generation_router(student,admin):
     @router.get('/admin/openmaic-jobs')
     def resource_jobs(ctx=aa):
         rows=ctx.session.scalars(select(OpenMAICJob).order_by(OpenMAICJob.created_at.desc()).limit(20))
-        return {'items':[{'job_id':r.id,'build_id':r.build_id,'status':r.status,'remote_id':r.remote_id,'error_code':r.error_code} for r in rows],
+        return {'items':[{'job_id':r.id,'build_id':r.build_id,'budget_id':r.budget_id,'status':r.status,'remote_id':r.remote_id,'error_code':r.error_code} for r in rows],
             'budgets':[{'budget_id':b.id,'enabled':b.enabled,'calls':b.calls,'input_reserved_or_known':b.input_reserved,'output_reserved_or_known':b.output_reserved,
             'max_calls':20,'max_input_tokens':128000,'max_output_tokens':32768} for b in ctx.session.scalars(select(ResourceBudget).order_by(ResourceBudget.created_at.desc()).limit(10))]}
 

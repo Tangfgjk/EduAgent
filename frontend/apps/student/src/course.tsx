@@ -33,6 +33,7 @@ export function CourseBar({ workspace }: { workspace: Workspace }) {
     }}>{editing ? '收起' : '调整课程'}</button></div>
       <label className="field">当前课程单元<select value={course.active_unit_id} disabled={locked} onChange={e => select.mutate(e.target.value)}>{(course.units ?? []).map(unit => <option key={String(unit.unit_id)} value={String(unit.unit_id)}>{String(unit.title)}</option>)}</select></label>
       <p className="card-note">陪学、圆桌和我教 AI 共用此单元；复习、成长证据与策略仍保留本项目历史。进行中的学习/策略任务须先结束才能切换。</p>
+      {location.pathname !== '/courses' && <Link className="button small" to={'/courses?workspace='+workspace.workspace_id}>查看当前课程、活动与资源 →</Link>}
     </> : <><strong>请确认此空间的学习主题和课程</strong><p className="card-note">空间名称不用于推断课程。旧记录会保留，确认后新学习使用统一的当前单元；可先进入“主题与课程”，让智能体准备来源、诊断和课程候选；也可手动选择已有内容。</p></>}
     {!course.active_unit_id && <Link className="button primary section-gap" to={'/courses?workspace='+workspace.workspace_id}>从学习主题准备课程</Link>}
     {(!course.active_unit_id || editing) && location.pathname !== '/courses' && workspace.status === 'active' && <form onSubmit={submit} className="form-stack">

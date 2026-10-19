@@ -234,6 +234,22 @@ def test_zip_import_api_is_quarantined_until_review(env):
     assert '<script>' not in imported['html'] and '&lt;script&gt;' in imported['html']
 
 
+def test_admin_resource_filter_preserves_course_scope_and_role_gate(env):
+    from uuid import uuid4
+    client,wid,root,row=course(env)
+    imported=env.admin.post('/api/v1/admin/course-builds/'+row['build_id']+'/resources',json={
+        'title':'按课程筛选的自编材料','cards':[{'text':'先核对符号和运算条件。'}]})
+    assert imported.status_code==201
+    bid=row['build_id']
+    result=env.admin.get('/api/v1/admin/resources',params={'build_id':bid}).json()['items']
+    assert imported.json()['resource_id'] in {item['resource_id'] for item in result}
+    assert all(item['build_id']==bid and item['workspace_id']==wid for item in result)
+    assert env.admin.get('/api/v1/admin/resources',params={'build_id':str(uuid4())}).json()['items']==[]
+    assert env.admin.get('/api/v1/admin/resources',params={'build_id':'invalid'}).status_code==422
+    assert client.get('/api/v1/admin/resources',params={'build_id':bid}).status_code in (401,403)
+    assert row['workspace_title']
+
+
 def test_cancel_after_presentation_still_marks_repeated_assessment(env):
     from app.worker import Worker
     client,wid,root,row=course(env)

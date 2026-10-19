@@ -148,7 +148,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             if database is None:
                 db.close()
 
-    app = FastAPI(title="桂子问津", version="0.18.0", lifespan=lifespan,
+    app = FastAPI(title="桂子问津", version="0.19.0", lifespan=lifespan,
                   responses={status: {"model": ErrorOut} for status in (401, 403, 409, 422, 429, 503)})
 
     @app.middleware("http")

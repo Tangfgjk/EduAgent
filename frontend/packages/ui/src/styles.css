@@ -32,3 +32,11 @@
 .workspace-action:hover::after, .workspace-action:focus-visible::after { opacity: 1; }
 
 .form-stack label.inline > input[type="checkbox"] { width:16px; height:16px; min-height:16px; flex:0 0 16px; padding:0; margin:0; }
+.course-route { border:1px solid var(--line, #dbe5db); border-radius:14px; padding:18px; min-width:0; }
+.course-route p { color:var(--muted, #687d73); line-height:1.7; }
+.course-route h3 { margin:14px 0 8px; }
+.course-workflow { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.course-workflow span { padding:7px 12px; border-radius:8px; background:#f1f5f0; font-size:13px; }
+.course-detail-json { white-space:pre-wrap; overflow-wrap:anywhere; max-height:500px; overflow:auto; }
+
+.notice.course-budget { display:block; }

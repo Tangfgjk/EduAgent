@@ -41,7 +41,7 @@ export function ActivityPage({ workspace, kind }: { workspace: Workspace; kind: 
   const run = runs.find(item => item.run_id === selected) ?? pending ?? runs[0];
   return <><Heading kicker={kind === 'roundtable' ? 'COMPARE, QUESTION, VERIFY' : 'EXPLAIN TO UNDERSTAND'} title={title}
     description={kind === 'roundtable' ? '先说出自己的思路，再比较观点，最后用依据核验。' : '把方法讲给虚拟学伴，回应它的疑问与错误。'}/>
-    <div className="notice">{kind === 'roundtable' ? <MessagesSquare size={20}/> : <GraduationCap size={20}/>}<div><strong>{kind === 'teach' ? '开发互动 · 可选真实学伴追问' : '开发互动 · 可选真实圆桌'}</strong><br/>{kind === 'teach' ? '概率讲解每次活动最多请求三次模型追问；其他互动仍为预设模板。模型追问不是教师结论，数值由程序另行核验，不评定讲解质量或素养。' : '新版概率圆桌由模型选择方向，安全模板展示提出、质疑、整理三种视角，不是三位独立专家；其他互动仍可使用模板。观点待核验，数值另行检查。'}</div></div>
+    <div className="notice">{kind === 'roundtable' ? <MessagesSquare size={20}/> : <GraduationCap size={20}/>}<div><strong>{kind === 'teach' ? '开发互动 · 可选真实学伴追问' : '开发互动 · 可选真实圆桌'}</strong><br/>{kind === 'teach' ? '每次活动按已开放路线请求有界模型追问。新版有理数使用课程Agent设计并审核的概念问题，旧内容沿用原支架。数值独立核验，不评定讲解质量或素养。' : '模型选择讨论方向，新版有理数按已审核概念设计组织三种视角；旧内容沿用原支架。不是三位独立专家，观点待核验，数值另行检查。'}</div></div>
     {workspace.kind === 'temporary' && <p className="page-note">本次互动仅保留在临时空间，不进入全局正式项目的学习记忆。</p>}
     {workspace.status === 'archived' && <p className="page-note">此空间已归档，可以查看历史，恢复后可继续。</p>}
     {query.isPending || content.isPending || learning.isPending ? <Loading/> : query.isError || content.isError || learning.isError ? <ErrorNotice error={query.error ?? content.error ?? learning.error} retry={() => { void query.refetch(); void content.refetch(); void learning.refetch(); }}/> : <>

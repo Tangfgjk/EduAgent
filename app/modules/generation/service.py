@@ -13,10 +13,14 @@ from app.modules.workspaces.service import Workspaces
 from app.modules.errors import DomainError
 from app.modules.knowledge import service as knowledge
 from app.modules.generation.mathematics import CourseProposal, sample_blueprints, verified_task, compile_course
+from app.modules.generation import rational_agent as rational
 
 
 class TopicIn(Contract):
     topic: str = Field(min_length=2,max_length=600)
+    agent_mode: Literal['bounded_v1','rational_agent_v2'] = 'bounded_v1'
+    learning_goal: str = Field(default='',max_length=400)
+    target_concepts: list[rational.Concept] = Field(default_factory=list,max_length=3)
 
 
 class Revision(Contract):
@@ -39,6 +43,7 @@ class DiagnosticIn(Revision):
 class BuildOut(Contract):
     build_id: str
     workspace_id: str
+    workspace_title: str = ''
     topic: str
     status: str
     revision: int
@@ -78,8 +83,9 @@ def public(session,row,admin=False):
         operation['result']=None  # never export generator teacher solutions
     diagnostics=[{k:t[k] for k in ('id','stem','format')} for t in row.diagnostics]
     restricted = independent_active(session,row.workspace_id) and not admin
-    candidate=row.candidate if admin else ({'title':row.candidate['spec']['title'],'objectives':row.candidate['objectives'],'lesson':row.candidate['lesson']} if row.candidate and row.status=='ready' and not restricted else None)
-    return {'build_id':row.id,'workspace_id':row.workspace_id,'topic':row.topic,'status':row.status,'revision':row.revision,
+    candidate=row.candidate if admin else ({'title':row.candidate['spec']['title'],'objectives':row.candidate['objectives'],'lesson':row.candidate['lesson'], 'teaching_design':row.candidate.get('teaching_design')} if row.candidate and row.status=='ready' and not restricted else None)
+    workspace=session.get(Workspace,row.workspace_id)
+    return {'build_id':row.id,'workspace_id':row.workspace_id,'workspace_title':workspace.title if workspace else '', 'topic':row.topic,'status':row.status,'revision':row.revision,
         'intent':row.intent,'sources':[] if restricted else [knowledge.public_source(s) for s in row.sources],'diagnostics':[] if restricted else diagnostics,
         'attempts':row.attempts,'plan':row.plan,'validation':row.validation,'unit_id':row.unit_id,
         'operation':operation,'candidate':candidate,'created_at':row.created_at}
@@ -99,22 +105,37 @@ def start(session,actor,wid,body,key):
     previous=session.scalar(select(CourseBuild).where(CourseBuild.workspace_id==wid,CourseBuild.creation_key==key))
     if previous:
         if previous.topic!=body.topic.strip(): raise DomainError(409,'idempotency_conflict','标识已用于其他主题')
+        if previous.intent.get('preparation_request',{}) != ({'agent_mode':body.agent_mode,'learning_goal':body.learning_goal.strip(),'target_concepts':body.target_concepts} if body.agent_mode!='bounded_v1' else {}):
+            raise DomainError(409,'idempotency_conflict','标识已用于不同学习目标')
         return public(session,previous)
     from app.modules.learning.activity_service import require_idle
     require_idle(session,wid,['tutor','teach','roundtable'])
     bid=str(uuid4())
+    def resolve(state):
+        intent=knowledge.resolve(state['topic'])
+        if body.agent_mode=='rational_agent_v2':
+            intent['preparation_request']={'agent_mode':body.agent_mode,'learning_goal':body.learning_goal.strip(),'target_concepts':body.target_concepts}
+        if body.agent_mode=='rational_agent_v2' and intent['status']=='candidate' and intent['nodes']==['MATH.G7.RATIONAL']:
+            concepts=rational.goals_for(body.topic,body.target_concepts)
+            intent.update(profile=rational.VERSION,target_concepts=concepts,learning_goal=body.learning_goal.strip(),goal_options=rational.GOALS)
+            if not concepts or len(concepts)>3: intent.update(status='needs_clarification',message='有理数包含多个目标，请先选择1至3个本轮重点，再重新准备。')
+        return {'intent':intent}
     def retrieve(state):
         intent=state['intent']; sources=[]; diagnostics=[]
         if intent['status']=='candidate':
             node=knowledge.NODES[intent['nodes'][0]]
             sources=knowledge.retrieve(session,intent['nodes'][0],wid)
+            if intent.get('profile')==rational.VERSION and not knowledge.source_enabled(session,rational.SOURCE_ID):
+                return {'sources':[],'diagnostics':[],'intent':{**intent,'status':'source_missing','message':'有理数目标参考已撤回，请管理员核对来源后重新准备。'}}
+            if intent.get('profile')==rational.VERSION and knowledge.source_enabled(session,rational.SOURCE_ID):
+                sources=[rational.source(),*sources][:5]
             if any(set(s.get('conflicts_with',[])).intersection({v['source_id'] for v in sources}) for s in sources):
                 return {'sources':sources,'diagnostics':[],'intent':{**intent,'status':'source_conflict','message':'来源已标记冲突，请管理员核对后重新准备。'}}
             if sources:
-                diagnostics=[verified_task(b,f'DIAG-{index}','diagnostic') for index,b in enumerate(sample_blueprints(node['family'],bid+'diagnostic',2))]
+                diagnostics=rational.diagnostics(intent['target_concepts'],bid+'diagnostic') if intent.get('profile')==rational.VERSION else [verified_task(b,f'DIAG-{index}','diagnostic') for index,b in enumerate(sample_blueprints(node['family'],bid+'diagnostic',2))]
         return {'sources':sources,'diagnostics':diagnostics}
     graph=StateGraph(PreparationState)
-    graph.add_node('resolve_topic',lambda state:{'intent':knowledge.resolve(state['topic'])})
+    graph.add_node('resolve_topic',resolve)
     graph.add_node('retrieve_and_verify_diagnostic',retrieve)
     graph.add_edge(START,'resolve_topic');graph.add_edge('resolve_topic','retrieve_and_verify_diagnostic');graph.add_edge('retrieve_and_verify_diagnostic',END)
     value=graph.compile().invoke({'topic':body.topic.strip()})
@@ -140,6 +161,14 @@ def diagnose(session,actor,wid,bid,body):
         'observed_numeric_passes':sum(a['status']=='passed' for a in attempts),'diagnostic_count':len(attempts),
         'explanation_assessed':False,'steps':['尝试诊断','练习与分级支架','圆桌比较与我教 AI','另一题无辅助核验','反思与后续复习'],
         'support_policy':'先表达、有限提示；完成独立尝试后减少步骤帮助，遇到困难可请求恢复支持。'}
+    if row.intent.get('profile')==rational.VERSION:
+        concepts=row.intent['target_concepts']
+        observations=[{'concept':concept,'label':rational.GOALS[concept],
+            'submitted':sum(i%len(concepts)==n for i in range(len(attempts))),
+            'numeric_passes':sum(i%len(concepts)==n and a['status']=='passed' for i,a in enumerate(attempts))} for n,concept in enumerate(concepts)]
+        row.plan={**row.plan,'profile':rational.VERSION,'scope':'、'.join(rational.GOALS[c] for c in concepts)+'；由教学Agent设计目标内的题型组合与活动，待审核后发布',
+            'concept_observations':observations,'learning_goal':row.intent.get('learning_goal',''),
+            'steps':['确认本轮目标与数值观察','Agent选择题型、任务数量和概念支架','独立核验题目并人工审核教学设计','按不同目标开展陪学、比较与讲解','独立检测、回望与证据记录']}
     row.status='confirm_plan';row.revision+=1;session.flush()
     return public(session,row)
 
@@ -180,6 +209,8 @@ def generate(session,actor,wid,bid,body,key,repair=False):
 
 
 def freeze_request(row,account,config):
+    if row.intent.get('profile')==rational.VERSION:
+        return rational.request(row,account,config)
     from app.llm.provider import GenerationRequest,Message
     from app.modules.learning.model_coaching import redact
     family=knowledge.NODES[row.intent['nodes'][0]]['family']
@@ -202,6 +233,8 @@ def freeze_request(row,account,config):
 
 
 def fake_proposal(row):
+    if row.intent.get('profile')==rational.VERSION:
+        return rational.fake_proposal(row)
     key=row.intent['nodes'][0];node=knowledge.NODES[key]
     return {'title':node['title']+' · 自动开发课程','objectives':[node['title']+'的数值练习','说明条件与独立检查依据'],
         'lesson':node['text'],'source_ids':[row.sources[0]['source_id']],
@@ -212,20 +245,31 @@ def validate_result(session,text,snapshot):
     from app.llm.provider import ProviderError
     row=session.get(CourseBuild,snapshot['build_id'])
     try:
-        proposal=CourseProposal.model_validate_json(text)
-        diag=sample_blueprints(knowledge.NODES[row.intent['nodes'][0]]['family'],row.id+'diagnostic',2)
-        spec=compile_course(proposal,knowledge.NODES[row.intent['nodes'][0]],row.sources,row.id,[b.parameters for b in diag])
+        agent=snapshot.get('prompt_version')==rational.VERSION
+        if agent:
+            proposal=rational.Proposal.model_validate_json(text)
+            spec=rational.compile_proposal(proposal,row.intent['target_concepts'],row.sources,row.id,row.diagnostics)
+        else:
+            proposal=CourseProposal.model_validate_json(text)
+            diag=sample_blueprints(knowledge.NODES[row.intent['nodes'][0]]['family'],row.id+'diagnostic',2)
+            spec=compile_course(proposal,knowledge.NODES[row.intent['nodes'][0]],row.sources,row.id,[b.parameters for b in diag])
     except (ValueError,KeyError,TypeError) as failure:
         from pydantic import ValidationError
         if isinstance(failure,ValidationError):
             codes=sorted({item['type'] for item in failure.errors()})[:5]
         else:
-            known={'zero_divisor','not_linear_equation','not_linear_function','invalid_length','irrational_result_requires_review','invalid_probability','unsupported_problem_shape','reference_mismatch','fabricated_citation','objective_bounds','topic_or_assessment_overlap'}
+            known={'zero_divisor','not_linear_equation','not_linear_function','invalid_length','irrational_result_requires_review','invalid_probability','unsupported_problem_shape','reference_mismatch','fabricated_citation','objective_bounds','topic_or_assessment_overlap','goal_coverage_mismatch','topic_or_problem_mismatch','activity_goal_mismatch','invalid_stage_budget','invalid_problem_parameters','parameter_bounds','comparison_requires_distinct_values'}
             codes=[str(failure) if str(failure) in known else 'invalid_numeric_or_structure']
         row.validation={'status':'failed','scope':'course_candidate','reason_codes':codes,'professional_review':False}
         raise ProviderError('invalid_course_proposal') from None
-    return {'spec':spec.model_dump(),'lesson':proposal.lesson,'objectives':proposal.objectives,
+    result={'spec':spec.model_dump(),'lesson':proposal.lesson,'objectives':proposal.objectives,
         'validation':{'status':'passed','scope':'compiled_numeric_tasks','verifier':'typed-math-compiler.v1','professional_review':False,'lesson_reviewed':False}}
+    if agent:
+        result['teaching_design']={'profile':rational.VERSION,'generator':'model_candidate_requires_review',
+            'designs':[d.model_dump() for d in proposal.designs],'sequence':[{'concept':t.concept,'stage':t.stage,'form':t.problem.form} for t in proposal.tasks],
+            'task_count':len(proposal.tasks),'limitation':'教学设计是候选理由，数值检查不证明解释质量或教学效果。'}
+        result['validation']['verifier']=rational.VERSION
+    return result
 
 
 def accept_result(session,op):
