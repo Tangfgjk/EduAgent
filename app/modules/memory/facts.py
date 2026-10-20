@@ -34,7 +34,7 @@ def publish_turn(session, run, entry, before, state, refresh=True):
     fact = LearningFact(workspace_id=run.workspace_id, run_id=run.id, input_id=entry.id,
         kind="reflection" if action == "reflect" else action, source_kind=entry.source_kind,
         task_id=task["id"], content_version=pack.version, created_at=entry.created_at,
-        payload={"assessment_exposure": before["task"].get("exposure_status"), "support_decision": before.get("support_decision", {}), "stage": task["stage"], "status": status, "hints_used": len(state["view"]["hints"]) if action == "hint" else len(before["hints"]),
+        payload={"strategy_version_id":before.get('strategy_version_id'),"answer_interpretation":state['view'].get('feedback',{}).get('interpretation') if action=='answer' else None,"assessment_exposure": before["task"].get("exposure_status"), "support_decision": before.get("support_decision", {}), "stage": task["stage"], "status": status, "hints_used": len(state["view"]["hints"]) if action == "hint" else len(before["hints"]),
             "attempt": before["attempts"] + (1 if action == "answer" else 0),
             "turn": state["turn"], "task_snapshot": task,
             "revealed_hint": state["view"]["hints"][-1] if action == "hint" else None,

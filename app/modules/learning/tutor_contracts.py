@@ -17,7 +17,7 @@ class GateInput(Contract):
 
 class AnswerInput(GateInput):
     action: Literal["answer"]
-    answer: str = Field(min_length=1, max_length=128)
+    answer: str = Field(min_length=1, max_length=1500)
     reasoning: str = Field(default="", max_length=1500)
 
 
@@ -56,6 +56,7 @@ class FeedbackOut(Contract):
     status: Literal["passed", "failed", "unverifiable"]
     message: str
     reasoning_reviewed: Literal[False] = False
+    interpretation: dict | None = None
 
 
 class TaskRecord(Contract):
@@ -97,6 +98,9 @@ class RoundtableVoiceOut(Contract):
 
 
 class CoachingResultOut(Contract):
+    answer_understanding: dict | None = None
+    next_task_id: str | None = None
+    decision_reason: str | None = None
     approved_questions: dict[str,str] | None = None
     rendering_mode: str | None = None
     diagnostic_code: str | None = None
@@ -109,7 +113,7 @@ class CoachingResultOut(Contract):
 
 class CoachingContextOut(Contract):
     student_text: str
-    focus: str
+    focus: str = "clarify"
     question: str
 
 

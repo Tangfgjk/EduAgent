@@ -29,6 +29,11 @@ def main():
     export.add_argument("--output", type=Path, required=True)
     recovery = sub.add_parser("restore")
     recovery.add_argument("--input", type=Path, required=True)
+    erasure = sub.add_parser('erase-requested-student',help='停服后处理本人已申请的删除；默认只预览')
+    erasure.add_argument('--account-id',required=True)
+    erasure.add_argument('--backup',type=Path,required=True)
+    erasure.add_argument('--apply',action='store_true')
+    erasure.add_argument('--services-stopped',action='store_true')
     legacy = sub.add_parser("import-legacy")
     legacy.add_argument("--source", type=Path, required=True)
     legacy.add_argument("--snapshot", type=Path, required=True)
@@ -69,6 +74,9 @@ def main():
             elif args.command == "backfill-learning-facts":
                 from app.modules.memory.backfill import backfill
                 print(json.dumps(backfill(db, args.apply), ensure_ascii=False))
+            elif args.command == 'erase-requested-student':
+                from app.modules.identity.privacy import erase_requested
+                print(json.dumps(erase_requested(db,args.account_id,args.backup,args.apply,args.services_stopped),ensure_ascii=False))
             else:
                 print(json.dumps(import_legacy(db, args.source, args.snapshot), ensure_ascii=False))
     except DomainError as error:

@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'student' | 'admin', username: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 async function enableContent(page: Page) {
   await login(page, 'admin', 's03.admin');
   await navigate(page, '知识点与题库');
@@ -24,13 +22,13 @@ async function enableContent(page: Page) {
   await expect(page.getByText('开发测试已启用', { exact: true })).toBeVisible();
 }
 async function answer(page: Page, value: string) {
-  await page.getByLabel('我的数值答案').fill(value);
-  await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
+  await page.getByLabel('我的回答').fill(value);
+  await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('等待你的思考', { exact: true })).toBeVisible();
 }
 async function reflect(page: Page) {
-  await page.getByLabel('这一步用到了什么依据？下次准备怎么检查？').fill('等式两边做相同运算，再代入检查');
-  await page.getByRole('button', { name: '保存反思并继续' }).click();
+  await page.getByLabel('我的反思').fill('等式两边做相同运算，再代入检查');
+  await page.getByRole('button', { name: '发送' }).click();
   await expect(page.getByText('等待你的思考', { exact: true })).toBeVisible();
 }
 
@@ -57,18 +55,18 @@ test('真实项目学习闭环：内容启用、诊断、提示、反思、检�
     await expect(page.getByRole('button', { name: '给我一点提示', exact: true })).toBeDisabled();
     await answer(page, 'x=6/2');
     await page.getByRole('button', { name: '继续下一步' }).click();
-    await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
     await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
-    await expect(page.locator('.study-hint')).toHaveCount(1);
+    await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toHaveCount(1);
     await page.reload();
-    await expect(page.locator('.study-hint')).toHaveCount(1);
+    await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toHaveCount(1);
     await answer(page, '6');
     await reflect(page);
-    await expect(page.getByText('P-APP-01', { exact: true })).toBeVisible();
-    await expect(page.locator('#math-answer')).toHaveCount(1);
-    await expect(page.getByLabel('我的数值答案')).toBeEnabled();
+    await expect(page.locator('.chat-current[data-task-id=\"P-APP-01\"]')).toBeVisible();
+    await expect(page.locator('#chat-answer')).toHaveCount(1);
+    await expect(page.getByLabel('我的回答')).toBeEnabled();
     await answer(page, '暂时不知道如何表达');
-    await expect(page.getByText('不可验证', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-message.assistant').filter({hasText:'尚不能确认最终答案，这不代表答错。请澄清你的表达。'})).toBeVisible();
     await navigate(admin, '内容与解答复核');
     await admin.getByRole('button', { name: '复核这条解答' }).first().click();
     await admin.getByLabel('复核依据').fill('需要补充列式和数值，当前无法判断');
@@ -85,9 +83,9 @@ test('真实项目学习闭环：内容启用、诊断、提示、反思、检�
     await page.screenshot({ path: 'test-results/screens/student-study.png', fullPage: true });
     await answer(page, '5');
     await page.getByRole('button', { name: '继续下一步' }).click();
-    await expect(page.getByText('C-APP-01', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"C-APP-01\"]')).toBeVisible();
     await answer(page, '6');
-    await page.getByRole('button', { name: '查看学习小结' }).click();
+    await page.getByRole('button', { name: '继续下一步' }).click();
     await expect(page.getByRole('heading', { name: '学习小结', exact: true })).toBeVisible();
     await expect(page.getByText('独立检测：2 / 2 道数值验证通过。', { exact: false })).toBeVisible();
     await page.reload();
@@ -112,9 +110,9 @@ test('手机临时陪学保存、项目隔离与取消', async ({ page, browser 
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '3');
   await page.getByRole('button', { name: '继续下一步' }).click();
-  await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
   await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
-  await expect(page.locator('.study-hint')).toHaveCount(1);
+  await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   mkdirSync('test-results/screens', { recursive: true });
   await page.evaluate(() => window.scrollTo(0, 0));

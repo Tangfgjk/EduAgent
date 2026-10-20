@@ -170,3 +170,76 @@ G05 从数据库补入题目曝光元数据，纯图回放不生成该字段。�
 ### 验证方法
 
 复用原手机登录→创建项目→展开四参数真实浏览器路径，并复测策略/复习桌面与手机场景。无测试专用导航后门。
+
+
+## 2026-10-20：课堂异步审核的取消与待复核出口
+
+状态：已解决；模块：resources/quality、generation、model_tasks；关键词：`checking`、`resource_cancelled`、第二次检查、晚回包。
+
+### 现象
+
+课堂检查要求修改或第二次检查额度不足时，学生可能一直看到checking。取消课堂时，关联机器检查还可能继续运行；需确保完成落库不能覆盖取消。
+
+### 定位过程
+
+对照OpenMAICRunner只扫描pending/running/import_pending及quality.accept的早退路径；以模拟HTTP和双数据库重放pass、revise、quota、timeout及学生/管理员取消后的late complete。
+
+### 根因
+
+资源审核结果与课堂任务状态不是同一对象，早退缺少任务终态转换；取消需要覆盖关联模型操作和结果提交栅栏，不能只更新一个页面状态。
+
+### 解决方案
+
+集中hold记录理由并将checking转pending_review；两端取消关联waiting/pending/running检查，保留在途未知计费；完成前重查任务取消；不撤销已开放旧资源，也不重新请求收费模型。
+
+### 验证方法
+
+`tests/test_private_classroom_release.py`在SQLite与隔离PostgreSQL覆盖六种结局；取消后late complete必须False，资源不能自动批准；失败检查必须显示待复核并保留原因。
+
+## 2026-10-20：恢复与取消的行锁顺序不一致
+
+状态：已解决；模块：runtime/model_tasks、resources/openmaic；关键词：`FOR UPDATE`、Run/Operation、Workspace/Job、恢复死锁。
+
+### 现象
+
+静态并发复查发现：恢复先锁Operation再修改Run，而完成先锁Run再锁Operation；课堂导入先锁Job再创建会话锁Workspace，取消顺序相反。并发时存在循环等待。
+
+### 定位过程
+
+沿恢复、提交、取消、导入的事务边界列出实际行锁顺序，不用单线程绿灯替代并发分析；检查_end隐式ORM flush对Run/Job的写锁。
+
+### 根因
+
+局部使用skip_locked不能消除不同入口之间的锁序反转；调用链中的后续写入也属于锁序。
+
+### 解决方案
+
+恢复先无锁搜候选，再经_locked以Account→Workspace→Run→Policy→Operation统一顺序锁定、复查租约；课堂导入先Workspace后Job；取消在Workspace内先停止关联操作，再锁Job并重读取消状态。
+
+### 验证方法
+
+模型恢复测试观察真实PG FOR UPDATE顺序，并跑原租约、取消、迟回包和课堂双数据库回归。生产负载/并发容量仍需单独压测。
+
+## 2026-10-20：动态诊断与模型输入快照不同步
+
+状态：已解决；模块：generation/service；关键词：`diagnostic_counts`、追加探测、`excluded_parameters`。
+
+### 现象
+
+追加第3/4道探测后，普通课程生成仍报告总数2且只排除初始题目，导致分母失真，可能浪费生成/修复额度。
+
+### 定位过程
+
+比较诊断持久记录、freeze_request发出的JSON和数学编译器排除参数。最终编译仍能拦截曝光复用，但模型输入不准确。
+
+### 根因
+
+新增自适应诊断后保留了固定两题的请求构造常量。
+
+### 解决方案
+
+使用实际attempts数量及diagnostic_parameters的完整曝光清单；有理数专用流程保留各自契约。
+
+### 验证方法
+
+`test_additional_diagnostic_is_in_model_denominator_and_excluded_parameters`经真实诊断接口累计三次观察，核对发送快照总数3及三组排除参数；SQLite/PostgreSQL同验。

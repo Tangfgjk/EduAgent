@@ -1,12 +1,13 @@
 import { SkillExecution } from '@wenjin/ui';
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import { BookOpen, Check, Lightbulb, Send, Square } from 'lucide-react';
+import { BookOpen, Square } from 'lucide-react';
 import { api, type AgentEvent, type TutorCommand, type TutorRun, type TutorView, type Workspace } from '@wenjin/api-client';
 import { Empty, ErrorNotice, Heading, Loading } from '@wenjin/ui';
 import './study.css';
 import { StudyHistory } from './study-history';
+import { TutorChat } from './tutor-chat';
 import { useCourse } from './course';
 import { ResourcePanel } from './generation';
 
@@ -74,24 +75,7 @@ function TutorSession({ run, archived, update, refresh }: { run: TutorRun; archi
     {run.queue && <div className="notice" role="status"><div><strong>{({ waiting: '输入已保存，等待教学处理', processing: '正在处理已保存的输入', retrying: '教学步骤暂未完成，正在准备重试', recovering: '正在等待教学任务恢复', failed: '教学处理已暂停，请联系管理员' })[run.queue.state]}</strong><br/>已等待 {run.queue.wait_seconds} 秒。{run.queue.retry_after_seconds ? `约 ${run.queue.retry_after_seconds} 秒后可再次处理。` : ''}{run.queue.wait_seconds >= 15 ? '等待较久；可以刷新状态或结束本次陪学，已有输入不会丢失。' : '请稍候，无需重复提交。'}<button className="button small" type="button" onClick={refresh}>刷新处理状态</button></div></div>}
     {submit.isError && <ErrorNotice error={submit.error}/>}
     {run.status === 'failed' && <div className="notice">流程未能继续（{run.error_code}）。已有记录保留，请检查内容状态后重新开始。</div>}
-    {view?.phase === 'summary' ? <Summary view={view}/> : view ? <div className="grid two">
-      <section className="card"><div className="card-head"><h2>第 {view.task_index} / {view.task_count} 题</h2><span className="badge neutral">{view.task?.task_id}</span></div><p className="study-stem">{view.task?.stem}</p><p className="card-note">{view.task?.answer_format}</p>
-        <AnswerForm key={"answer:" + view.task?.task_id} view={view} locked={locked} send={command => submit.mutate(command)}/>
-        {view.feedback && <div className={`study-feedback ${view.feedback.status}`} role="status"><strong>{outcomeNames[view.feedback.status]}</strong><p>{view.feedback.message}</p></div>}
-        {view.can_continue && <button className="button primary section-gap" disabled={locked} onClick={() => submit.mutate({ action: 'next' })}><Check size={16}/>{view.task_index === view.task_count ? '查看学习小结' : '继续下一步'}</button>}
-        {view.can_reflect && <Reflection prompt={view.reflection_prompt} key={"reflection:" + view.task?.task_id} locked={locked} send={command => submit.mutate(command)}/>}
-      </section>
-      <section className="card align-start"><div className="card-head"><h2>津津 · 学习伙伴</h2><span className="badge neutral">{run.coaching_available || run.coaching ? "预设提示＋AI 追问" : "预设教学支架"}</span></div>
-        <p className="body-copy">{view.phase === 'checkpoint' || view.phase === 'diagnostic' ? '这一段请独立完成。提交前不提供提示，提交后不能改写这一题的结果。' : '先试着说出你的想法。提示逐级开放，使用提示的次数会单独保留。'}</p>
-        <div className="hint-steps">{['轻推', '方向', '部分步骤', '完整对照'].map((label, index) => <span className={view.hints.length > index ? 'revealed' : ''} key={label}>L{index}<small>{label}</small></span>)}</div>
-        {view.hints.map((hint, index) => <div className="study-hint" key={index}><span className="badge neutral">L{index}</span><p>{hint}</p></div>)}
-        <button className="button" disabled={locked || !view.can_hint} onClick={() => submit.mutate({ action: 'hint', coaching_text: '' })}><Lightbulb size={16}/>{view.hints.length ? '再给我一级提示' : '给我一点提示'}</button>
-        <ModelCoaching key={'coach:' + view.task?.task_id} run={run} locked={locked} send={command => submit.mutate(command)} update={update} refresh={refresh}/>
-        {view.can_skip && <button className="button text section-gap" disabled={locked} onClick={() => submit.mutate({ action: 'skip' })}>记录为未完成并反思</button>}
-        {view.pending_reviews > 0 && <p className="card-note">本轮有 {view.pending_reviews} 条不可验证提交等待复核，不计为自动验证通过。</p>}
-        <p className="card-note">你的步骤与反思是学习记录；本轮程序只验证数值结果，不自动评定推理质量或素养。</p>
-      </section>
-    </div> : <section className="card"><Empty title="输入已经保存">正在准备第一道题。等待较久时，请检查开发 worker 是否启动。</Empty></section>}
+    {view?.phase === 'summary' ? <Summary view={view}/> : view ? <><TutorChat run={run} locked={locked} send={command => submit.mutate(command)}/><details className="card section-gap"><summary>模型任务与取消</summary><ModelCoaching key={'coach:' + view.task?.task_id} run={run} locked={locked} send={command => submit.mutate(command)} update={update} refresh={refresh}/></details></> : <section className="card"><Empty title="输入已经保存">正在准备第一道题。等待较久时，请检查开发 worker 是否启动。</Empty></section>}
     {(run.status === 'queued' || run.status === 'awaiting_input') && <button className="button text section-gap" disabled={submit.isPending} onClick={() => submit.mutate({ action: 'cancel' })}><Square size={14}/>结束这次陪学</button>}
     <TutorEvents key={run.run_id} run={run}/>
     <StudyHistory run={run}/>
@@ -102,7 +86,7 @@ function ModelCoaching({ run, locked, send, update, refresh }: { run: TutorRun; 
   const [text, setText] = useState('');
   const op = run.coaching;
   const cancel = useMutation({ mutationFn: () => api.cancelModelTask(run), onSuccess: update, onError: refresh });
-  if (run.view?.unit_id !== 'math.g9.probability.dev1' || run.view.phase !== 'practice') return null;
+  if (run.view?.phase !== 'practice') return null;
   const relevant = !!op && op.task_id === run.view.task?.task_id;
   const waiting = !!op && relevant && ['waiting', 'pending', 'running'].includes(op.status);
   const labels: Record<string, string> = { waiting: '思路已保存，等待教学步骤', pending: '思路已保存，等待模型', running: '模型正在读取本轮思路', succeeded: '追问建议已保存', failed: '模型未能给出可用追问，请使用上方预设提示', cancelled: '本次模型追问已取消', discarded: '学习步骤或权限已变化，旧回复已拦截', unknown: '模型结果未知，不自动重试，请使用预设提示' };
@@ -120,17 +104,6 @@ function ModelCoaching({ run, locked, send, update, refresh }: { run: TutorRun; 
     </div>}
     <ErrorNotice error={cancel.error}/>
   </section>;
-}
-
-function AnswerForm({ view, locked, send }: { view: TutorView; locked: boolean; send: (command: TutorCommand) => void }) {
-  const [answer, setAnswer] = useState(''), [reasoning, setReasoning] = useState('');
-  function submit(event: FormEvent) { event.preventDefault(); if (!locked && view.can_answer && answer.trim()) send({ action: 'answer', answer: answer.trim(), reasoning }); }
-  return <form onSubmit={submit} className="form-stack section-gap"><label htmlFor="math-answer">我的数值答案</label><input id="math-answer" value={answer} onChange={e => setAnswer(e.target.value)} maxLength={128} required disabled={locked || !view.can_answer} placeholder="例如 x=3 或 6/2"/><label htmlFor="math-reasoning">我的步骤与依据（可选）</label><textarea id="math-reasoning" rows={4} maxLength={1500} value={reasoning} onChange={e => setReasoning(e.target.value)} disabled={locked || !view.can_answer} placeholder="写下算式、猜想或卡住的位置，先保留自己的思考。"/><button className="button primary" disabled={locked || !view.can_answer || !answer.trim()}><Send size={16}/>检查我的解答</button></form>;
-}
-
-function Reflection({ prompt, locked, send }: { prompt: string; locked: boolean; send: (command: TutorCommand) => void }) {
-  const [text, setText] = useState('');
-  return <form className="form-stack section-gap" onSubmit={event => { event.preventDefault(); if (!locked && text.trim().length >= 2) send({ action: 'reflect', reflection: text.trim() }); }}><label htmlFor="math-reflection">{prompt}</label><textarea id="math-reflection" value={text} maxLength={1000} onChange={e => setText(e.target.value)} disabled={locked} required rows={3}/><button className="button primary" disabled={locked || text.trim().length < 2}>保存反思并继续</button></form>;
 }
 
 function Summary({ view }: { view: TutorView }) {

@@ -37,7 +37,8 @@ class DiagnosticAnswer(Contract):
 
 
 class DiagnosticIn(Revision):
-    answers: list[DiagnosticAnswer] = Field(min_length=2,max_length=2)
+    answers: list[DiagnosticAnswer] = Field(min_length=0,max_length=4)
+    finish_diagnostic: bool = Field(default=False,strict=True)
 
 
 class BuildOut(Contract):
@@ -81,7 +82,8 @@ def public(session,row,admin=False):
     if op:
         operation=public_operation(op,session.get(ModelConfiguration,op.configuration_id),include_result=False)
         operation['result']=None  # never export generator teacher solutions
-    diagnostics=[{k:t[k] for k in ('id','stem','format')} for t in row.diagnostics]
+    submitted={a['task_id'] for a in row.attempts}
+    diagnostics=[{k:t[k] for k in ('id','stem','format')} for t in row.diagnostics if row.status!='diagnostic' or t['id'] not in submitted]
     restricted = independent_active(session,row.workspace_id) and not admin
     candidate=row.candidate if admin else ({'title':row.candidate['spec']['title'],'objectives':row.candidate['objectives'],'lesson':row.candidate['lesson'], 'teaching_design':row.candidate.get('teaching_design')} if row.candidate and row.status=='ready' and not restricted else None)
     workspace=session.get(Workspace,row.workspace_id)
@@ -132,7 +134,7 @@ def start(session,actor,wid,body,key):
             if any(set(s.get('conflicts_with',[])).intersection({v['source_id'] for v in sources}) for s in sources):
                 return {'sources':sources,'diagnostics':[],'intent':{**intent,'status':'source_conflict','message':'来源已标记冲突，请管理员核对后重新准备。'}}
             if sources:
-                diagnostics=rational.diagnostics(intent['target_concepts'],bid+'diagnostic') if intent.get('profile')==rational.VERSION else [verified_task(b,f'DIAG-{index}','diagnostic') for index,b in enumerate(sample_blueprints(node['family'],bid+'diagnostic',2))]
+                diagnostics=rational.diagnostics(intent['target_concepts'],bid+'diagnostic') if intent.get('profile')==rational.VERSION else [{**verified_task(b,f'DIAG-{index}','diagnostic'),'probe_blueprint':b.model_dump()} for index,b in enumerate(sample_blueprints(node['family'],bid+'diagnostic',2))]
         return {'sources':sources,'diagnostics':diagnostics}
     graph=StateGraph(PreparationState)
     graph.add_node('resolve_topic',resolve)
@@ -154,9 +156,23 @@ def revision(row,expected,statuses):
 def diagnose(session,actor,wid,bid,body):
     row=owned(session,actor,wid,bid,active=True);revision(row,body.expected_revision,{'diagnostic'})
     knowledge.check_snapshot(session,row.sources)
-    attempts=[{**answer.model_dump(),'status':verify(answer.answer,task['answer']),'task_id':task['id']} for task,answer in zip(row.diagnostics,body.answers)]
+    previous=row.attempts or [];remaining=[t for t in row.diagnostics if t['id'] not in {a['task_id'] for a in previous}]
+    if len(body.answers)!=len(remaining) and not (body.finish_diagnostic and not body.answers and previous):
+        raise DomainError(422,'diagnostic_answer_count','提交需逐题对应本轮尚未作答的诊断')
+    from app.modules.learning.answer_interpretation import interpret
+    attempts=[*previous,*[{**answer.model_dump(),'status':interpret(answer.answer).check(task['answer']),'task_id':task['id']} for task,answer in zip(remaining,body.answers)]]
     row.attempts=attempts
     node=knowledge.NODES[row.intent['nodes'][0]]
+    if not body.finish_diagnostic and any(a['status']=='unverifiable' for a in attempts[-len(body.answers):]) and len(row.diagnostics)<4:
+        if row.intent.get('profile')==rational.VERSION:
+            extra=rational.diagnostics(row.intent['target_concepts'],bid+'followup'+str(len(row.diagnostics)))[0]
+        else:
+            b=sample_blueprints(node['family'],bid+'followup'+str(len(row.diagnostics)),1)[0]
+            extra={**verified_task(b,'pending','diagnostic'),'probe_blueprint':b.model_dump()}
+        extra={**extra,'id':'DIAG-'+str(len(row.diagnostics))}
+        row.diagnostics=[*row.diagnostics,extra]
+        row.intent={**row.intent,'diagnostic_basis':'部分表达尚未确定，追加一题核对。最多四题；也可保留未知并结束诊断，不将未理解当作错误。'}
+        row.revision+=1;session.flush();return public(session,row)
     row.plan={'knowledge_points':row.intent['nodes'],'prerequisites':node['prerequisites'],'scope':node['title']+'：数值练习与依据说明；证明/解释质量不自动评分',
         'observed_numeric_passes':sum(a['status']=='passed' for a in attempts),'diagnostic_count':len(attempts),
         'explanation_assessed':False,'steps':['尝试诊断','练习与分级支架','圆桌比较与我教 AI','另一题无辅助核验','反思与后续复习'],
@@ -169,6 +185,7 @@ def diagnose(session,actor,wid,bid,body):
         row.plan={**row.plan,'profile':rational.VERSION,'scope':'、'.join(rational.GOALS[c] for c in concepts)+'；由教学Agent设计目标内的题型组合与活动，待审核后发布',
             'concept_observations':observations,'learning_goal':row.intent.get('learning_goal',''),
             'steps':['确认本轮目标与数值观察','Agent选择题型、任务数量和概念支架','独立核验题目并人工审核教学设计','按不同目标开展陪学、比较与讲解','独立检测、回望与证据记录']}
+    row.plan={**row.plan,'diagnostic_basis':'依据本次实际提交形成安排；'+('仍有未确定表达，不推断误区或掌握。' if any(a['status']=='unverifiable' for a in attempts) else '数值记录明确，结束本轮诊断；不代表已测完全部能力。')}
     row.status='confirm_plan';row.revision+=1;session.flush()
     return public(session,row)
 
@@ -215,8 +232,8 @@ def freeze_request(row,account,config):
     from app.modules.learning.model_coaching import redact
     family=knowledge.NODES[row.intent['nodes'][0]]['family']
     data={'topic':redact(row.topic,account),'family':family,'sources':[{'source_id':s['source_id'],'text':s['text'][:800]} for s in row.sources],
-        'plan':row.plan,'diagnostic_counts':{'passed':row.plan['observed_numeric_passes'],'total':2},
-        'excluded_parameters':[b.parameters for b in sample_blueprints(family,row.id+'diagnostic',2)]}
+        'plan':row.plan,'diagnostic_counts':{'passed':row.plan['observed_numeric_passes'],'total':len(row.attempts)},
+        'excluded_parameters':diagnostic_parameters(row)}
     schema=CourseProposal.model_json_schema()
     request=GenerationRequest(messages=(Message(role='system',content=(
         '你为初中数学开发课程生成结构化候选，不评定学生能力，不自批内容。只输出JSON并严格遵循Schema。'
@@ -238,7 +255,12 @@ def fake_proposal(row):
     key=row.intent['nodes'][0];node=knowledge.NODES[key]
     return {'title':node['title']+' · 自动开发课程','objectives':[node['title']+'的数值练习','说明条件与独立检查依据'],
         'lesson':node['text'],'source_ids':[row.sources[0]['source_id']],
-        'tasks':[b.model_dump() for b in sample_blueprints(node['family'],row.id,9) if b.parameters not in [d.parameters for d in sample_blueprints(node['family'],row.id+'diagnostic',2)]][:7]}
+        'tasks':[b.model_dump() for b in sample_blueprints(node['family'],row.id,15) if b.parameters not in diagnostic_parameters(row)][:7]}
+
+
+def diagnostic_parameters(row):
+    original=sample_blueprints(knowledge.NODES[row.intent['nodes'][0]]['family'],row.id+'diagnostic',2)
+    return [t['probe_blueprint']['parameters'] if t.get('probe_blueprint') else original[i].parameters for i,t in enumerate(row.diagnostics)]
 
 
 def validate_result(session,text,snapshot):
@@ -251,8 +273,7 @@ def validate_result(session,text,snapshot):
             spec=rational.compile_proposal(proposal,row.intent['target_concepts'],row.sources,row.id,row.diagnostics)
         else:
             proposal=CourseProposal.model_validate_json(text)
-            diag=sample_blueprints(knowledge.NODES[row.intent['nodes'][0]]['family'],row.id+'diagnostic',2)
-            spec=compile_course(proposal,knowledge.NODES[row.intent['nodes'][0]],row.sources,row.id,[b.parameters for b in diag])
+            spec=compile_course(proposal,knowledge.NODES[row.intent['nodes'][0]],row.sources,row.id,diagnostic_parameters(row))
     except (ValueError,KeyError,TypeError) as failure:
         from pydantic import ValidationError
         if isinstance(failure,ValidationError):
@@ -276,16 +297,19 @@ def accept_result(session,op):
     row=session.get(CourseBuild,op.request['build_id'],with_for_update=True)
     row.candidate=op.result;row.validation=op.result['validation'];row.status='pending_review';row.revision+=1
     session.get(AgentRun,op.run_id).status='completed'
+    if session.get(GenerationPolicy,1).private_auto_release:
+        from app.modules.generation.quality import enqueue
+        enqueue(session,row,1)
 
 
-def approve(session,actor,row,expected,note):
+def approve(session,actor,row,expected,note,*,system=False):
     revision(row,expected,{'pending_review'})
     knowledge.check_snapshot(session,row.sources)
     from app.modules.learning.content_contracts import GeneratedContentSpec
     from app.modules.learning.content_service import Content
     from app.modules.governance import reviews
     repo=ContentRepository(session,include_private=True)
-    result=repo.register(actor,GeneratedContentSpec.model_validate(row.candidate['spec']),workspace_id=row.workspace_id,validation_report={'schema_version':'validation.v1','status':'passed','verifier':'typed-math-compiler.v1','scope':'numeric_expression_only','professional_review':False,'reasoning_reviewed':False})
+    result=repo.register(actor,GeneratedContentSpec.model_validate(row.candidate['spec']),workspace_id=row.workspace_id,validation_report={'schema_version':'validation.v1','status':'passed','verifier':'typed-math-compiler.v1','scope':'numeric_expression_only','professional_review':False,'reasoning_reviewed':False},system_build_id=row.id if system else None)
     units=[repo.pack(result['unit_id']),*[repo.activity(a['unit_id']) for a in row.candidate['spec']['activities']]]
     for unit in units:
         reviews.save(session,actor,{'kind':'content','target_id':unit.unit_id,'version':unit.version,'expected_revision':0,'conclusion':'development_ready','note':note})

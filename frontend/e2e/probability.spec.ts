@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'admin' | 'student', username: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 
 for (const kind of ['roundtable', 'teach'] as const) {
   test(`概率${kind === 'teach' ? '我教 AI 窄屏' : '圆桌桌面'}：独立审核、选择、刷新和证据`, async ({ page, browser }) => {

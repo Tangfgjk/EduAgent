@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'student' | 'admin', name: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 async function create(page: Page, title: string, temporary = false) {
   await navigate(page, '项目与会话');
   await page.getByRole('button', { name: temporary ? '新建临时会话' : '新建学习项目', exact: true }).click();
@@ -35,6 +33,7 @@ async function prepare(admin: Page, title: string) {
   await card.getByRole('button', { name: '发布资料', exact: true }).click();
   await expect(card.getByText('资料已发布', { exact: true })).toBeVisible();
 }
+// Explicitly exercise historical review-required API mode. r14.spec covers default self-service.
 async function propose(page: Page, materialTitle: string, model = false, execution = false) {
   await navigate(page, '规划与策略');
   await page.getByLabel('我的学习体验', { exact: false }).fill('我希望先核验数值，再反思为什么这样变形。');
@@ -42,13 +41,17 @@ async function propose(page: Page, materialTitle: string, model = false, executi
   await page.getByRole('combobox', { name: '反思引导重点', exact: true }).selectOption('verification');
   await page.getByRole('checkbox', { name: new RegExp(materialTitle) }).check();
   if (execution) {
-    await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).check();
+    await page.getByRole('checkbox',{name:'调整执行策略（系统检查与本人确认）'}).check();
     await page.getByLabel('练习顺序',{exact:true}).selectOption('errors_first');
     await page.getByLabel('复习列表排序',{exact:true}).selectOption('due_errors_first');
     await page.getByLabel('生成课程支持方式',{exact:true}).selectOption('step_first');
     await page.getByLabel('通用追问重点',{exact:true}).selectOption('verification');
   }
   if (model) await page.getByLabel('使用已开放模型生成有来源的候选').check();
+  await page.route('**/api/v1/student/workspaces/*/strategies',async route=>{
+    if(route.request().method()==='POST')await route.continue({postData:JSON.stringify({...route.request().postDataJSON(),self_service:false})});
+    else await route.continue();
+  });
   await page.getByRole('button', { name: '生成开发策略提案', exact: true }).click();
   await expect(page.locator('.strategy-detail').getByText('等待管理员审核', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading',{name:'冻结的学情观察摘要',exact:true})).toBeVisible();
@@ -103,21 +106,21 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await navigate(page, '津津陪学');
     await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
-    await expect(page.getByText('本任务冻结的执行策略',{exact:true})).toBeVisible();
-    await page.getByLabel('我的数值答案', { exact: true }).fill('3');
-    await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
+    await page.getByText('本任务冻结的执行策略',{exact:true}).click();
+    await page.getByLabel('我的回答', { exact: true }).fill('3');
+    await page.getByRole('button', { name: '发送', exact: true }).click();
     await page.getByRole('button', { name: '继续下一步', exact: true }).click();
-    await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
-    await page.getByLabel('我的数值答案', { exact: true }).fill('6');
-    await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
-    await expect(page.getByLabel('怎样把结果代回原条件检查？请写下你的核验与提醒。', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
+    await page.getByLabel('我的回答', { exact: true }).fill('6');
+    await page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(page.getByLabel('我的反思', { exact: true })).toBeVisible();
     await navigate(page, '规划与策略');
     await page.getByText('查看激活历史与回滚', { exact: true }).click();
     await page.getByLabel('回滚理由', { exact: true }).fill('先回到默认引导，已有陪学保留原策略。');
     await page.getByRole('button', { name: '确认回滚', exact: true }).click();
     await expect(page.getByText('平台默认', { exact: true })).toBeVisible();
     await navigate(page, '津津陪学');
-    await expect(page.getByLabel('怎样把结果代回原条件检查？请写下你的核验与提醒。', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('我的反思', { exact: true })).toBeVisible();
   } finally { await admin.close(); }
 });
 
@@ -189,14 +192,14 @@ test('手机执行策略：四项可选择、说明可读且无横向溢出',asy
   await login(page,'student','s03.two');
   await create(page,'手机执行项目 '+Date.now());
   await navigate(page,'规划与策略');
-  await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).check();
+  await page.getByRole('checkbox',{name:'调整执行策略（系统检查与本人确认）'}).check();
   await page.getByLabel('练习顺序',{exact:true}).selectOption('errors_first');
   await page.getByLabel('复习列表排序',{exact:true}).selectOption('due_errors_first');
   await page.getByLabel('生成课程支持方式',{exact:true}).selectOption('step_first');
   await page.getByLabel('通用追问重点',{exact:true}).selectOption('verification');
   await expect(page.getByLabel('通用追问重点',{exact:true})).toHaveValue('verification');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
-  await page.getByRole('checkbox',{name:'调整执行策略（需审核与本人确认）'}).scrollIntoViewIfNeeded();
+  await page.getByRole('checkbox',{name:'调整执行策略（系统检查与本人确认）'}).scrollIntoViewIfNeeded();
   mkdirSync('test-results/screens',{recursive:true});
   await page.screenshot({path:'test-results/screens/student-execution-mobile.png'});
 });

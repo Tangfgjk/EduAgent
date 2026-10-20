@@ -1,0 +1,3 @@
+export type ClassroomManifest = { schema_version: string; title: string; unsupported: string[]; scenes: ClassroomScene[] };
+export type ClassroomElement = { id: string; kind: string; left: number; top: number; width: number; height: number; rotation: number; text?: string; color: string; font_size?: number; fill?: string; path?: string; view_box?: number[]; src?: string; alt?: string; captions?: string };
+export type ClassroomScene = { id: string; title: string; width: number; height: number; background: string; media?: {id:string;kind:string;src:string;alt:string;captions:string}[]; elements: ClassroomElement[]; actions: { kind: string; text?: string; id?: string; element_id?: string }[] };

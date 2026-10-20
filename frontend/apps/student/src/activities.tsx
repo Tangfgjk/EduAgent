@@ -41,7 +41,7 @@ export function ActivityPage({ workspace, kind }: { workspace: Workspace; kind: 
   const run = runs.find(item => item.run_id === selected) ?? pending ?? runs[0];
   return <><Heading kicker={kind === 'roundtable' ? 'COMPARE, QUESTION, VERIFY' : 'EXPLAIN TO UNDERSTAND'} title={title}
     description={kind === 'roundtable' ? '先说出自己的思路，再比较观点，最后用依据核验。' : '把方法讲给虚拟学伴，回应它的疑问与错误。'}/>
-    <div className="notice">{kind === 'roundtable' ? <MessagesSquare size={20}/> : <GraduationCap size={20}/>}<div><strong>{kind === 'teach' ? '开发互动 · 可选真实学伴追问' : '开发互动 · 可选真实圆桌'}</strong><br/>{kind === 'teach' ? '每次活动按已开放路线请求有界模型追问。新版有理数使用课程Agent设计并审核的概念问题，旧内容沿用原支架。数值独立核验，不评定讲解质量或素养。' : '模型选择讨论方向，新版有理数按已审核概念设计组织三种视角；旧内容沿用原支架。不是三位独立专家，观点待核验，数值另行检查。'}</div></div>
+    <details className="card section-gap"><summary>活动说明与检查范围</summary><div className="notice">{kind === 'roundtable' ? <MessagesSquare size={20}/> : <GraduationCap size={20}/>}<div><strong>{kind === 'teach' ? '开发互动 · 可选真实学伴追问' : '开发互动 · 可选真实圆桌'}</strong><br/>{kind === 'teach' ? '每次活动按已开放路线请求有界模型追问。新版有理数使用课程Agent设计并审核的概念问题，旧内容沿用原支架。数值独立核验，不评定讲解质量或素养。' : '模型选择讨论方向，新版有理数按已审核概念设计组织三种视角；旧内容沿用原支架。不是三位独立专家，观点待核验，数值另行检查。'}</div></div></details>
     {workspace.kind === 'temporary' && <p className="page-note">本次互动仅保留在临时空间，不进入全局正式项目的学习记忆。</p>}
     {workspace.status === 'archived' && <p className="page-note">此空间已归档，可以查看历史，恢复后可继续。</p>}
     {query.isPending || content.isPending || learning.isPending ? <Loading/> : query.isError || content.isError || learning.isError ? <ErrorNotice error={query.error ?? content.error ?? learning.error} retry={() => { void query.refetch(); void content.refetch(); void learning.refetch(); }}/> : <>
@@ -50,12 +50,12 @@ export function ActivityPage({ workspace, kind }: { workspace: Workspace; kind: 
       {offset === 0 && !pending && <section className="card section-gap"><h2>{unit?.title ?? "选择互动单元"}</h2><p className="body-copy">{kind === 'roundtable' ? unit?.flow === 'roundtable_cycle_v1' ? '我的思路 → 三种视角 → 我的比较修正 → 另一题无辅助验证 → 圆桌小结。' : '我的方案 → 三种角色观点 → 我的比较与数值核验 → 讨论小结。' : unit?.flow === 'teach_cycle_v1' ? '我的讲解 → 最多三轮学伴追问与修正 → 另一题无辅助验证 → TeachReport。' : '我的讲解 → 学伴的预设误区 → 我的纠错与数值核验 → TeachReport。'}</p><p className="card-note">陪学与互动活动在同一空间中依次进行。请先结束当前陪学或另一条互动路线；正式项目和临时会话都可开始本活动。</p>
         {unit && !unit.enabled && <p className="card-note">请管理员到“知识点与题库”核对并单独启用互动模板。陪学题库的启用不会自动启用此活动。</p>}
         <button className="button primary section-gap" disabled={!course.data?.active_unit_id || !unit?.enabled || start.isPending || workspace.status !== 'active'} onClick={() => start.mutate()}>{start.isPending ? '正在发起…' : '开始' + title}</button><ErrorNotice error={start.error}/></section>}
-      <SkillExecution snapshot={run?.skill_execution}/>
+      <details className="section-gap"><summary>本轮教学策略</summary><SkillExecution snapshot={run?.skill_execution}/></details>
       {run?.view && <p className="card-note">本轮内容：{content.data?.items.find(item => item.content_version === run.view?.activity_version)?.title ?? "历史互动版本"}</p>}
       {run ? <ActivitySession key={run.run_id} run={run} archived={workspace.status !== 'active'} update={update} refresh={() => { void query.refetch(); }}/>
         : offset > 0 && <Empty title="这一页没有历史活动">可以返回上一页查看。</Empty>}
-      {runs.length > 0 && <section className="card section-gap"><h2>这个空间的互动记录</h2><div className="plan-history">{runs.map(item => <button className="button" key={item.run_id} onClick={() => setSelected(item.run_id)}>{new Date(item.created_at * 1000).toLocaleString()} · {statusNames[item.status]}</button>)}</div></section>}
-      <div className="pagination section-gap"><button className="button" disabled={offset === 0 || query.isFetching} onClick={() => { setOffset(Math.max(0, offset - 20)); setSelected(undefined); }}>上一页</button><span>第 {offset / 20 + 1} 页</span><button className="button" disabled={runs.length < 20 || query.isFetching} onClick={() => { setOffset(offset + 20); setSelected(undefined); }}>下一页</button></div>
+      {runs.length > 0 && <details className="card section-gap"><summary>往期活动 · {title}</summary><div className="plan-history">{runs.map(item => <button className="button" key={item.run_id} onClick={() => setSelected(item.run_id)}>{new Date(item.created_at * 1000).toLocaleString()} · {statusNames[item.status]}</button>)}</div>
+      <div className="pagination section-gap"><button className="button" disabled={offset === 0 || query.isFetching} onClick={() => { setOffset(Math.max(0, offset - 20)); setSelected(undefined); }}>上一页</button><span>第 {offset / 20 + 1} 页</span><button className="button" disabled={runs.length < 20 || query.isFetching} onClick={() => { setOffset(offset + 20); setSelected(undefined); }}>下一页</button></div></details>}
     </>}
   </>;
 }

@@ -13,16 +13,29 @@ from app.modules.errors import DomainError
 REF='a9da60b3b4adb429369c0da13d5637a904ead2b0'
 
 
+def require_scope(session,build):
+    from app.infrastructure.db.models import Account,CourseBinding
+    from app.modules.generation.service import independent_active
+    from app.modules.knowledge.service import check_snapshot
+    space=session.get(Workspace,build.workspace_id);account=session.get(Account,space.owner_id);binding=session.get(CourseBinding,build.workspace_id)
+    if space.status!='active' or not account.enabled or account.source_kind not in {'synthetic','adult_test'} or independent_active(session,space.id) or binding and binding.active_unit_id!=build.unit_id:
+        raise DomainError(409,'resource_scope_changed','课堂的账号、课程或独立检测范围已变化')
+    check_snapshot(session,build.sources)
+
+
 def artifact_for_document(document,remote):
+    from app.modules.resources.classroom import project
     scenes=document.get('scenes',[])
     if not isinstance(scenes,list) or not 1<=len(scenes)<=3 or not all(isinstance(scene,dict) for scene in scenes) or not isinstance(document.get('stage'),dict):raise ValueError('scene_budget_exceeded')
     cards=[]
     for scene in scenes:
         text=plain_text(scene.get('content',{}))
         if not text.strip():raise ValueError('empty_scene_content')
-        cards.append({'text':(str(scene.get('title',''))+'\n'+text)[:4000]})
+        title=str(scene.get('title',''))
+        cards.append({'text':(text if text.strip().startswith(title) else title+'\n'+text)[:4000]})
     return {'title':str(document['stage'].get('name','OpenMAIC 课程资源'))[:120],
-        'cards':cards,'generator':'OpenMAIC.v1.2.0','upstream_ref':REF,'remote_job_id':remote,'converter_version':'canvas-text.v2'}
+        'cards':cards,'generator':'OpenMAIC.v1.2.0','upstream_ref':REF,'remote_job_id':remote,'converter_version':'classroom-manifest.v1',
+        'classroom':project(document),'source_document':document,'source_document_sha256':content_hash(document)}
 
 
 def endpoint():
@@ -87,7 +100,7 @@ class OpenMAICRunner:
                 row.status='cancelled';budget.enabled=False;return True
             build=session.get(CourseBuild,row.build_id)
             from app.modules.knowledge.service import check_snapshot
-            try: check_snapshot(session,build.sources)
+            try: require_scope(session,build)
             except DomainError:
                 row.status='cancelled';budget.enabled=False;return True
             identifier,owner,remote=row.id,row.owner_id,row.remote_id
@@ -115,23 +128,30 @@ class OpenMAICRunner:
         except (httpx.HTTPError,ValueError,KeyError,TypeError): error='resource_remote_unknown'
         finally: client.close()
         with self.db.transaction() as session:
-            row=session.get(OpenMAICJob,identifier,with_for_update=True);budget=session.get(ResourceBudget,row.budget_id)
+            candidate=session.get(OpenMAICJob,identifier)
+            session.get(Workspace,candidate.workspace_id,with_for_update=True)
+            row=session.scalar(select(OpenMAICJob).where(OpenMAICJob.id==identifier).with_for_update().execution_options(populate_existing=True))
+            budget=session.get(ResourceBudget,row.budget_id)
             if row.status=='cancelled' or (not budget.enabled and not readonly): return True
             row.remote_id=remote
             row.lease_until=None
             if error: row.status='unknown' if readonly or not remote else 'running';row.error_code=error
             elif artifact:
                 build=session.get(CourseBuild,row.build_id)
-                try: check_snapshot(session,build.sources)
+                try: require_scope(session,build)
                 except DomainError:
                     row.status='cancelled';budget.enabled=False;return True
                 if session.get(Workspace,row.workspace_id).status!='active' or build.status!='ready':
                     row.status='cancelled';budget.enabled=False;return True
                 digest=content_hash(artifact)
                 existing=session.scalar(select(ResourceArtifact).where(ResourceArtifact.build_id==row.build_id,ResourceArtifact.sha256==digest))
+                checking=False
                 if existing is None:
-                    session.add(ResourceArtifact(workspace_id=row.workspace_id,build_id=row.build_id,body=artifact,sha256=digest))
-                row.classroom_id=target;row.status='completed' if existing and existing.status=='approved' else 'pending_review';budget.enabled=False
+                    existing=ResourceArtifact(workspace_id=row.workspace_id,build_id=row.build_id,body=artifact,sha256=digest)
+                    session.add(existing);session.flush()
+                    from app.modules.resources.quality import enqueue
+                    checking=bool(enqueue(session,existing))
+                row.classroom_id=target;row.status='completed' if existing and existing.status=='approved' else 'checking' if checking else 'pending_review';budget.enabled=False
             elif value.get('status')=='failed': row.status='failed';row.error_code='remote_generation_failed';budget.enabled=False
             else: row.status='running'
         return True

@@ -130,3 +130,6 @@ export { StrategyDetails, strategyPhases } from './strategy';
 export { SkillExecution } from './skill-execution';
 
 export { EvolutionWorkbench } from './skill-evolution';
+
+export {MediaBudgets} from './media-budget';
+export {PrivacyControls,OperationalReadiness} from './privacy';

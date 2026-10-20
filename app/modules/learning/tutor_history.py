@@ -25,15 +25,16 @@ def history(session, account, run, after=0, limit=30):
     # The expected revision is unique within an accepted input stream, even when
     # several inputs share a second; the initial start input has sequence 1.
     sequence = func.coalesce(LearningInput.payload['expected_revision'].as_integer(), 0) + 1
-    rows = session.execute(select(LearningInput, LearningFact, ModelOperation, ModelConfiguration, sequence)
+    rows = session.execute(select(LearningInput, LearningFact, ModelOperation, ModelConfiguration, sequence, OutboxJob.status)
         .outerjoin(LearningFact, LearningFact.input_id == LearningInput.id)
+        .outerjoin(OutboxJob, OutboxJob.input_id == LearningInput.id)
         .outerjoin(ModelOperation, ModelOperation.input_id == LearningInput.id)
         .outerjoin(ModelConfiguration, ModelConfiguration.id == ModelOperation.configuration_id)
         .where(LearningInput.account_id == account.id, LearningInput.workspace_id == run.workspace_id,
             LearningInput.conversation_id == run.conversation_id, sequence > after)
         .order_by(sequence).limit(limit + 1)).all()
     items = []
-    for entry, fact, operation, config, position in rows[:limit]:
+    for entry, fact, operation, config, position, job_status in rows[:limit]:
         payload = entry.payload
         observation = fact.payload if fact else {}
         snapshot = observation.get('task_snapshot') or {}
@@ -44,7 +45,7 @@ def history(session, account, run, after=0, limit=30):
             'answer': payload.get('answer'), 'reasoning': payload.get('reasoning'),
             'reflection': payload.get('reflection'), 'thinking': payload.get('coaching_text') or None,
             'preset_hint': observation.get('revealed_hint'), 'numeric_status': observation.get('status') if fact and fact.kind == 'answer' else None,
-            'processed': fact is not None,
+            'processed': fact is not None or job_status == 'completed',
             'model': {'operation_id': operation.id, 'status': operation.status, 'vendor': config.vendor,
                 'model': config.model, 'prompt_version': config.prompt_version,
                 'result': operation.result if operation.status == 'succeeded' else None,

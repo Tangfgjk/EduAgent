@@ -297,3 +297,23 @@ def test_published_configuration_immutable_and_no_browser_keys(env, monkeypatch)
     assert env.admin.post('/api/v1/admin/model-runtime/publish', json=payload).json()['error']['code'] == 'model_key_missing'
     assert env.admin.post('/api/v1/admin/model-runtime/publish', json={**payload, 'api_key': 'test-secret'}).status_code == 422
     assert 'test-secret' not in env.admin.get('/api/v1/admin/model-runtime').text
+
+
+def test_recovery_uses_completion_lock_order_before_mutating_run(env):
+    import re
+    from sqlalchemy import event
+    client,path,_=setup(env);ready(env,client,path)
+    runner=ModelTaskRunner(env.db);claim=runner.claim();assert claim
+    with env.db.transaction() as session:session.get(ModelOperation,claim['id']).lease_until=now()-1
+    locks=[]
+    def capture(connection,cursor,statement,parameters,context,executemany):
+        if 'FOR UPDATE' in statement.upper():
+            table=re.search(r'FROM\s+([a-z_]+)',statement,re.IGNORECASE)
+            if table:locks.append(table.group(1).lower())
+    event.listen(env.db.engine,'before_cursor_execute',capture)
+    try:runner.recover()
+    finally:event.remove(env.db.engine,'before_cursor_execute',capture)
+    if env.db.engine.dialect.name=='postgresql':
+        assert locks[:5]==['accounts','workspaces','agent_runs','model_policy','model_operations'],locks
+    assert client.get(path).json()['coaching']['status']=='unknown'
+    assert runner.claim() is None

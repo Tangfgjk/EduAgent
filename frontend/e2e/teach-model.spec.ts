@@ -51,7 +51,7 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     await expect(student.getByText('模拟学伴', { exact: true })).toBeVisible();
-    await expect(student.getByText('你能先说明自己的思路，以及仍不确定的地方吗？', { exact: true }).last()).toBeVisible();
+    await expect(student.getByText('你使用了哪条关系或运算法则，它的适用条件是什么？', { exact: true }).last()).toBeVisible();
     await student.reload();
     await expect(student.getByText('学伴追问已保存', { exact: true })).toBeVisible();
     mkdirSync('test-results/screens', { recursive: true });
@@ -78,7 +78,7 @@ test('模型我教 AI：讲解追问刷新、数值核验与验证阶段无辅�
     await student.getByRole('button', { name: '提交本题验证，查看报告', exact: true }).click();
     await expect(student.getByText('另一题验证：数值通过', { exact: true })).toBeVisible();
     await expect(student.getByText('学生原始贡献', { exact: true })).toHaveCount(5);
-    await expect(student.getByText('你能先说明自己的思路，以及仍不确定的地方吗？', { exact: true }).last()).toBeVisible();
+    await expect(student.getByText('你使用了哪条关系或运算法则，它的适用条件是什么？', { exact: true }).last()).toBeVisible();
     await student.setViewportSize({ width: 390, height: 844 });
     expect(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   } finally { await context.close(); }

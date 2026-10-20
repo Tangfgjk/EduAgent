@@ -143,7 +143,7 @@ def task_spec(problem, identifier, stage, concept, design=None):
 def diagnostics(concepts, seed):
     # Two probes are preparation evidence only, not a competency score.
     rows=[]
-    for i in range(2):
+    for i in range(max(2,len(concepts))):
         concept=concepts[i % len(concepts)]; problem=sample(concept,seed+str(i))
         rows.append({**task_spec(problem,f'DIAG-{i}','diagnostic',concept), 'probe_problem':problem.model_dump(exclude={'answer'}),'probe_concept':concept})
     return rows

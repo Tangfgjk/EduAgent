@@ -160,6 +160,11 @@ class Worker:
                     activate_model_task(session, run, entry)
                     event(session, run, event_kind)
                 # 取消、已终结运行不再执行图；输入历史仍保留。
+                if run is not None:
+                    from app.modules.skill_evolution.trials import monitor
+                    monitor(session,run.workspace_id)
+                    from app.modules.skill_evolution.automation import tick
+                    tick(session,run.workspace_id)
                 self.check_lease(job, claimed)
                 if run is None:
                     job.status = "dead"
@@ -187,7 +192,7 @@ def main():
     parser = argparse.ArgumentParser(description="运行教学流程及已发布的开发模型任务；默认不开放模型")
     parser.add_argument("--env-file")
     parser.add_argument("--once", action="store_true")
-    parser.add_argument("--lane", choices=["teaching", "models", "combined"], default="combined",
+    parser.add_argument("--lane", choices=["teaching", "models", "combined", "media"], default="combined",
                         help="试点分别启动 teaching/models 两个进程，避免模型等待占用教学 worker")
     args = parser.parse_args()
     settings = Settings.load(Path(args.env_file) if args.env_file else None)
@@ -196,7 +201,10 @@ def main():
     db = Database(settings.database_url)
     try:
         db.assert_ready()
-        worker = ModelTaskRunner(db) if args.lane == "models" else Worker(db, enable_models=args.lane == "combined")
+        if args.lane=='media':
+            from app.modules.resources.media import MediaRunner
+            worker=MediaRunner(db)
+        else:worker = ModelTaskRunner(db) if args.lane == "models" else Worker(db, enable_models=args.lane == "combined")
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
         logger.addHandler(handler)

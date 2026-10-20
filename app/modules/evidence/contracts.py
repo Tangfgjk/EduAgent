@@ -66,6 +66,7 @@ class CompetencyState(Contract):
 
 
 class EvidenceOut(Contract):
+    assistance: str = 'all'
     scope: Literal["global", "workspace"]
     workspace_count: int
     days: int

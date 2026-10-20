@@ -1,11 +1,13 @@
+import {PrivacyControls} from '@wenjin/ui';
 import { EvolutionWorkbench } from '@wenjin/ui';
 import { Units } from './units';
+import { WorkspaceGuide } from './workspace-guide';
 import { CourseBar } from './course';
 import { GenerationPage } from './generation';
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
-import { Archive, ArrowRight, BookOpen, CalendarDays, ChartNoAxesCombined, ChevronRight, Compass, FolderOpen, GraduationCap, History, MessageCircle, MessageCirclePlus, MessagesSquare, Pencil, Plus, Settings, Sparkles, Undo2 } from 'lucide-react';
+import { Archive, ArrowRight, ChartNoAxesCombined, ChevronRight, Compass, FolderOpen, GraduationCap, History, MessageCircle, MessageCirclePlus, MessagesSquare, Pencil, Plus, Settings, Undo2 } from 'lucide-react';
 import { api, ApiError, type Account, type Workspace } from '@wenjin/api-client';
 import { Empty, ErrorNotice, Heading, Loading, MathGarden, Modal, Shell, Soon, Success, type NavItem } from '@wenjin/ui';
 import { LearningCycle } from '@wenjin/math';
@@ -17,19 +19,11 @@ import { EvidencePage } from './evidence';
 import { PlannerPage } from './planner';
 
 const navigation: NavItem[] = [
-  { path: 'home', label: '今日学习', icon: Compass, section: '学习空间' },
-  { path: 'spaces', label: '项目与会话', icon: FolderOpen },
-  { path: 'courses', label: '主题与课程', icon: Sparkles },
-  { path: 'units', label: '数学单元', icon: BookOpen },
-  { path: 'plan', label: '学习计划', icon: CalendarDays, section: '在项目中学习' },
-  { path: 'study', label: '津津陪学', icon: MessageCircle },
-  { path: 'review', label: '错题与复习', icon: History },
-  { path: 'roundtable', label: '圆桌讨论', icon: MessagesSquare },
-  { path: 'teach', label: '我教 AI', icon: GraduationCap },
-  { path: 'evidence', label: '成长证据', icon: ChartNoAxesCombined, section: '回望与调整' },
-  { path: 'skill-evolution', label: 'Skill 离线改进', icon: Sparkles },
-  { path: 'planner', label: '规划与策略', icon: Sparkles },
-  { path: 'settings', label: '偏好与账号', icon: Settings },
+  { path: 'home', label: '学习工作台', icon: Compass },
+  { path: 'spaces', label: '学习空间', icon: FolderOpen },
+  { path: 'review', label: '复习', icon: History },
+  { path: 'evidence', label: '成长', icon: ChartNoAxesCombined },
+  { path: 'settings', label: '我的', icon: Settings },
 ];
 type Action = { mode: 'create'; kind: Workspace['kind'] } | { mode: 'rename' | 'archive' | 'restore'; id: string };
 
@@ -72,8 +66,8 @@ export function StudentApp({ account }: { account: Account }) {
     {action && (action.mode === 'create' || target) && <WorkspaceDialog key={action.mode + (target?.workspace_id ?? '')} action={action} target={target} onClose={() => setAction(null)} onSaved={workspace => {
       queryClient.setQueryData<Workspace[]>(queryKey, old => { const rest = old?.filter(item => item.workspace_id !== workspace.workspace_id) ?? []; return [workspace, ...rest]; });
       void queryClient.invalidateQueries({ queryKey });
-      if (action.mode === 'create') choose(workspace);
-      setNotice(action.mode === 'create' ? '工作空间已创建，可以在左侧切换。' : action.mode === 'rename' ? '名称已更新。' : action.mode === 'archive' ? '已归档，记录保留，可随时恢复。' : '工作空间已恢复。');
+      if (action.mode === 'create') { choose(workspace); navigate({ pathname: '/home', search: '?workspace=' + workspace.workspace_id }); }
+      setNotice(action.mode === 'create' ? '工作空间已创建，请从工作台的下一步开始。' : action.mode === 'rename' ? '名称已更新。' : action.mode === 'archive' ? '已归档，记录保留，可随时恢复。' : '工作空间已恢复。');
       setAction(null);
     }} onConflict={() => { void queryClient.invalidateQueries({ queryKey }); }}/>}
   </Shell>;
@@ -82,10 +76,11 @@ export function StudentApp({ account }: { account: Account }) {
 function Home({ account, items, current, search, create, enter }: { account: Account; items: Workspace[]; current?: Workspace; search: string; create: (kind: Workspace['kind']) => void; enter: (workspace: Workspace) => void }) {
   const active = items.filter(item => item.kind === 'project' && item.status === 'active');
   return <><Heading kicker="A LITTLE THINKING, EVERY DAY" title={`${account.display_name}，今天从哪里开始？`} description="给自己一个清晰的小目标，留下一次认真的尝试。"/>
+    {current && <WorkspaceGuide workspace={current}/>}
     <section className="hero card"><div><span className="kicker">以问为津 · 学有所思</span><h2 className="serif">让问题，成为理解的起点。</h2><p>围绕一个项目积累思考，也可以随时开启一次临时探索。每个空间各有自己的学习上下文。</p><div className="actions"><button className="button primary" onClick={() => create('project')}><Plus size={16}/>新建学习项目</button><button className="button translucent" onClick={() => create('temporary')}>开启临时会话<ArrowRight size={16}/></button></div></div><MathGarden/></section>
     <div className="section-heading"><h2>我的学习空间</h2><Link className="text-link" to={{ pathname: '/spaces', search }}>查看全部<ChevronRight size={15}/></Link></div>
     {active.length ? <div className="grid three">{active.slice(0, 3).map(item => <section className="card project-card" key={item.workspace_id}><div className="card-head"><span className="tile-icon"><FolderOpen size={21}/></span><span className="badge">正式项目</span></div><h3>{item.title}</h3><p>准备好目标与计划后，在这里逐步积累自己的学习过程。</p><button className="button" onClick={() => enter(item)}>进入项目<ArrowRight size={15}/></button></section>)}</div> : <section className="card"><Empty title="第一个项目，从一个想学会的问题开始" action={<button className="button" onClick={() => create('project')}>创建我的第一个项目</button>}>比如「弄懂一元一次方程」或「梳理三角形证明」。项目会保存，刷新后也能继续。</Empty></section>}
-    <div className="grid two section-gap"><section className="card"><div className="card-head"><h2>你的学习路线</h2><span className="badge neutral">先看方向</span></div><LearningCycle/><p className="card-note">方程开发单元已接入。先由你明确目标，计划确认后再开始尝试，最后用独立检测检验理解。</p></section><section className="card"><div className="card-head"><h2>不止于解出一道题</h2><span className="badge neutral">开发互动已接入</span></div><Link className="feature-link" to={{ pathname: '/roundtable', search }}><MessagesSquare size={19}/><div><strong>圆桌讨论</strong><small>让不同思路相遇，学会追问依据。</small></div><ChevronRight size={17}/></Link><Link className="feature-link" to={{ pathname: '/teach', search }}><GraduationCap size={19}/><div><strong>我教 AI</strong><small>把你理解的方法，讲给虚拟学伴听。</small></div><ChevronRight size={17}/></Link><p className="card-note">{current ? `当前上下文：${current.title}` : '选定项目后，每条学习路线都将有明确归属。'}</p></section></div>
+    <div className="grid two section-gap"><section className="card"><div className="card-head"><h2>你的学习路线</h2><span className="badge neutral">先看方向</span></div><LearningCycle/><p className="card-note">方程开发单元已接入。先由你明确目标，课程和节奏确认后再开始尝试，最后用独立检测检验理解。</p></section><section className="card"><div className="card-head"><h2>不止于解出一道题</h2><span className="badge neutral">开发互动已接入</span></div><Link className="feature-link" to={{ pathname: '/roundtable', search }}><MessagesSquare size={19}/><div><strong>圆桌讨论</strong><small>让不同思路相遇，学会追问依据。</small></div><ChevronRight size={17}/></Link><Link className="feature-link" to={{ pathname: '/teach', search }}><GraduationCap size={19}/><div><strong>我教 AI</strong><small>把你理解的方法，讲给虚拟学伴听。</small></div><ChevronRight size={17}/></Link><p className="card-note">{current ? `当前上下文：${current.title}` : '选定项目后，每条学习路线都将有明确归属。'}</p></section></div>
   </>;
 }
 
@@ -120,5 +115,5 @@ function WorkspaceDialog({ action, target, onClose, onSaved, onConflict }: { act
 }
 
 function SettingsView({ account }: { account: Account }) {
-  return <><Heading kicker="MAKE ROOM FOR YOUR WAY" title="偏好与账号" description="先理解自己适合怎样学习，再逐步调整。"/><section className="card settings-card"><h2>当前账号</h2><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>身份</dt><dd>学生</dd></div><div><dt>账号管理</dt><dd>忘记密码请联系管理员重置</dd></div></dl><h2 className="section-gap">学习偏好</h2><p className="body-copy">偏好调整会在陪学接入后开放，让提示方式和节奏有据可依。目前尚未收集或保存学习偏好。</p><div className="setting-row"><span>提示方式与学习节奏</span><Soon/></div><div className="setting-row"><span>通知与复习提醒</span><Soon/></div></section></>;
+  return <><Heading kicker="MAKE ROOM FOR YOUR WAY" title="偏好与账号" description="先理解自己适合怎样学习，再逐步调整。"/><section className="card settings-card"><h2>当前账号</h2><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>身份</dt><dd>学生</dd></div><div><dt>账号管理</dt><dd>忘记密码请联系管理员重置</dd></div></dl><h2 className="section-gap">学习偏好</h2><p className="body-copy">偏好调整会在陪学接入后开放，让提示方式和节奏有据可依。目前尚未收集或保存学习偏好。</p><div className="setting-row"><span>提示方式与学习节奏</span><Soon/></div><div className="setting-row"><span>通知与复习提醒</span><Soon/></div></section><PrivacyControls/></>;
 }

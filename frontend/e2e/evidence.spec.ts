@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'student' | 'admin', username: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 async function create(page: Page, title: string, temporary = false) {
   await navigate(page, '项目与会话');
   await page.getByRole('button', { name: temporary ? '新建临时会话' : '新建学习项目', exact: true }).click();
@@ -21,8 +19,8 @@ async function create(page: Page, title: string, temporary = false) {
   await expect(page.locator('.context-bar')).toContainText(title);
 }
 async function answer(page: Page, value: string) {
-  await page.getByLabel('我的数值答案', { exact: true }).fill(value);
-  await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
+  await page.getByLabel('我的回答', { exact: true }).fill(value);
+  await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('等待你的思考', { exact: true })).toBeVisible();
 }
 
@@ -52,17 +50,17 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
   await answer(page, '3');
   await page.getByRole('button', { name: '继续下一步', exact: true }).click();
-  await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
   await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
-  await expect(page.getByRole('button', { name: '再给我一级提示', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '给我一点提示', exact: true })).toBeEnabled();
   await answer(page, '6');
-  await page.getByLabel('这一步用到了什么依据？下次准备怎么检查？').fill('两边同时进行相同运算');
-  await page.getByRole('button', { name: '保存反思并继续', exact: true }).click();
-  await expect(page.getByText('P-APP-01', { exact: true })).toBeVisible();
+  await page.getByLabel('我的反思').fill('两边同时进行相同运算');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await expect(page.locator('.chat-current[data-task-id=\"P-APP-01\"]')).toBeVisible();
   await answer(page, '7');
-  await page.getByLabel('这一步用到了什么依据？下次准备怎么检查？').fill('包装费只出现一次');
-  await page.getByRole('button', { name: '保存反思并继续', exact: true }).click();
-  await expect(page.getByText('C-EQ-01', { exact: true })).toBeVisible();
+  await page.getByLabel('我的反思').fill('包装费只出现一次');
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  await expect(page.locator('.chat-current[data-task-id=\"C-EQ-01\"]')).toBeVisible();
   await answer(page, '5');
   await navigate(page, '成长证据');
   await page.getByRole('tab', { name: '当前空间局部', exact: true }).click();
@@ -82,7 +80,7 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await page.getByRole('combobox', { name: '趋势指标', exact: true }).selectOption('hints');
   await page.getByRole('button', { name: /提示请求 1 次$/ }).click();
   await expect(page.getByRole('status').filter({ hasText: '提示请求 1 次' })).toBeVisible();
-  await page.getByRole('button', { name: '逻辑推理', exact: false }).click();
+  await page.getByRole('button', { name: /^逻辑推理 \d+ 条候选$/ }).click();
   await expect(page.getByText('逻辑推理 · 未评定', { exact: true })).toBeVisible();
   await page.getByRole('combobox', { name: '记录类型', exact: true }).selectOption('checkpoint');
   await expect(page.locator('.evidence-records > li')).toHaveCount(1);
@@ -108,10 +106,9 @@ test('成长证据：真实阶段统计、可交互趋势、来源自述与归�
   await page.getByRole('combobox', { name: '记录类型', exact: true }).selectOption('all');
   await page.getByRole('tab',{name:'全局宏观',exact:true}).click();
   await page.getByRole('checkbox',{name:'全局包含归档项目'}).uncheck();
-  await expect(page.getByText('当前范围还没有过程证据',{exact:true})).toBeVisible();
-  await expect(page.locator('.knowledge-node.has-evidence')).toHaveCount(0);
+  await expect(page.locator('.evidence-records > li').filter({hasText:title})).toHaveCount(0);
   await page.getByRole('checkbox',{name:'全局包含归档项目'}).check();
-  await expect(page.locator('.knowledge-node.has-evidence')).toHaveCount(1);
+  await expect(page.locator('.evidence-records > li').filter({hasText:title}).first()).toBeVisible();
   mkdirSync('test-results/screens', { recursive: true });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'test-results/screens/student-evidence-live.png', fullPage: true });

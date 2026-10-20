@@ -1,3 +1,7 @@
+export type MediaBudgetRecord={budget_id:string;resource_id:string;workspace_id:string;enabled:boolean;revision:number;body:Record<string,unknown>;operations:{operation_id:string;slot:string;kind:string;status:string;reserved_microyuan:number;receipt:Record<string,unknown>|null}[]};
+export type EffectStudy = {study_id:string;title:string;status:string;revision:number;protocol:Record<string,unknown>;protocol_hash:string};
+export type EffectReport = EffectStudy & {cells:{arm:string;phase:string;participants:number;passed:number;submissions:number;wilson_95:[number,number]|null}[];limitations:string[]};
+import type { ClassroomManifest } from './classroom-types';
 import type { components } from './schema';
 
 export type Account = components['schemas']['AccountOut'];
@@ -78,19 +82,54 @@ async function request<T>(path: string, options: RequestInit = {}, decode?: (res
 }
 
 const json = (value: unknown) => JSON.stringify(value);
+
+/** Streams committed messages/status, never unchecked model JSON or chain of thought. */
+export async function watchTutor(run:TutorRun,signal:AbortSignal,changed:()=>void){
+ const response=await fetch(`/api/v1/student/workspaces/${run.workspace_id}/tutoring/${run.run_id}/live`,{
+  headers:{'X-Wenjin-Client':'student','Accept':'text/event-stream'},credentials:'same-origin',signal});
+ if(!response.ok||!response.body)throw new ApiError(response.status,'live_unavailable','实时连接暂不可用，已有记录可继续刷新');
+ const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
+ try{while(!signal.aborted){const next=await reader.read();if(next.done)break;buffer+=decoder.decode(next.value,{stream:true});
+  if(buffer.length>1_000_000)throw new Error('live_response_bounds');let end:number;
+  while((end=buffer.indexOf('\n\n'))>=0){const event=buffer.slice(0,end);buffer=buffer.slice(end+2);if(event.startsWith('event: closed'))throw new Error('live_scope_changed');if(event.includes('event: snapshot'))changed();}
+ }}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+}
+
 export const api = {
+  readiness:(signal?:AbortSignal)=>request<Record<string,unknown>>('/admin/readiness',{signal}),
+  exportPrivacy:()=>request<{data:Record<string,unknown>;sha256:string}>('/student/privacy/export'),
+  requestErasure:()=>request<{request_id:string;status:string;notice:string}>('/student/privacy/erasure-request',{method:'POST',body:json({acknowledge_export_and_disable:true})}),
+  erasureRequests:(signal?:AbortSignal)=>request<{items:{request_id:string;account_id:string;username:string;created_at:number;status:string}[];notice:string}>('/admin/privacy/erasure-requests',{signal}),
+  studentClassroomJobs:(wid:string,bid:string,signal?:AbortSignal)=>request<{items:{job_id:string;status:string;error_code:string|null}[]}>(`/student/workspaces/${wid}/course-builds/${bid}/openmaic`,{signal}),
+  startStudentClassroom:(wid:string,bid:string)=>request<{job_id:string;status:string}>(`/student/workspaces/${wid}/course-builds/${bid}/openmaic`,{method:'POST'}),
+  cancelStudentClassroom:(wid:string,bid:string,jid:string)=>request<{job_id:string;status:string}>(`/student/workspaces/${wid}/course-builds/${bid}/openmaic/${jid}/cancel`,{method:'POST'}),
+  mediaBudgets:(wid?:string,signal?:AbortSignal)=>request<{items:MediaBudgetRecord[]}>(wid?`/student/workspaces/${wid}/media-budgets`:'/admin/media-budgets',{signal}),
+  proposeMediaBudget:(rid:string)=>request<MediaBudgetRecord>(`/admin/resources/${rid}/media-budget`,{method:'POST'}),
+  authorizeMediaBudget:(bid:string,revision:number,enabled:boolean,ack:boolean)=>request<MediaBudgetRecord>(`/admin/media-budgets/${bid}`,{method:'PUT',body:json({expected_revision:revision,enabled,acknowledge_five_yuan_and_verified_prices:ack})}),
+  startMedia:(wid:string,bid:string,kind:'image'|'audio'|'video',index:number)=>request<MediaBudgetRecord>(`/student/workspaces/${wid}/media-budgets/${bid}/jobs`,{method:'POST',body:json({kind,index})}),
+  learningAutomation:(wid:string,signal?:AbortSignal)=>request<{enabled:boolean;revision:number;state:Record<string,unknown>;limits:Record<string,unknown>}>(`/student/workspaces/${wid}/learning-automation`,{signal}),
+  configureLearningAutomation:(wid:string,enabled:boolean,revision:number)=>request<{enabled:boolean;revision:number}>(`/student/workspaces/${wid}/learning-automation`,{method:'PUT',body:json({enabled,expected_revision:revision})}),
+  effectStudies:(signal?:AbortSignal)=>request<{items:EffectStudy[]}>('/admin/effect-studies',{signal}),
+  createEffectStudy:(body:components['schemas']['StudyIn'])=>request<EffectStudy>('/admin/effect-studies',{method:'POST',body:json(body)}),
+  freezeEffectStudy:(id:string,revision:number)=>request<EffectStudy>(`/admin/effect-studies/${id}/freeze`,{method:'POST',body:json({expected_revision:revision})}),
+  effectStudyReport:(id:string,signal?:AbortSignal)=>request<EffectReport>(`/admin/effect-studies/${id}/report`,{signal}),
+  recordEffectObservation:(id:string,body:components['schemas']['ObservationIn'],key:string)=>request<Record<string,unknown>>(`/admin/effect-studies/${id}/observations`,{method:'POST',body:json(body),headers:{'Idempotency-Key':key}}),
+  withdrawSkillTrial: (wid:string,rid:string)=>request<{status:string}>(`/student/workspaces/${wid}/skill-evolutions/${rid}/withdraw-trial`,{method:'POST'}),
+  classroomProgress: (wid:string, rid:string, signal?:AbortSignal) => request<{revision:number;resource_hash:string;body:Record<string,unknown>|null}>(`/student/workspaces/${wid}/classrooms/${rid}/progress`,{signal}),
+  saveClassroomProgress: (wid:string,rid:string,body:components['schemas']['Playback'],key:string) => request<{revision:number;resource_hash:string;body:Record<string,unknown>}>(`/student/workspaces/${wid}/classrooms/${rid}/progress`,{method:'PUT',body:json(body),headers:{'Idempotency-Key':key}}),
+  nextAction: (wid: string, signal?: AbortSignal) => request<components['schemas']['NextAction']>(`/student/workspaces/${wid}/next-action`, { signal }),
   generationPolicy: (signal?: AbortSignal) => request<components['schemas']['PolicyOut']>('/admin/generation-policy', { signal }),
   publishGenerationPolicy: (body: components['schemas']['PolicyIn']) => request<components['schemas']['PolicyOut']>('/admin/generation-policy', { method: 'POST', body: json(body) }),
   courseBuilds: (wid: string, offset = 0, signal?: AbortSignal) => request<components['schemas']['BuildsOut']>(`/student/workspaces/${wid}/course-builds?offset=${offset}`, { signal }),
   startCourseBuild: (wid: string, topic: string, key: string, options?: { agent_mode: 'bounded_v1' | 'rational_agent_v2'; learning_goal: string; target_concepts: string[] }) => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: json({ topic, ...options }) }),
-  diagnoseCourse: (wid: string, row: components['schemas']['BuildOut'], answers: { answer: string; reasoning: string }[]) => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/diagnostic`, { method: 'POST', body: json({ expected_revision: row.revision, answers }) }),
+  diagnoseCourse: (wid: string, row: components['schemas']['BuildOut'], answers: { answer: string; reasoning: string }[], finish=false) => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/diagnostic`, { method: 'POST', body: json({ expected_revision: row.revision, answers, finish_diagnostic:finish }) }),
   reviseCoursePlan: (wid: string, row: components['schemas']['BuildOut'], focus: 'basis' | 'representation' | 'verification') => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/plan`, { method: 'POST', body: json({ expected_revision: row.revision, focus }) }),
   generateCourse: (wid: string, row: components['schemas']['BuildOut'], key: string, action = 'generate') => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/${action}`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: json({ expected_revision: row.revision }) }),
   cancelCourseBuild: (wid: string, row: components['schemas']['BuildOut']) => request<components['schemas']['BuildOut']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/cancel`, { method: 'POST', body: json({ expected_revision: row.revision }) }),
   activateCourseBuild: (wid: string, row: components['schemas']['BuildOut'], courseRevision: number) => request<components['schemas']['CourseContext']>(`/student/workspaces/${wid}/course-builds/${row.build_id}/activate`, { method: 'POST', body: json({ expected_revision: row.revision, course_revision: courseRevision }) }),
   adminCourseBuilds: (offset = 0, signal?: AbortSignal) => request<components['schemas']['BuildsOut']>(`/admin/course-builds?offset=${offset}`, { signal }),
   reviewCourseBuild: (row: components['schemas']['BuildOut'], approve: boolean, note: string) => request<components['schemas']['BuildOut']>(`/admin/course-builds/${row.build_id}/review`, { method: 'POST', body: json({ expected_revision: row.revision, approve, note }) }),
-  learningResources: (wid: string, signal?: AbortSignal) => request<{ items: { resource_id: string; unit_id: string; title: string; html: string; sha256: string }[] }>(`/student/workspaces/${wid}/resources`, { signal }),
+  learningResources: (wid: string, signal?: AbortSignal) => request<{ items: { resource_id: string; unit_id: string; title: string; html: string; sha256: string; cards:{text:string}[]; classroom: ClassroomManifest | null }[] }>(`/student/workspaces/${wid}/resources`, { signal }),
   knowledgeSources: (signal?: AbortSignal) => request<{ knowledge_points: Record<string, { title: string }>; documents: Record<string, unknown>[] }>('/admin/knowledge-sources', { signal }),
   addKnowledgeSource: (body: components['schemas']['SourceIn']) => request<{ source_id: string; version: string }>('/admin/knowledge-sources', { method: 'POST', body: json(body) }),
   setKnowledgeSourceState: (id: string, revision: number, enabled: boolean) => request<{ revision: number; enabled: boolean }>(`/admin/knowledge-sources/${encodeURIComponent(id)}/state`, { method: 'POST', body: json({ expected_revision: revision, enabled }) }),
@@ -117,7 +156,7 @@ export const api = {
   releasePlanningMaterial: (material: PlanningMaterial, enabled: boolean) => request<PlanningMaterial>(`/admin/planning-materials/${material.material_id}/release`, { method: 'POST', body: json({ expected_revision: material.revision, enabled, acknowledge_development_only: true }) }),
   evolutions: (wid: string|undefined,offset: number,signal?:AbortSignal)=>request<components['schemas']['EvolutionsOut']>(wid?`/student/workspaces/${wid}/skill-evolutions?offset=${offset}`:`/admin/skill-evolutions?offset=${offset}`,{signal}),
   evolution: (id:string,wid?:string,signal?:AbortSignal)=>request<EvolutionRun>(wid?`/student/workspaces/${wid}/skill-evolutions/${id}`:`/admin/skill-evolutions/${id}`,{signal}),
-  startEvolution: (wid:string,key:string)=>request<EvolutionRun>(`/student/workspaces/${wid}/skill-evolutions`,{method:'POST',body:json({mode:'offline'}),headers:{'Idempotency-Key':key}}),
+  startEvolution: (wid:string,key:string,mode:'offline'|'semantic'='offline',allowPersonalTrial=false)=>request<EvolutionRun>(`/student/workspaces/${wid}/skill-evolutions`,{method:'POST',body:json({mode,allow_personal_trial:allowPersonalTrial}),headers:{'Idempotency-Key':key}}),
   decideEvolution: (run:EvolutionRun,action:'approve'|'reject'|'withdraw'|'propose',note:string,key:string)=>request<EvolutionRun>(action==='propose'?`/student/workspaces/${run.workspace_id}/skill-evolutions/${run.run_id}/proposal`:`/admin/skill-evolutions/${run.run_id}/decision`,{method:'POST',body:json({expected_revision:run.revision,report_sha256:run.report_sha256,note,...(action==='propose'?{}:{action})}),headers:{'Idempotency-Key':key}}),
   cancelEvolution: (run:EvolutionRun)=>request<EvolutionRun>(`/student/workspaces/${run.workspace_id}/skill-evolutions/${run.run_id}/cancel`,{method:'POST',body:json({expected_revision:run.revision})}),
   evolutionFact: (run:EvolutionRun,fid:string,admin:boolean,signal?:AbortSignal)=>request<components['schemas']['FactOut']>(admin?`/admin/skill-evolutions/${run.run_id}/facts/${fid}`:`/student/workspaces/${run.workspace_id}/facts/${fid}`,{signal}),
@@ -128,8 +167,8 @@ export const api = {
   cancelStrategy: (run: StrategyRun) => request<StrategyRun>(`/student/workspaces/${run.workspace_id}/strategies/${run.run_id}/cancel`, { method: 'POST', body: json({ expected_revision: run.revision }) }),
   activeStrategy: (wid: string, signal?: AbortSignal) => request<ActiveStrategy>(`/student/workspaces/${wid}/active-strategy`, { signal }),
   rollbackStrategy: (active: ActiveStrategy, target_version: string | null, note: string, key: string) => request<ActiveStrategy>(`/student/workspaces/${active.workspace_id}/active-strategy/rollback`, { method: 'POST', body: json({ target_version, note, expected_revision: active.revision }), headers: { 'Idempotency-Key': key } }),
-  learningInsights: (wid: string | undefined, days: 14 | 30 | 90, source: EvidenceSource, includeArchived = true, signal?: AbortSignal) => request<LearningInsights>((wid ? `/student/workspaces/${wid}/learning-insights` : '/student/learning-insights') + `?days=${days}&source=${source}&include_archived=${includeArchived}`, { signal }),
-  evidence: (wid: string | undefined, days: 14 | 30 | 90, source: EvidenceSource, record_kind: EvidenceCategory, offset: number, signal?: AbortSignal, includeArchived = true) => request<EvidenceReport>((wid ? `/student/workspaces/${wid}/evidence` : '/student/evidence') + `?days=${days}&source=${source}&record_kind=${record_kind}&offset=${offset}&include_archived=${includeArchived}`, { signal }),
+  learningInsights: (wid: string | undefined, days: 14 | 30 | 90, source: EvidenceSource, includeArchived = true, signal?: AbortSignal, assistance='all') => request<LearningInsights>((wid ? `/student/workspaces/${wid}/learning-insights` : '/student/learning-insights') + `?days=${days}&source=${source}&include_archived=${includeArchived}&assistance=${encodeURIComponent(assistance)}`, { signal }),
+  evidence: (wid: string | undefined, days: 14 | 30 | 90, source: EvidenceSource, record_kind: EvidenceCategory, offset: number, signal?: AbortSignal, includeArchived = true, assistance='all') => request<EvidenceReport>((wid ? `/student/workspaces/${wid}/evidence` : '/student/evidence') + `?days=${days}&source=${source}&record_kind=${record_kind}&offset=${offset}&include_archived=${includeArchived}&assistance=${encodeURIComponent(assistance)}`, { signal }),
   activityCatalog: (admin = false, signal?: AbortSignal, workspaceId?: string) => request<components['schemas']['ActivityCatalogOut']>(`/${admin ? 'admin' : 'student'}/activity-catalog${workspaceId ? '?workspace_id='+workspaceId : ''}`, { signal }),
   releaseActivityPack: (content: ActivityContentInfo, enabled: boolean) => request<ActivityContentInfo>(`/admin/activity-catalog/${encodeURIComponent(content.unit_id)}/development-release`, { method: 'POST', body: json({ content_version: content.content_version, expected_revision: content.revision, enabled, acknowledge_development_only: true }) }),
   activityContent: (admin = false, signal?: AbortSignal) => request<ContentInfo>(`/${admin ? 'admin' : 'student'}/activity-content`, { signal }),
@@ -195,3 +234,5 @@ export const api = {
   renameWorkspace: (workspace: Workspace, title: string) => request<Workspace>(`/student/workspaces/${workspace.workspace_id}`, { method: 'PATCH', body: json({ title, expected_revision: workspace.revision }) }),
   changeStatus: (workspace: Workspace, action: 'archive' | 'restore') => request<Workspace>(`/student/workspaces/${workspace.workspace_id}/${action}`, { method: 'POST', body: json({ expected_revision: workspace.revision }) }),
 };
+
+export type { ClassroomManifest, ClassroomElement, ClassroomScene } from './classroom-types';

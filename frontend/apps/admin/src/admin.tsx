@@ -1,3 +1,5 @@
+import {OperationalReadiness} from '@wenjin/ui';
+import { EffectStudies } from './effect-studies';
 import { EvolutionWorkbench } from '@wenjin/ui';
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,6 +21,7 @@ const navigation: NavItem[] = [
   { path: 'generation', label: '课程生成与资源', icon: Sparkles },
   { path: 'review', label: '内容与解答复核', icon: ClipboardCheck },
   { path: 'runs', label: '运行记录', icon: ListChecks },
+  { path: 'effect-studies', label: '教学效果验证', icon: ClipboardCheck },
   { path: 'evaluations', label: '评测工作台', icon: ClipboardCheck },
   { path: 'skill-evolution', label: 'Skill 进化评测', icon: Sparkles },
   { path: 'strategies', label: '策略评审', icon: FileCheck2 },
@@ -32,6 +35,7 @@ export function AdminApp({ account }: { account: Account }) {
     <Route path="content" element={<ContentPage/>}/><Route path="review" element={<ReviewsPage/>}/>
     <Route path="runs" element={<Preparation page="runs"/>}/><Route path="strategies" element={<StrategiesPage/>}/>
     <Route path="generation" element={<GenerationManagement/>}/>
+    <Route path="effect-studies" element={<EffectStudies/>}/>
     <Route path="evaluations" element={<EvaluationsPage/>}/>
     <Route path="config" element={<Configuration account={account}/>}/><Route path="*" element={<Navigate to="/overview" replace/>}/>
   </Routes></Shell>;
@@ -95,5 +99,5 @@ function Preparation({ page }: { page: string }) {
 }
 
 function Configuration({ account }: { account: Account }) {
-  return <><Heading kicker="CLEAR ROLES, CLEAR RESPONSIBILITIES" title="配置与权限" description="账号管理与教学决策各有明确职责。"/><div className="grid equal"><section className="card"><div className="card-head"><h2>当前管理身份</h2><UserRound size={22}/></div><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>权限</dt><dd>学生账号、开发内容与解答复核</dd></div></dl><div className="notice"><LockKeyhole size={17}/>管理身份不代表可以替学生作答、代签计划或替代学生确认策略。</div></section><section className="card"><h2>后续配置</h2><div className="source-row"><ShieldCheck size={20}/><div><h3>审核职责与内容开放</h3><p>与对应教学功能一同接入。</p></div><Soon/></div><div className="source-row"><Sparkles size={20}/><div><h3>模型与运行配置</h3><p>下方统一管理开发模型、调用额度与停用。</p></div></div><div className="source-row"><CheckCheck size={20}/><div><h3>版本与审核规则</h3><p>保留检查与变更依据。</p></div><Soon/></div><p className="card-note">此页面不会在浏览器中存储模型密钥。</p></section></div><ModelRuntimePanel/></>;
+  return <><Heading kicker="CLEAR ROLES, CLEAR RESPONSIBILITIES" title="配置与权限" description="账号管理与教学决策各有明确职责。"/><div className="grid equal"><section className="card"><div className="card-head"><h2>当前管理身份</h2><UserRound size={22}/></div><dl className="definition-list"><div><dt>姓名</dt><dd>{account.display_name}</dd></div><div><dt>账号</dt><dd>{account.username}</dd></div><div><dt>权限</dt><dd>学生账号、开发内容与解答复核</dd></div></dl><div className="notice"><LockKeyhole size={17}/>管理身份不代表可以替学生作答、代签计划或替代学生确认策略。</div></section><section className="card"><h2>后续配置</h2><div className="source-row"><ShieldCheck size={20}/><div><h3>审核职责与内容开放</h3><p>与对应教学功能一同接入。</p></div><Soon/></div><div className="source-row"><Sparkles size={20}/><div><h3>模型与运行配置</h3><p>下方统一管理开发模型、调用额度与停用。</p></div></div><div className="source-row"><CheckCheck size={20}/><div><h3>版本与审核规则</h3><p>保留检查与变更依据。</p></div><Soon/></div><p className="card-note">此页面不会在浏览器中存储模型密钥。</p></section></div><ModelRuntimePanel/><OperationalReadiness/></>;
 }

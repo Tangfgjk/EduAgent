@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'student' | 'admin', username: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 async function enable(page: Page) {
   await login(page, 'admin', 's03.admin');
   await navigate(page, '知识点与题库');
@@ -31,8 +29,8 @@ async function space(page: Page, title: string, temporary = false) {
   await expect(page.locator('.context-bar')).toContainText(title);
 }
 async function answer(page: Page, value: string) {
-  await page.getByLabel('我的数值答案').fill(value);
-  await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
+  await page.getByLabel('我的回答').fill(value);
+  await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('等待你的思考', { exact: true })).toBeVisible();
 }
 
@@ -54,9 +52,9 @@ test('真实复习、来源自述、局部记忆和归档项目全局追溯', as
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '3');
   await page.getByRole('button', { name: '继续下一步' }).click();
-  await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
   await answer(page, '0');
-  await expect(page.getByText('数值未通过', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-message.assistant').filter({hasText:'最终数值未通过；请检查条件与运算。'})).toBeVisible();
   await navigate(page, '错题与复习');
   await page.getByRole('button', { name: '查看原始尝试', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('我的答案：0');
@@ -103,7 +101,7 @@ test('手机临时复习、独立诊断隔离、全局排除临时空间', async
   await page.getByRole('button', { name: '开始开发单元' }).click();
   await expect(page.getByRole('heading', { name: '先试一题', exact: true })).toBeVisible();
   await answer(page, '0');
-  await expect(page.getByText('数值未通过', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-message.assistant').filter({hasText:'最终数值未通过；请检查条件与运算。'})).toBeVisible();
   await navigate(page, '错题与复习');
   await page.getByRole('button', { name: '无提示复做', exact: true }).click();
   await page.getByLabel('复做数值答案').fill('3');
@@ -112,7 +110,7 @@ test('手机临时复习、独立诊断隔离、全局排除临时空间', async
   await page.getByRole('button', { name: '关闭', exact: true }).click();
   await navigate(page, '津津陪学');
   await page.getByRole('button', { name: '继续下一步' }).click();
-  await expect(page.getByText('P-EQ-01', { exact: true })).toBeVisible();
+  await expect(page.locator('.chat-current[data-task-id=\"P-EQ-01\"]')).toBeVisible();
   await navigate(page, '错题与复习');
   await page.getByRole('button', { name: '无提示复做', exact: true }).click();
   await page.getByLabel('复做数值答案').fill('3');

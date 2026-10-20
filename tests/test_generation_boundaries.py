@@ -202,7 +202,8 @@ def test_existing_canvas_reimport_uses_no_model_budget_and_retains_text(env):
         budget=s.get(ResourceBudget,bid);assert not budget.enabled and budget.calls==8
         resources=list(s.scalars(select(ResourceArtifact).where(ResourceArtifact.build_id==row['build_id'],ResourceArtifact.sha256.is_not(None))))
         assert len(resources)==2  # approved base lesson + one deduplicated conversion
-        resource=next(r for r in resources if r.body.get('converter_version')=='canvas-text.v2')
+        resource=next(r for r in resources if r.body.get('converter_version')=='classroom-manifest.v1')
+        assert resource.body['classroom']['executable_scripts'] is False
         assert '同号得正' in resource.body['cards'][0]['text']
         assert '公式（纯文本）' in resource.body['cards'][0]['text']
         assert 'fetch(' not in render(resource.body) and 'https://bad.example' not in render(resource.body)

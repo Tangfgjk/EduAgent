@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { confirmFixtureCourse } from './course-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,10 +10,7 @@ async function login(page: Page, role: 'student' | 'admin', username: string) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.locator('.app-shell')).toBeVisible();
 }
-async function navigate(page: Page, name: string) {
-  if ((page.viewportSize()?.width ?? 1440) < 700) await page.getByRole('button', { name: '打开导航' }).click();
-  await page.getByRole('link', { name, exact: true }).click();
-}
+async function navigate(page: Page, name: string) { await navigateStudent(page,name); }
 
 for (const mobile of [false, true]) {
   test(`内容包独立审核、领域筛选、概率陪学与刷新恢复 ${mobile ? '手机' : '桌面'}`, async ({ page, browser }) => {
@@ -49,17 +47,17 @@ for (const mobile of [false, true]) {
     await expect(page.getByLabel('选择开发单元')).toHaveValue('math.g9.probability.dev1');
     await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
-    await expect(page.getByText('D-PRB-01', { exact: true })).toBeVisible();
-    await page.getByLabel('我的数值答案').fill('1/6');
-    await page.getByRole('button', { name: '检查我的解答', exact: true }).click();
-    await expect(page.getByText('数值通过', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"D-PRB-01\"]')).toBeVisible();
+    await page.getByLabel('我的回答').fill('1/6');
+    await page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(page.locator('.chat-message.assistant').filter({hasText:'最终数值通过独立核验；解释仍需评阅。'})).toBeVisible();
     await page.getByRole('button', { name: '继续下一步', exact: true }).click();
-    await expect(page.getByText('P-PRB-01', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"P-PRB-01\"]')).toBeVisible();
     await page.reload();
-    await expect(page.getByText('P-PRB-01', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-current[data-task-id=\"P-PRB-01\"]')).toBeVisible();
     await expect(page.getByText('本轮内容：等可能事件概率 · 开发单元', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
-    await expect(page.getByText('先列出全部可能的点数。', { exact: true })).toBeVisible();
+    await expect(page.locator('.chat-message.assistant').filter({hasText:'先列出全部可能的点数。'})).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.getByRole('button', { name: '结束这次陪学', exact: true }).click();
     await expect(page.getByText('已取消', { exact: true })).toBeVisible();

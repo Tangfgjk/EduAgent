@@ -91,7 +91,7 @@ class Tutoring(Learning):
         existing = session.scalar(select(LearningInput).where(LearningInput.conversation_id == run.conversation_id,
             LearningInput.idempotency_key == key))
         if existing:
-            if existing.payload != operation:
+            if {k:v for k,v in existing.payload.items() if k!='teaching_decision'} != operation:
                 raise DomainError(409, "idempotency_conflict", "该标识已用于不同操作")
             return public_tutor(session, run)
         self.spaces.owned(session, actor, wid, active=True)
@@ -107,6 +107,18 @@ class Tutoring(Learning):
         if run.version != version_for(item.unit_id, item):
             raise DomainError(409, "version_conflict", "教学版本已更新，请重新发起")
         check_action(run.view, payload["action"], actor.account.learner_id)
+        if payload['action']=='reflect':
+            from app.infrastructure.db.models import ModelOperation
+            suggestion=session.scalar(select(ModelOperation).where(ModelOperation.run_id==run.id,
+                ModelOperation.task_id==run.view['task']['task_id'],ModelOperation.status=='succeeded')
+                .order_by(ModelOperation.created_at.desc(),ModelOperation.id.desc()).limit(1))
+            policy = session.get(ModelPolicy, 1)
+            if suggestion and suggestion.configuration_id == policy.active_id and suggestion.result and suggestion.result.get('next_task_id'):
+                completed={r['task_id'] for r in run.view['records']}
+                target=suggestion.result['next_task_id']
+                if any(t['id']==target and t['stage']=='practice' and target not in completed for t in item.tasks):
+                    operation['teaching_decision']={'next_task_id':target,'operation_id':suggestion.id,
+                        'reason':suggestion.result.get('decision_reason','模型基于本题表达选择后续练习，未作能力判断')}
         conversation = session.get(Conversation, run.conversation_id)
         entry = self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
         run.status, run.gate_id = "queued", None

@@ -3,7 +3,8 @@ from pydantic import Field,field_validator
 from app.modules.learning.contracts import Contract
 
 class EvolutionStart(Contract):
-    mode: Literal['offline']='offline'
+    mode: Literal['offline', 'semantic']='offline'
+    allow_personal_trial: bool = Field(default=False, strict=True)
 
 class EvolutionDecision(Contract):
     expected_revision: int=Field(ge=1,strict=True)
@@ -25,6 +26,8 @@ class EvolutionProposal(Contract):
     def clean(cls,value):return EvolutionDecision.clean(value)
 
 class EvolutionOut(Contract):
+    generation: dict | None = None
+    trial: dict | None = None
     run_id: str
     workspace_id: str
     workspace_title: str

@@ -77,7 +77,8 @@ test('主题生成、管理员审核、三路线同课、课堂导入与安全�
     await adminPage.screenshot({ path: info.outputPath('course-admin-mobile.png'), fullPage: true });
     await page.screenshot({ path: info.outputPath('generated-course-desktop.png'), fullPage: true });
     await page.getByText(/浏览器导入资源 · /).click();
-    await expect(page.frameLocator('iframe[title="资源预览：浏览器导入资源"]').getByRole('heading', { name: '浏览器导入资源' })).toBeVisible();
+    await expect(page.getByRole('region',{name:'互动课堂播放器'})).toContainText('浏览器导入资源');
+    await expect(page.locator('iframe')).toHaveCount(0);
     const unit = (await (await page.request.get(`/api/v1/student/workspaces/${wid}/course`, { headers: student })).json()).active_unit_id;
     for (const route of ['study', 'roundtable', 'teach']) {
       await page.goto(`/student/${route}?workspace=${wid}`);

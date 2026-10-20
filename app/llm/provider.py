@@ -62,7 +62,7 @@ class Provider(Protocol):
 
 
 class ProviderConfig(Value):
-    vendor: Literal["deepseek", "openai_compatible", "fake"] = "fake"
+    vendor: Literal["deepseek", "openai_compatible", "anthropic", "gemini", "fake"] = "fake"
     model: str = Field(default="scripted", min_length=1, max_length=160, pattern=r"^[a-zA-Z0-9_.:/-]+$")
     base_url: str = "https://api.deepseek.com"
     api_key: SecretStr = Field(default=SecretStr(""), repr=False)
@@ -168,4 +168,7 @@ class FakeProvider:
 def create_provider(config: ProviderConfig) -> Provider:
     if config.vendor == "fake":
         return FakeProvider()
+    if config.vendor in {'anthropic','gemini'}:
+        from app.llm.native_provider import NativeProvider
+        return NativeProvider(config)
     return ChatCompletionsProvider(config)

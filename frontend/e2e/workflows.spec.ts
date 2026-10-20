@@ -1,3 +1,4 @@
+import {navigateStudent} from './navigation-helper';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 
@@ -10,10 +11,11 @@ async function login(page: Page, role: 'student' | 'admin', username: string, se
   await expect(page.locator('.app-shell')).toBeVisible();
 }
 async function createProject(page: Page, name: string) {
-  await page.getByRole('link', { name: '项目与会话', exact: true }).click();
+  await navigateStudent(page,'项目与会话');
   await page.getByRole('button', { name: '新建学习项目', exact: true }).click();
   await page.getByLabel('空间名称').fill(name);
   await page.getByRole('button', { name: '保存空间' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);await navigateStudent(page,'项目与会话');
   await expect(page.locator('.context-bar')).toContainText(name);
   return new URL(page.url()).searchParams.get('workspace')!;
 }
@@ -30,6 +32,7 @@ test('学生真实项目创建、刷新、重命名、归档恢复与临时路�
   const renamed = project + ' · 调整';
   await page.getByLabel('空间名称').fill(renamed);
   await page.getByRole('button', { name: '保存空间' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);await navigateStudent(page,'项目与会话');
   await expect(page.locator('.context-bar')).toContainText(renamed);
   await page.getByRole('button', { name: '归档 ' + renamed, exact: true }).click();
   await page.getByRole('button', { name: '确认归档' }).click();
@@ -41,17 +44,18 @@ test('学生真实项目创建、刷新、重命名、归档恢复与临时路�
   await page.getByRole('button', { name: '新建临时会话', exact: true }).click();
   await page.getByLabel('空间名称').fill('一次临时探索');
   await page.getByRole('button', { name: '保存空间' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);await navigateStudent(page,'项目与会话');
   await expect(page.locator('.context-bar')).toContainText('一次临时探索');
-  await page.getByRole('link', { name: '圆桌讨论', exact: true }).click();
+  await navigateStudent(page,'圆桌讨论');
   await expect(page.getByRole('heading', { name: '圆桌讨论', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '开始圆桌讨论' })).toBeVisible();
   await expect(page.getByText('本次互动仅保留在临时空间', { exact: false })).toBeVisible();
   await page.getByLabel('当前工作空间').selectOption(wid);
   await expect(page.locator('.context-bar')).toContainText(renamed);
-  await page.getByRole('link', { name: '我教 AI', exact: true }).click();
+  await navigateStudent(page,'我教 AI');
   await expect(page.getByRole('heading', { name: '我教 AI', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '开始我教 AI' })).toBeVisible();
-  await page.getByRole('link', { name: '成长证据', exact: true }).click();
+  await navigateStudent(page,'成长证据');
   await page.getByRole('tab', { name: '当前空间局部' }).click();
   await expect(page.getByText('尚无评分', { exact: true })).toBeVisible();
   await page.reload();
@@ -99,7 +103,7 @@ test('切换学生不泄露上一个账号项目，错误工作空间不可访�
   const wid = await createProject(page, project);
   await page.getByRole('button', { name: '退出登录' }).click();
   await login(page, 'student', 's03.two');
-  await page.getByRole('link', { name: '项目与会话', exact: true }).click();
+  await navigateStudent(page,'项目与会话');
   await expect(page.getByRole('heading', { name: project, exact: true })).toHaveCount(0);
   await page.goto('/student/study?workspace=' + wid);
   await expect(page.getByRole('heading', { name: '这个工作空间暂不可访问' })).toBeVisible();
@@ -148,8 +152,7 @@ test('手机布局、键盘弹窗、核心入口没有横向溢出', async ({ pa
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   for (const name of ['圆桌讨论', '我教 AI', '成长证据', '项目与会话']) {
-    await page.getByRole('button', { name: '打开导航' }).click();
-    await page.getByRole('link', { name, exact: true }).click();
+    await navigateStudent(page,name);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await expect(page.getByRole('complementary', { name: '学习导航' })).not.toBeVisible();

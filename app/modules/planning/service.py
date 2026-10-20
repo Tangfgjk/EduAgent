@@ -87,6 +87,8 @@ def skill_text(policy):
 
 
 def version_valid(session, version):
+    from app.modules.planning.default_reference import check
+    check(version.bundle)
     if version.hard_rules_hash != registry_hash(): fail("rules_changed", "教学规则版本变化，请重新生成提案")
     try:
         SoftPolicy.model_validate(version.policy)
@@ -106,6 +108,8 @@ def version_valid(session, version):
 
 
 def require_fresh(session, run, bundle, base_revision, expires_at):
+    from app.modules.planning.default_reference import check
+    check(bundle)
     if bundle["workspace_id"] != run.workspace_id: fail("scope_conflict", "来源与提案项目不一致")
     if now() >= expires_at: fail("proposal_expired", "提案已过期，请重新生成")
     if bundle["rules_hash"] != registry_hash(): fail("rules_changed", "教学规则已更新，请重新生成")
@@ -130,6 +134,8 @@ def require_fresh(session, run, bundle, base_revision, expires_at):
 
 
 def effective_policy(session, wid):
+    from app.modules.skill_evolution.trials import monitor
+    monitor(session, wid)
     pointer = session.get(ActiveStrategy, wid)
     if not pointer or pointer.version_id is None: return None, DEFAULT.copy(), None
     version = session.get(StrategyVersion, pointer.version_id)
@@ -187,6 +193,8 @@ class Planning(Learning):
 
     def start(self, session, actor, wid, body, key, *, evolution_reference=None):
         body = dict(body)
+        # Preserve historical idempotency hashes for requests without new options.
+        if not body.get('self_service'): body.pop('self_service', None)
         if evolution_reference:body['_evolution_reference']=evolution_reference
         if not body.get('request_model'):
             body.pop('request_model', None)
@@ -209,6 +217,15 @@ class Planning(Learning):
         bundle = {"workspace_id": wid, "rules_hash": registry_hash(), "student_experience": body["learning_experience"],
             "evidence": evidence_snapshot(session, wid), "materials": snapshot, "source_kind": actor.account.source_kind,
             "base_version_id": pointer.version_id if pointer else None, "created_at": now()}
+        if not snapshot:
+            from app.modules.planning.default_reference import reference
+            bundle['default_reference'] = reference()
+        if body.get('self_service'):
+            if evolution_reference: fail('evolution_review_required', '离线改进须先通过对应的独立评测门槛')
+            bundle['release_decision'] = {'kind': 'system_auto', 'policy_version': 'private-soft-policy.v1',
+                'scope': 'personal_development_strategy', 'checks': ['strict_soft_policy', 'owned_active_project',
+                    'development_account', 'reference_versions', 'student_confirmation_required'],
+                'learning_effect_validated': False}
         from app.modules.evidence.insights import report as learning_insights
         bundle['learning_observations']=learning_insights(session,actor,wid,days=30,source=actor.account.source_kind)['planning_summary']
         if body.get('request_model'):

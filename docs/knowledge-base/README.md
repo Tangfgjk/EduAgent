@@ -24,4 +24,11 @@
 
 | `report_sha256`、同秒排序、跨端撤回、`revision_conflict` | [方法论](05-methodology.md) |
 
+### 本轮新增排错入口
+
+| 错误关键词 | 记录 |
+|---|---|
+| `checking`、`resource_cancelled`、晚回包、Run/Operation、动态诊断分母 | [业务代码](04-business.md) |
+| `dockerDesktopLinuxEngine`、`worker_cycle_unavailable`、跨日数据库不可用 | [中间件](03-middleware.md) |
+
 其他分类：[中间件](03-middleware.md)、[业务代码](04-business.md)、[方法论](05-methodology.md)。未解决问题写入 `inbox/`，解决后归档到分类。

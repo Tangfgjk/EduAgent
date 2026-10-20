@@ -35,7 +35,7 @@ test('学生端与管理端在同一浏览器切换后保持各自登录', async
   await page.bringToFront();
   await page.reload();
   await expect(page.locator('.app-shell')).toBeVisible();
-  await expect(page.getByRole('link', { name: '数学单元', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '学习空间', exact: true })).toBeVisible();
   await other.bringToFront();
   await other.reload();
   await expect(other.getByRole('link', { name: '学生账号', exact: true })).toBeVisible();

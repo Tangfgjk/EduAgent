@@ -1,4 +1,5 @@
 from typing import Literal
+from pydantic import Field
 from app.modules.learning.contracts import Contract
 
 
@@ -79,7 +80,19 @@ class PlanningObservations(Contract):
     model_dispatch: str
 
 
+class ReviewMatrixRow(Contract):
+    source_kind: str
+    reason: str
+    cards: int
+    due: int
+    scheduled: int
+    window_recalls: int
+    refs: list[ObservationRef]
+
+
 class LearningInsights(Contract):
+    assistance: str = 'all'
+    review_matrix: list[ReviewMatrixRow] = Field(default_factory=list)
     schema_version: Literal['learning-observations.v1']
     scope: Literal['workspace','global']
     workspace_count: int

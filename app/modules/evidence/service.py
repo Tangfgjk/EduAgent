@@ -32,7 +32,7 @@ def category(fact):
 class Evidence:
     spaces = Workspaces()
 
-    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0, include_archived=True):
+    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0, include_archived=True,assistance='all'):
         self.spaces._student(actor)
         if wid:
             workspaces = [self.spaces.owned(session, actor, wid)]
@@ -50,6 +50,8 @@ class Evidence:
         if source != "all": condition.append(LearningFact.source_kind == source)
         # 同时取不可变原文，来源页仍通过所有权检查。旧事实也供窗口内的后续自述/复核引用。
         rows = session.execute(select(LearningFact, LearningInput).join(LearningInput, LearningFact.input_id == LearningInput.id).where(*condition)).all() if by_id else []
+        from app.modules.evidence.support_filter import matches
+        rows=[(fact,entry) for fact,entry in rows if matches(fact,assistance)]
         facts = {fact.id: fact for fact, _ in rows}
 
         def bump(fact, at, key):
@@ -86,6 +88,7 @@ class Evidence:
                 items = session.scalars(select(model).join(LearningFact, model.fact_id == LearningFact.id)
                     .where(*condition, model.created_at >= start, model.created_at <= timestamp))
                 for item in items:
+                    if item.fact_id not in facts:continue
                     fact = facts[item.fact_id]
                     bump(fact, item.created_at, key)
                     add_record(fact, item.id, item.created_at, kind, item.conclusion if kind == "human_judgment" else None,
@@ -94,7 +97,7 @@ class Evidence:
         filtered = [record for record in records if record_kind == "all" or record["record_kind"] == record_kind]
         filtered.sort(key=lambda record: (record["created_at"], record["record_id"]), reverse=True)
         return {"scope": "workspace" if wid else "global", "workspace_count": len(workspaces), "days": days,
-            "starts_at": start, "as_of": timestamp,
+            "starts_at": start, "as_of": timestamp,'assistance':assistance,
             "groups": [{"source_kind": source, **value} for source, value in sorted(groups.items())],
             "daily": [{"day": date, "source_kind": source, **value} for (date, source), value in sorted(daily.items())],
             "stages": [{"source_kind": source, "stage": stage, **value} for (source, stage), value in sorted(stages.items())],

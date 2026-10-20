@@ -2,7 +2,7 @@
 from collections import defaultdict
 from datetime import datetime,timedelta
 from sqlalchemy import select
-from app.infrastructure.db.models import LearningFact,LearningInput,Workspace,RecallAttempt,MemoryNote,FactJudgment,GeneratedContentVersion,now
+from app.infrastructure.db.models import LearningFact,LearningInput,Workspace,RecallAttempt,MemoryNote,FactJudgment,GeneratedContentVersion,ReviewCard,now
 from app.modules.evidence.service import LOCAL_ZONE,DIMENSIONS
 from app.modules.learning.content_repository import ContentRepository,content_hash
 from app.modules.knowledge.service import NODES
@@ -55,7 +55,7 @@ def metadata(session,version,cache):
     return cache[version]
 
 
-def report(session,actor,wid=None,days=30,source='all',include_archived=True):
+def report(session,actor,wid=None,days=30,source='all',include_archived=True,assistance='all'):
     Workspaces()._student(actor)
     if wid:
         spaces=[Workspaces().owned(session,actor,wid)]
@@ -69,6 +69,8 @@ def report(session,actor,wid=None,days=30,source='all',include_archived=True):
     if source!='all':condition.append(LearningFact.source_kind==source)
     rows=session.execute(select(LearningFact,LearningInput).join(LearningInput,LearningFact.input_id==LearningInput.id)
         .where(*condition).order_by(LearningFact.created_at,LearningFact.id)).all() if by_id else []
+    from app.modules.evidence.support_filter import matches
+    rows=[(f,e) for f,e in rows if matches(f,assistance)]
     recalls={r.fact_id:r for r in session.scalars(select(RecallAttempt).join(LearningFact,RecallAttempt.fact_id==LearningFact.id).where(*condition))} if by_id else {}
     notes=list(session.scalars(select(MemoryNote).join(LearningFact,MemoryNote.fact_id==LearningFact.id).where(
         LearningFact.workspace_id.in_(by_id),LearningFact.created_at<=stamp,MemoryNote.created_at>=begin,MemoryNote.created_at<=stamp,
@@ -135,7 +137,22 @@ def report(session,actor,wid=None,days=30,source='all',include_archived=True):
         references[fact.id]={'fact_id':fact.id,'workspace_id':fact.workspace_id,'workspace_title':by_id[fact.workspace_id].title,
             'archived':by_id[fact.workspace_id].status=='archived','source_kind':fact.source_kind,'task_id':fact.task_id,
             'content_version':fact.content_version,'created_at':fact.created_at,'kind':fact.kind}
-    identity={'version':VERSION,'scope':wid,'spaces':[(w.id,w.status) for w in spaces],'days':days,'starts_at':begin,'source':source,
+    if assistance!='all':
+        allowed={f.id for f,_ in rows};notes=[n for n in notes if n.fact_id in allowed];judgments=[j for j in judgments if j.fact_id in allowed]
+    matrix={}
+    for card in session.scalars(select(ReviewCard).where(ReviewCard.workspace_id.in_(by_id),*([] if source=='all' else [ReviewCard.source_kind==source]))):
+        fs=list(session.scalars(select(LearningFact).where(LearningFact.id.in_(card.source_fact_ids))))
+        fs=[f for f in fs if matches(f,assistance)]
+        if not fs:continue
+        refs=[{'fact_id':f.id,'workspace_id':f.workspace_id,'workspace_title':by_id[f.workspace_id].title,'archived':by_id[f.workspace_id].status=='archived',
+            'source_kind':f.source_kind,'task_id':f.task_id,'content_version':f.content_version,'created_at':f.created_at,'kind':f.kind} for f in fs]
+        for reason in card.reasons or ['unclassified']:
+            key=(card.source_kind,reason)
+            value=matrix.setdefault(key,{'source_kind':card.source_kind,'reason':reason,'cards':0,'due':0,'scheduled':0,'refs':[],'window_recalls':0})
+            value['cards']+=1;value['due' if card.next_due_at<=stamp else 'scheduled']+=1
+            value['refs']=(value['refs']+refs)[-8:]
+            value['window_recalls']+=sum(a.card_id==card.id for a in recalls.values())
+    identity={'version':VERSION,'scope':wid,'spaces':[(w.id,w.status) for w in spaces],'days':days,'starts_at':begin,'source':source,'assistance':assistance,
         'facts':[f.id for f,_ in rows],'notes':sorted(n.id for n in notes),'judgments':sorted(j.id for j in judgments),'content':sorted(cache.items())}
     summary={'schema_version':VERSION,'fingerprint':content_hash(identity),'starts_at':begin,'as_of':stamp,'scope':'workspace' if wid else 'global',
         'source_filter':source,'workspace_count':len(spaces),'counts':{'facts':len(rows),'self_reports':len(notes),'human_numeric_judgments':len(judgments)},
@@ -144,5 +161,5 @@ def report(session,actor,wid=None,days=30,source='all',include_archived=True):
         'delivery':'local_only','model_dispatch':'既有规划最多六条原文等外发范围保持不变；本摘要不自动发送外部模型'}
     return {'schema_version':VERSION,'scope':summary['scope'],'workspace_count':len(spaces),'starts_at':begin,'as_of':stamp,'days':days,'source_filter':source,
         'include_archived':include_archived,'knowledge_nodes':kc_nodes,'prerequisite_edges':[{'from_id':pre,'to_id':key} for key,n in NODES.items() for pre in n['prerequisites']],
-        'measures':measure_rows,'support_events':support[-50:],'support_event_count':len(support),'competencies':competencies,
+        'measures':measure_rows,'support_events':support[-50:],'support_event_count':len(support),'competencies':competencies,'assistance':assistance,'review_matrix':list(matrix.values()),
         'planning_summary':summary,'facts_count':len(rows),'limitations':['按开发KC/课程版本归档，未完成完整课标映射','图形显示记录和候选材料，不是掌握度或素养分']}

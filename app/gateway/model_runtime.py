@@ -12,7 +12,7 @@ from app.infrastructure.runtime.model_tasks import runtime_status, publish_confi
 
 class ModelConfigurationOut(Contract):
     configuration_id: UUID
-    vendor: Literal["deepseek", "fake"]
+    vendor: str
     model: str
     max_output_tokens: int
     account_daily_calls: int
@@ -22,6 +22,7 @@ class ModelConfigurationOut(Contract):
 
 
 class ModelRuntimeOut(Contract):
+    provider_catalog: list[dict] = Field(default_factory=list)
     purpose_scopes: list[PurposeScope] = Field(default_factory=list)
     verification_boundary: str = "仅比较有界有理数表达式与已审核参考值；不理解题意、不验证证明或评定教学效果。"
     revision: int
@@ -39,7 +40,8 @@ class ModelRuntimeOut(Contract):
 
 class PublishModel(Contract):
     expected_revision: int = Field(ge=0, strict=True)
-    vendor: Literal["deepseek", "fake"]
+    vendor: Literal['deepseek','fake','openai','anthropic','gemini','qwen','glm','doubao','moonshot']
+    model: str | None = Field(default=None,min_length=1,max_length=160,pattern=r'^[a-zA-Z0-9_.:/-]+$')
     prompt_version: Literal["probability.followup.v1", "probability.followup.v2", "probability.followup.v3"] = "probability.followup.v1"
     max_output_tokens: int = Field(default=512, ge=64, le=512, strict=True)
     account_daily_calls: int = Field(default=30, ge=0, le=30, strict=True)

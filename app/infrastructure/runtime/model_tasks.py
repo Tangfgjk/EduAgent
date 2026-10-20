@@ -13,7 +13,7 @@ from sqlalchemy import select, func
 
 from app.infrastructure.db.models import (Account, AgentRun, AuditEvent, ModelConfiguration,
     ModelDailyBudget, ModelOperation, ModelPolicy, LearningInput, OutboxJob, Workspace, new_id, now)
-from app.llm.provider import (FakeProvider, GenerationRequest, ProviderConfig, ProviderError, create_provider)
+from app.llm.provider import (FakeProvider, GenerationRequest, ProviderError)
 from app.modules.errors import DomainError
 from app.modules.learning.output_gate import render_result
 from app.modules.learning.content_repository import content_hash
@@ -73,6 +73,7 @@ def public_operation(op, config, run=None, include_result=True):
 
 
 def runtime_status(session):
+    from app.llm.catalog import catalog
     policy = session.get(ModelPolicy, 1)
     config = session.get(ModelConfiguration, policy.active_id) if policy.active_id else None
     ops = list(session.scalars(select(ModelOperation).order_by(ModelOperation.created_at.desc(), ModelOperation.id.desc()).limit(20)))
@@ -81,7 +82,7 @@ def runtime_status(session):
     midnight = int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=BUSINESS_TIMEZONE).timestamp())
     today = list(session.scalars(select(ModelOperation).where(ModelOperation.created_at >= midnight)))
     from app.modules.learning.purpose_scopes import scopes
-    return {"purpose_scopes": scopes(config,session), "revision": policy.revision, "active": public_configuration(config),
+    return {"provider_catalog":catalog(),"purpose_scopes": scopes(config,session), "revision": policy.revision, "active": public_configuration(config),
             "deepseek_key_configured": bool(model_key()), "budget_day": day, "budget_timezone": "Asia/Shanghai",
             "reserved_calls": budget.calls if budget else 0,
             "input_tokens_known": sum((op.usage or {}).get("input_tokens") or 0 for op in today),
@@ -96,12 +97,17 @@ def publish_configuration(session, actor, payload):
     if policy.revision != payload["expected_revision"]:
         raise DomainError(409, "revision_conflict", "模型配置已更新，请刷新")
     vendor = payload["vendor"]
+    from app.llm.catalog import PROFILES,credential
+    if vendor!='fake' and (vendor not in PROFILES or not credential(vendor)):
+        raise DomainError(409,'model_key_missing','请先在本机配置所选服务商密钥，不在聊天或网页中填写')
+    if vendor not in {'deepseek','fake'} and not payload.get('model'):
+        raise DomainError(422,'model_required','请明确服务商实际可用的模型ID，不自动猜测型号')
     prompt_version = payload.get("prompt_version", PROMPT_VERSION)
     if prompt_version not in SUPPORTED_PROMPTS:
         raise DomainError(422, "model_version_conflict", "不支持此模型提示版本")
     if vendor == "deepseek" and not model_key():
         raise DomainError(409, "model_key_missing", "请先配置 DeepSeek 密钥并确认服务进程有读取权限")
-    config = ModelConfiguration(vendor=vendor, model="deepseek-flash" if vendor == "deepseek" else "scripted",
+    config = ModelConfiguration(vendor=vendor, model=payload.get('model') or ("deepseek-flash" if vendor == "deepseek" else "scripted"),
         max_output_tokens=payload["max_output_tokens"], account_daily_calls=payload["account_daily_calls"],
         site_daily_calls=payload["site_daily_calls"], prompt_version=prompt_version, actor_id=actor.account.id)
     session.add(config)
@@ -181,12 +187,14 @@ def collect_teach_context(session, account, run, config, policy, item):
     return history, sources
 
 
-def reserve(session, account, run, entry, text, *, teach_item=None, planning_bundle=None, course_build=None):
+def reserve(session, account, run, entry, text, *, teach_item=None, planning_bundle=None, course_build=None, evolution_dataset=None, course_review=False,resource_artifact=None,resource_review_index=1):
     if planning_bundle is not None and (run.kind != 'strategy' or entry.payload.get('operation') != 'strategy_start' or not entry.payload.get('request_model')):
         raise DomainError(409, 'model_scope_forbidden', '仅新规划可请求模型候选')
     from app.modules.generation.interaction import enabled as generic_enabled
     generic = course_build is None and planning_bundle is None and generic_enabled(session) and (run.kind in {"tutor", "teach", "roundtable"})
-    if not generic and course_build is None and planning_bundle is None and teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
+    if evolution_dataset is not None and (run.kind != 'skill_evolution' or entry.payload.get('operation') != 'evolution_semantic_start'):
+        raise DomainError(409, 'model_scope_forbidden', '只有新的语义Skill改进任务可请求候选')
+    if evolution_dataset is None and not generic and course_build is None and planning_bundle is None and teach_item is None and (run.kind != 'tutor' or run.view["unit_id"] != UNIT or run.view["phase"] != "practice"):
         raise DomainError(409, "model_scope_forbidden", "模型追问目前仅开放概率练习，不用于诊断或独立检测")
     if teach_item is not None:
         from app.modules.learning.teach_coaching import UNIT as TEACH_UNIT
@@ -210,6 +218,8 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
     if not policy.active_id:
         raise DomainError(409, "model_paused", "管理员尚未开放模型追问，可继续使用预设提示")
     config = session.get(ModelConfiguration, policy.active_id)
+    if evolution_dataset is not None and config.vendor not in {'deepseek','fake'}:
+        raise DomainError(409,'semantic_vendor_not_authorized','本轮语义RSI仅授权DeepSeek；其他服务商需单独确认')
     if config.prompt_version not in SUPPORTED_PROMPTS:
         raise DomainError(409, "model_version_conflict", "模型提示版本已更新，请重新发布配置")
     reservation_time = now()
@@ -222,13 +232,23 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
         if limit > 0 and budget.calls >= limit:
             raise DomainError(429, "model_budget_exhausted", "今日模型调用额度已用完，可继续使用预设提示")
         budget.calls += 1
-    if course_build is not None:
+    if evolution_dataset is not None:
+        from app.modules.skill_evolution.semantic import freeze
+        snapshot = freeze(evolution_dataset, account, config)
+    elif course_build is not None:
         from app.modules.generation.service import freeze_request as freeze_course, fake_proposal
         from app.infrastructure.db.models import GenerationPolicy
         if run.kind != 'course_build' or not session.get(GenerationPolicy, 1).courses:
             raise DomainError(409, 'model_scope_forbidden', '课程生成用途未开放')
-        snapshot = freeze_course(course_build, account, config)
-        if config.vendor == 'fake': snapshot['fake_candidate'] = fake_proposal(course_build)
+        if resource_artifact is not None:
+            from app.modules.resources.quality import freeze
+            snapshot=freeze(resource_artifact,course_build,resource_review_index,config)
+        elif course_review:
+            from app.modules.generation.quality import freeze
+            snapshot=freeze(course_build,config)
+        else:
+            snapshot = freeze_course(course_build, account, config)
+            if config.vendor == 'fake': snapshot['fake_candidate'] = fake_proposal(course_build)
     elif generic:
         from app.modules.generation.interaction import freeze as freeze_generic
         from app.modules.learning.content_catalog import get_pack
@@ -253,7 +273,7 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
         snapshot = freeze_teach(teach_item, text, entry.payload['answer'], account,
             config.max_output_tokens, config.prompt_version, **context)
     op = ModelOperation(input_id=entry.id, run_id=run.id, workspace_id=run.workspace_id, account_id=account.id,
-        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='course.production.v1' if course_build is not None else 'planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
+        configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='skill-semantic.v1' if evolution_dataset is not None else 'course.production.v1' if course_build is not None else 'planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
         hint_level=len((run.view or {}).get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
     session.add(op)
     session.flush()
@@ -293,6 +313,12 @@ class ModelTaskRunner:
     @staticmethod
     def _provider(config, snapshot):
         if config.vendor == "fake":
+            if snapshot.get('purpose') in {'course_semantic_review','resource_semantic_review'}:
+                from app.modules.generation.quality import CHECKS
+                return FakeProvider((json.dumps({'verdict':'pass','checks':{k:True for k in CHECKS},'issues':[]}),))
+            if snapshot.get('purpose') == 'skill_semantic':
+                from app.modules.skill_evolution.semantic import fake
+                return FakeProvider((json.dumps(fake(snapshot), ensure_ascii=False),))
             if snapshot.get('purpose', '').startswith('generic_'):
                 return FakeProvider((json.dumps({'quote':snapshot['student_text'][:80], 'focus':'basis'},ensure_ascii=False),))
             if snapshot.get('purpose') == 'course_generation':
@@ -307,8 +333,8 @@ class ModelTaskRunner:
             if snapshot.get('purpose') == 'teach':
                 proposal['question'] = '你能说明讲解中每个基本结果是怎样确定的吗？'
             return FakeProvider((json.dumps(proposal, ensure_ascii=False),))
-        return create_provider(ProviderConfig(vendor="deepseek", model=config.model,
-            api_key=model_key(), max_output_tokens=4096 if snapshot.get('purpose') == 'course_generation' else config.max_output_tokens, timeout_seconds=30))
+        from app.llm.catalog import provider
+        return provider(config.vendor,config.model,2048 if snapshot.get('purpose') == 'skill_semantic' else 4096 if snapshot.get('purpose') in {'course_generation','course_semantic_review','resource_semantic_review'} else config.max_output_tokens)
 
     def _locked(self, session, op_id):
         candidate = session.get(ModelOperation, op_id)
@@ -327,14 +353,35 @@ class ModelTaskRunner:
         if not reason:
             from app.modules.learning.content_service import require_content
             try:
-                if op.request.get('purpose') == 'course_generation':
+                if op.request.get('purpose') == 'skill_semantic':
+                    from app.infrastructure.db.models import EvolutionDataset
+                    from app.modules.skill_evolution.service import fresh
+                    from types import SimpleNamespace
+                    dataset = session.get(EvolutionDataset, run.id)
+                    if run.kind != 'skill_evolution' or (run.view or {}).get('phase') != 'model_pending' or not dataset or content_hash(dataset.body) != op.request.get('dataset_hash'):
+                        raise DomainError(409, 'stale_result', '语义候选上下文已变化')
+                    fresh(session, SimpleNamespace(account=account), run, dataset)
+                elif op.request.get('purpose')=='resource_semantic_review':
+                    from app.infrastructure.db.models import ResourceArtifact,CourseBuild,GenerationPolicy,OpenMAICJob
+                    from app.modules.knowledge.service import check_snapshot
+                    row=session.get(ResourceArtifact,op.request['resource_id'])
+                    build=session.get(CourseBuild,op.request['build_id'])
+                    scope=session.get(GenerationPolicy,1)
+                    if not scope.courses or not scope.private_auto_release or not row or row.status!='pending_review' or row.workspace_id!=workspace.id or row.sha256!=op.request['resource_hash'] or not build or build.status!='ready' or content_hash(build.sources)!=op.request['sources_hash']:
+                        raise DomainError(409,'resource_changed','资源自动检查范围已变化')
+                    check_snapshot(session,build.sources)
+                    if row.body.get('remote_job_id') and session.scalar(select(OpenMAICJob.id).where(OpenMAICJob.build_id==build.id,OpenMAICJob.remote_id==row.body['remote_job_id'],OpenMAICJob.status=='cancelled').with_for_update()):
+                        raise DomainError(409,'resource_cancelled','学生已取消此课堂')
+                elif op.request.get('purpose') in {'course_generation','course_semantic_review'}:
                     from app.infrastructure.db.models import CourseBuild, GenerationPolicy
                     from app.modules.knowledge.service import check_snapshot
                     row = session.get(CourseBuild, op.request['build_id'])
-                    if (not row or row.run_id != run.id or row.workspace_id != run.workspace_id or row.status not in {'queued', 'generating'}
+                    if (not row or row.run_id != run.id or row.workspace_id != run.workspace_id or row.status not in {'queued', 'generating','semantic_review'}
                             or not session.get(GenerationPolicy, 1).courses or content_hash(row.sources) != op.request.get('sources_hash')):
                         raise DomainError(409, 'stale_result', '课程生成范围或来源已变更')
                     check_snapshot(session, row.sources)
+                    if op.request.get('purpose')=='course_semantic_review' and (not session.get(GenerationPolicy,1).private_auto_release or content_hash(row.candidate)!=op.request['candidate_hash']):
+                        raise DomainError(409,'auto_release_paused','自动内容检查已停用或候选已变化')
                 elif op.request.get('purpose', '').startswith('generic_'):
                     from app.modules.generation.interaction import enabled
                     from app.modules.learning.content_catalog import get_pack
@@ -389,32 +436,52 @@ class ModelTaskRunner:
     def _end(op, status, error):
         op.status, op.error_code, op.finished_at = status, error, now()
         op.lease_token, op.lease_until = None, None
-        if op.request.get('purpose') == 'course_generation' and status != 'succeeded':
+        if op.request.get('purpose') == 'skill_semantic' and status != 'succeeded':
+            from sqlalchemy.orm import object_session
+            run = object_session(op).get(AgentRun, op.run_id)
+            if run.status not in {'cancelled', 'completed'}:
+                run.status = 'cancelled' if status == 'cancelled' else 'failed'
+                run.error_code = error
+                run.view = {**(run.view or {}), 'phase': status, 'reason': '模型无可用结果；不会自动重试或发布策略'}
+        if op.request.get('purpose')=='resource_semantic_review' and status!='succeeded':
+            from sqlalchemy.orm import object_session
+            session=object_session(op);run=session.get(AgentRun,op.run_id)
+            run.status='cancelled' if status=='cancelled' else 'failed';run.error_code=error
+            from app.infrastructure.db.models import OpenMAICJob
+            for job in session.scalars(select(OpenMAICJob).where(OpenMAICJob.build_id==op.request['build_id'],OpenMAICJob.status=='checking')):
+                job.status='pending_review';job.error_code=error
+        if op.request.get('purpose') in {'course_generation','course_semantic_review'} and status != 'succeeded':
             from sqlalchemy.orm import object_session
             from app.infrastructure.db.models import CourseBuild
             session = object_session(op)
             row = session.get(CourseBuild, op.request['build_id'])
             if row and row.run_id == op.run_id:
-                row.status = 'unknown' if status == 'unknown' else 'cancelled' if status == 'cancelled' else 'failed'
+                row.status = 'pending_review' if op.request.get('purpose')=='course_semantic_review' else 'unknown' if status == 'unknown' else 'cancelled' if status == 'cancelled' else 'failed'
                 row.revision += 1
                 session.get(AgentRun, op.run_id).status = 'cancelled' if status == 'cancelled' else 'failed'
 
     def recover(self):
+        # Discover without leases; every mutation then uses the same lock order
+        # as complete/cancel. Locking the operation first can deadlock on Run.
         with self.db.transaction() as session:
-            expired = list(session.scalars(select(ModelOperation).where(ModelOperation.status == "running",
-                ModelOperation.lease_until <= now()).with_for_update(skip_locked=True)))
-            for op in expired:
-                op.billing_unknown = True
-                self._end(op, "unknown", "worker_interrupted")
-            waiting = session.scalars(select(ModelOperation).join(OutboxJob, OutboxJob.input_id == ModelOperation.input_id)
-                .where(ModelOperation.status == "waiting", OutboxJob.status == "dead").with_for_update(of=ModelOperation, skip_locked=True))
-            for op in waiting:
-                self._end(op, "failed", "input_processing_failed")
-            stale = session.scalars(select(ModelOperation).join(AgentRun, AgentRun.id == ModelOperation.run_id)
-                .where(ModelOperation.status == "waiting", AgentRun.status.in_(["cancelled", "failed", "completed"]))
-                .with_for_update(of=ModelOperation, skip_locked=True))
-            for op in stale:
-                self._end(op, "discarded", "run_ended")
+            ids=set(session.scalars(select(ModelOperation.id).where(ModelOperation.status=='running',ModelOperation.lease_until<=now())))
+            ids.update(session.scalars(select(ModelOperation.id).join(OutboxJob,OutboxJob.input_id==ModelOperation.input_id)
+                .where(ModelOperation.status=='waiting',OutboxJob.status=='dead')))
+            ids.update(session.scalars(select(ModelOperation.id).join(AgentRun,AgentRun.id==ModelOperation.run_id)
+                .where(ModelOperation.status=='waiting',AgentRun.status.in_(['cancelled','failed','completed']))))
+        for identifier in sorted(ids):
+            with self.db.transaction() as session:
+                locked=self._locked(session,identifier)
+                if locked is None:continue
+                op,_=locked
+                if op.status=='running' and op.lease_until<=now():
+                    op.billing_unknown=True
+                    self._end(op,'unknown','worker_interrupted')
+                elif op.status=='waiting':
+                    job=session.scalar(select(OutboxJob).where(OutboxJob.input_id==op.input_id))
+                    run=session.get(AgentRun,op.run_id)
+                    if job and job.status=='dead':self._end(op,'failed','input_processing_failed')
+                    elif run.status in {'cancelled','failed','completed'}:self._end(op,'discarded','run_ended')
 
     def claim(self, operation_id=None):
         self.recover()
@@ -476,7 +543,13 @@ class ModelTaskRunner:
             try:
                 if result.finish_reason != "stop":
                     raise ProviderError("truncated_output")
-                if claim['request'].get('purpose') == 'course_generation':
+                if claim['request'].get('purpose') == 'skill_semantic':
+                    from app.modules.skill_evolution.semantic import validate
+                    proposal = validate(result.text, claim['request'])
+                elif claim['request'].get('purpose') in {'course_semantic_review','resource_semantic_review'}:
+                    from app.modules.generation.quality import validate
+                    proposal=validate(result.text,claim['request'])
+                elif claim['request'].get('purpose') == 'course_generation':
                     from app.modules.generation.service import validate_result
                     proposal = validate_result(session, result.text, claim['request'])
                 elif claim['request'].get('purpose', '').startswith('generic_'):
@@ -498,7 +571,16 @@ class ModelTaskRunner:
             else:
                 op.result = proposal
                 self._end(op, "succeeded", None)
-                if claim['request'].get('purpose') == 'course_generation':
+                if claim['request'].get('purpose') == 'skill_semantic':
+                    from app.modules.skill_evolution.trials import accept
+                    accept(session, op)
+                elif claim['request'].get('purpose') == 'course_semantic_review':
+                    from app.modules.generation.quality import accept
+                    accept(session,op)
+                elif claim['request'].get('purpose') == 'resource_semantic_review':
+                    from app.modules.resources.quality import accept
+                    accept(session,op)
+                elif claim['request'].get('purpose') == 'course_generation':
                     from app.modules.generation.service import accept_result
                     accept_result(session, op)
                 elif claim['request'].get('purpose') == 'planning':

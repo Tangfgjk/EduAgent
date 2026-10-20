@@ -1,4 +1,5 @@
 import html
+import hashlib
 import io
 import json
 import zipfile
@@ -21,11 +22,12 @@ class ResourceIn(Contract):
 def import_classroom(data):
     """Read an OpenMAIC formatVersion=1 export without extracting files or code.
 
-    Only plain scene text is retained; actions, HTML, audio, external URLs and
-    self-reported scores never become executable resources or learning facts.
+    Preserve the original manifest for provenance; render only the bounded,
+    non-executable projection. Raw markup never enters the student renderer.
     """
     if len(data)>5_000_000: raise DomainError(422,'resource_too_large','资源压缩包过大')
     try:
+        assets={}
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             entries=archive.infolist()
             if len(entries)>500 or sum(i.file_size for i in entries)>20_000_000:
@@ -37,6 +39,14 @@ def import_classroom(data):
             manifest=archive.read('manifest.json')
             if len(manifest)>2_000_000: raise ValueError('manifest_bounds')
             value=json.loads(manifest)
+            import base64
+            media_types={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
+                '.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg','.mp4':'video/mp4','.webm':'video/webm'}
+            from pathlib import PurePosixPath
+            for entry in entries:
+                mime=media_types.get(PurePosixPath(entry.filename).suffix.lower())
+                if mime and 0<entry.file_size<=5_000_000:
+                    assets[entry.filename]='data:'+mime+';base64,'+base64.b64encode(archive.read(entry)).decode('ascii')
         if not isinstance(value,dict): raise ValueError('manifest_shape')
         if value.get('formatVersion')!=1: raise ValueError('unsupported_format')
         scenes=value.get('scenes',[])
@@ -48,7 +58,10 @@ def import_classroom(data):
             content=scene.get('content',{})
             text=scene.get('title','')+'\n'+plain_text(content)
             cards.append(Card(text=text[:4000]))
-        return ResourceIn(title=str(value['stage']['name'])[:120],cards=cards,generator='OpenMAIC.v1.2.0.classroom-export').model_dump()
+        from app.modules.resources.classroom import project
+        return {**ResourceIn(title=str(value['stage']['name'])[:120],cards=cards,generator='OpenMAIC.v1.2.0.classroom-export').model_dump(),
+            'classroom':project(value,assets),'source_document':value,
+            'source_archive_sha256':hashlib.sha256(data).hexdigest()}
     except (ValueError,KeyError,TypeError,AttributeError,zipfile.BadZipFile,RuntimeError):
         raise DomainError(422,'invalid_resource','无法安全导入此课堂导出，请检查格式、路径及大小') from None
 

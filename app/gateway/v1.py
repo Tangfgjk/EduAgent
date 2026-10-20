@@ -26,6 +26,12 @@ from app.gateway.model_runtime import model_runtime_router
 from app.gateway.development import development_router
 from app.gateway.courses import course_router
 from app.gateway.generation import generation_router
+from app.gateway.agenda import agenda_router
+from app.gateway.classroom import classroom_router
+from app.gateway.effect_studies import study_router
+from app.gateway.media import media_router
+from app.gateway.privacy import privacy_router
+from app.gateway.readiness import readiness_router
 from app.modules.resources.proxy import proxy_router
 from app.infrastructure.db.database import Database
 from app.infrastructure.db.models import Account
@@ -148,7 +154,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             if database is None:
                 db.close()
 
-    app = FastAPI(title="桂子问津", version="0.19.0", lifespan=lifespan,
+    app = FastAPI(title="桂子问津", version="0.20.0", lifespan=lifespan,
                   responses={status: {"model": ErrorOut} for status in (401, 403, 409, 422, 429, 503)})
 
     @app.middleware("http")
@@ -206,6 +212,10 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 check_origin(request)
             ui_role = client_role(request)
             session_cookie, _ = cookie_names(ui_role)
+            # Native image/audio/video requests cannot add X-Wenjin-Client.
+            # A role-specific read route can choose only that role's cookie.
+            if not write and ui_role is None and role in {'student','admin'} and request.cookies.get(f'wenjin_{role}_session'):
+                session_cookie=f'wenjin_{role}_session'
             with db.transaction() as session:
                 actor = identity.authorize(session, request.cookies.get(session_cookie, ""),
                                            request.headers.get("x-csrf-token"), role or ui_role, write)
@@ -295,7 +305,13 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         return spaces.change(ctx.session, ctx.actor, str(wid), body.expected_revision, status="active")
 
     app.include_router(learning_router(student))
-    app.include_router(tutoring_router(student, admin))
+    app.include_router(agenda_router(student))
+    app.include_router(classroom_router(student))
+    app.include_router(study_router(admin))
+    app.include_router(media_router(student,admin))
+    app.include_router(privacy_router(student,admin))
+    app.include_router(readiness_router(admin,settings))
+    app.include_router(tutoring_router(student, admin,db))
     app.include_router(memory_router(student))
     app.include_router(activity_router(student, admin))
     app.include_router(evidence_router(student))

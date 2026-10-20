@@ -1,0 +1,12 @@
+.classroom-player{border:1px solid #dbe5db;border-radius:12px;padding:12px;margin:12px 0;background:#fafcf9}
+.classroom-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.classroom-layout{display:grid;grid-template-columns:160px minmax(0,1fr);gap:12px}
+.classroom-layout nav{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow:auto}
+.classroom-layout nav [aria-current=step]{background:#e2f0e9;border-color:#26725d}
+.classroom-layout svg{width:100%;height:auto;max-height:65vh;border:1px solid #dbe5db}
+.classroom-layout svg svg{border:0;max-height:none}
+.classroom-element{width:100%;height:100%;white-space:pre-wrap;line-height:1.35;overflow:auto;font-family:'Microsoft YaHei',sans-serif}
+.classroom-element video,.classroom-element audio{width:100%;max-height:100%}
+.classroom-caption{min-height:60px;padding:14px;margin-top:10px;line-height:1.7;background:#f0f5f1;border-radius:8px}
+.classroom-formula{white-space:normal;overflow-wrap:normal}
+@media(max-width:700px){.classroom-layout{grid-template-columns:1fr}.classroom-layout nav{flex-direction:row;max-height:100px;overflow:auto}.classroom-controls strong{width:100%}}

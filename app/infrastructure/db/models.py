@@ -66,6 +66,7 @@ class GenerationPolicy(Base):
     courses: Mapped[bool] = mapped_column(Boolean, default=False)
     interaction: Mapped[bool] = mapped_column(Boolean, default=False)
     search: Mapped[bool] = mapped_column(Boolean, default=False)
+    private_auto_release: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class CourseBuild(Base):
@@ -643,3 +644,104 @@ class EvolutionEvaluation(Base):
     body: Mapped[dict] = mapped_column(JSON)
     sha256: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[int] = mapped_column(BigInteger,default=now)
+
+
+class SkillTrial(Base):
+    __tablename__ = 'skill_trials'
+    id: Mapped[str] = mapped_column(ForeignKey('evolution_candidates.id'), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    baseline_id: Mapped[str] = mapped_column(ForeignKey('strategy_versions.id'))
+    candidate_id: Mapped[str] = mapped_column(ForeignKey('strategy_versions.id'))
+    status: Mapped[str] = mapped_column(String(32), default='active')
+    body: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class EvaluationStudy(Base):
+    __tablename__ = 'evaluation_studies'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    title: Mapped[str] = mapped_column(String(160))
+    protocol: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(32), default='draft')
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class EvaluationObservation(Base):
+    __tablename__ = 'evaluation_observations'
+    __table_args__ = (UniqueConstraint('study_id', 'creation_key'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    study_id: Mapped[str] = mapped_column(ForeignKey('evaluation_studies.id'), index=True)
+    creation_key: Mapped[str] = mapped_column(String(128))
+    body: Mapped[dict] = mapped_column(JSON)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class ResourceProgress(Base):
+    __tablename__ = 'resource_progress'
+    __table_args__ = (UniqueConstraint('account_id', 'resource_id'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    account_id: Mapped[str] = mapped_column(ForeignKey('accounts.id'))
+    resource_id: Mapped[str] = mapped_column(ForeignKey('resource_artifacts.id'))
+    body: Mapped[dict] = mapped_column(JSON)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[int] = mapped_column(BigInteger, default=now)
+
+
+class LearningAutomation(Base):
+    __tablename__ = 'learning_automation'
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'),primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean,default=False)
+    revision: Mapped[int] = mapped_column(Integer,default=0)
+    body: Mapped[dict] = mapped_column(JSON,default=dict)
+
+
+class MediaBudget(Base):
+    __tablename__='media_budgets'
+    id: Mapped[str]=mapped_column(String(36),primary_key=True,default=new_id)
+    workspace_id: Mapped[str]=mapped_column(ForeignKey('workspaces.id'),index=True)
+    resource_id: Mapped[str]=mapped_column(ForeignKey('resource_artifacts.id'))
+    enabled: Mapped[bool]=mapped_column(Boolean,default=False)
+    revision: Mapped[int]=mapped_column(Integer,default=0)
+    body: Mapped[dict]=mapped_column(JSON)
+    created_at: Mapped[int]=mapped_column(BigInteger,default=now)
+
+
+class MediaOperation(Base):
+    __tablename__='media_operations'
+    __table_args__=(UniqueConstraint('budget_id','slot'),)
+    id: Mapped[str]=mapped_column(String(36),primary_key=True,default=new_id)
+    budget_id: Mapped[str]=mapped_column(ForeignKey('media_budgets.id'),index=True)
+    slot: Mapped[str]=mapped_column(String(20))
+    request: Mapped[dict]=mapped_column(JSON)
+    request_hash: Mapped[str]=mapped_column(String(64))
+    reserved_microyuan: Mapped[int]=mapped_column(Integer)
+    status: Mapped[str]=mapped_column(String(32),default='pending',index=True)
+    remote_id: Mapped[str|None]=mapped_column(String(200),nullable=True)
+    receipt: Mapped[dict|None]=mapped_column(JSON,nullable=True)
+    lease_token: Mapped[str|None]=mapped_column(String(36),nullable=True)
+    lease_until: Mapped[int|None]=mapped_column(BigInteger,nullable=True)
+    next_poll_at: Mapped[int]=mapped_column(BigInteger,default=now)
+    polls: Mapped[int]=mapped_column(Integer,default=0)
+    created_at: Mapped[int]=mapped_column(BigInteger,default=now)
+
+
+class MediaAsset(Base):
+    __tablename__='media_assets'
+    id: Mapped[str]=mapped_column(ForeignKey('media_operations.id'),primary_key=True)
+    body: Mapped[dict]=mapped_column(JSON)
+    sha256: Mapped[str]=mapped_column(String(64))
+
+
+class PlaybackReceipt(Base):
+    __tablename__='playback_receipts'
+    __table_args__=(UniqueConstraint('account_id','resource_id','creation_key'),)
+    id: Mapped[str]=mapped_column(String(36),primary_key=True,default=new_id)
+    account_id: Mapped[str]=mapped_column(ForeignKey('accounts.id'),index=True)
+    resource_id: Mapped[str]=mapped_column(ForeignKey('resource_artifacts.id'))
+    creation_key: Mapped[str]=mapped_column(String(128))
+    request_hash: Mapped[str]=mapped_column(String(64))
+    response: Mapped[dict]=mapped_column(JSON)
+    created_at: Mapped[int]=mapped_column(BigInteger,default=now)

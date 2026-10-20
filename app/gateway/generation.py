@@ -7,13 +7,14 @@ from app.modules.learning.contracts import Contract
 from app.modules.knowledge import service as knowledge
 from app.modules.resources import service as resources
 from app.infrastructure.db.models import (CourseBuild,GenerationPolicy,KnowledgeDocument,KnowledgeSourceState,
-    ResourceArtifact,ModelOperation,AgentRun,SearchOperation,AuditEvent,ProductionReview,ResourceBudget,OpenMAICJob)
+    ResourceArtifact,ModelOperation,AgentRun,SearchOperation,AuditEvent,ProductionReview,ResourceBudget,OpenMAICJob,Workspace)
 from app.modules.learning.content_repository import content_hash
 from app.modules.workspaces.service import Workspaces
 from app.modules.errors import DomainError
 
 
 class PolicyIn(Contract):
+    private_auto_release: bool = Field(default=False,strict=True)
     expected_revision: int=Field(ge=0,strict=True)
     courses: bool
     interaction: bool
@@ -22,6 +23,7 @@ class PolicyIn(Contract):
 
 
 class PolicyOut(Contract):
+    private_auto_release: bool = False
     revision: int
     courses: bool
     interaction: bool
@@ -52,7 +54,7 @@ def generation_router(student,admin):
     def policy_out(session):
         from app.modules.knowledge.search import key
         row=session.get(GenerationPolicy,1)
-        return {'revision':row.revision,'courses':row.courses,'interaction':row.interaction,'search':row.search,'tavily_key_configured':bool(key()),
+        return {'private_auto_release':row.private_auto_release,'revision':row.revision,'courses':row.courses,'interaction':row.interaction,'search':row.search,'tavily_key_configured':bool(key()),
             'limits':{'course_output_tokens':4096,'course_calls':6,'manual_repairs':1,'interaction_output_tokens':512,'interaction_calls':3,
                 'search_daily_calls':20,'search_calls_per_topic':2,'automatic_retries':False,'quota':'shared_development_calls'}}
 
@@ -66,7 +68,8 @@ def generation_router(student,admin):
         if not body.acknowledge_development_only: raise DomainError(422,'scope_confirmation_required','请确认开发范围')
         from app.modules.knowledge.search import key
         if body.search and not key(): raise DomainError(409,'search_unconfigured','请在本机配置 Tavily 密钥，不在网页粘贴密钥')
-        row.courses,row.interaction,row.search=body.courses,body.interaction,body.search;row.revision+=1
+        row.courses,row.interaction,row.search=body.courses,body.interaction,body.search
+        row.private_auto_release=body.private_auto_release;row.revision+=1
         ctx.session.add(AuditEvent(actor_id=ctx.actor.account.id,action='generation.configure',target_id='1'))
         ctx.session.flush();return policy_out(ctx.session)
 
@@ -181,7 +184,10 @@ def generation_router(student,admin):
             if build.status!='ready': continue
             try: knowledge.check_snapshot(ctx.session,build.sources)
             except DomainError: continue
-            result.append({'resource_id':row.id,'title':row.body['title'],'sha256':row.sha256,'unit_id':build.unit_id,'html':resources.render(row.body)})
+            from app.modules.resources.classroom import public_manifest
+            from app.modules.resources.media import classroom_overlay
+            result.append({'resource_id':row.id,'title':row.body['title'],'sha256':row.sha256,'unit_id':build.unit_id,'html':resources.render(row.body),'cards':row.body.get('cards',[]),
+                'classroom':public_manifest(classroom_overlay(ctx.session,row)) if row.body.get('classroom') else None})
         return {'items':result}
 
     @router.post('/admin/course-builds/{bid}/resources',status_code=201)
@@ -237,6 +243,36 @@ def generation_router(student,admin):
         ctx.session.add(job);ctx.session.add(AuditEvent(actor_id=ctx.actor.account.id,action='resource.generate',target_id=row.id));ctx.session.flush()
         return {'job_id':job.id,'status':job.status}
 
+    @router.post('/student/workspaces/{wid}/course-builds/{bid}/openmaic',status_code=202)
+    def student_openmaic(wid:UUID,bid:UUID,ctx=sa):
+        row=service.owned(ctx.session,ctx.actor,str(wid),str(bid),active=True)
+        from app.modules.learning.courses import require_bound_unit
+        require_bound_unit(ctx.session,str(wid),row.unit_id)
+        if not ctx.session.get(GenerationPolicy,1).private_auto_release:raise DomainError(409,'resource_autonomy_paused','平台尚未开放私有课堂自动检查，可继续现有课程')
+        if service.independent_active(ctx.session,str(wid)):raise DomainError(409,'independent_check','独立尝试期间不生成辅助课堂')
+        return openmaic(bid,ctx)
+
+    @router.get('/student/workspaces/{wid}/course-builds/{bid}/openmaic')
+    def student_openmaic_status(wid:UUID,bid:UUID,ctx=sa):
+        service.owned(ctx.session,ctx.actor,str(wid),str(bid))
+        rows=ctx.session.scalars(select(OpenMAICJob).where(OpenMAICJob.build_id==str(bid),OpenMAICJob.workspace_id==str(wid)))
+        return {'items':[{'job_id':r.id,'status':r.status,'error_code':r.error_code} for r in rows]}
+
+    @router.post('/student/workspaces/{wid}/course-builds/{bid}/openmaic/{jid}/cancel')
+    def student_cancel_openmaic(wid:UUID,bid:UUID,jid:UUID,ctx=sa):
+        service.owned(ctx.session,ctx.actor,str(wid),str(bid),active=True)
+        row=ctx.session.get(OpenMAICJob,str(jid))
+        if not row or row.build_id!=str(bid) or row.workspace_id!=str(wid):raise DomainError(404,'not_found','没有此课堂任务')
+        ctx.session.refresh(row)  # workspace lock was acquired by owned()
+        if row.status not in {'completed','cancelled','failed'}:
+            from app.modules.resources.quality import cancel_checks
+            cancel_checks(ctx.session,row)
+            ctx.session.flush()
+            row=ctx.session.scalar(select(OpenMAICJob).where(OpenMAICJob.id==str(jid)).with_for_update().execution_options(populate_existing=True))
+            row.status='cancelled';ctx.session.get(ResourceBudget,row.budget_id).enabled=False
+            ctx.session.add(AuditEvent(actor_id=ctx.actor.account.id,action='resource.student_cancel',target_id=row.id))
+        return {'job_id':row.id,'status':row.status}
+
     @router.post('/admin/openmaic-jobs/{jid}/reimport')
     def reimport_resource(jid:UUID,ctx=aa):
         row=ctx.session.get(OpenMAICJob,str(jid),with_for_update=True)
@@ -259,8 +295,14 @@ def generation_router(student,admin):
 
     @router.post('/admin/openmaic-jobs/{jid}/cancel')
     def cancel_resource(jid:UUID,ctx=aa):
-        row=ctx.session.get(OpenMAICJob,str(jid),with_for_update=True)
+        row=ctx.session.get(OpenMAICJob,str(jid))
         if not row: raise DomainError(404,'not_found','未找到资源任务')
+        ctx.session.get(Workspace,row.workspace_id,with_for_update=True)
+        ctx.session.refresh(row)
+        from app.modules.resources.quality import cancel_checks
+        cancel_checks(ctx.session,row)
+        ctx.session.flush()
+        row=ctx.session.scalar(select(OpenMAICJob).where(OpenMAICJob.id==str(jid)).with_for_update().execution_options(populate_existing=True))
         row.status='cancelled';ctx.session.get(ResourceBudget,row.budget_id,with_for_update=True).enabled=False
         return {'status':'cancelled','notice':'本地停止发布和后续模型调用；在途上游请求可能仍产生费用，不声称远端已停止。'}
 

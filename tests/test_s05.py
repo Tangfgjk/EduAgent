@@ -165,7 +165,10 @@ def test_unknown_answer_real_review_and_no_fake_success(env):
     assert env.admin.post(f'/api/v1/admin/answer-reviews/{review["review_id"]}/resolve', json=body).status_code == 409
     current = client.get(path).json()
     assert current['view']['pending_reviews'] == 0
-    assert current['view']['records'][0]['status'] == 'unverifiable'
+    # Clarification no longer finalizes an independent task. The original
+    # submission/review remains durable, while the learner can clarify or skip.
+    assert current['view']['records'] == []
+    assert current['view']['can_answer'] and current['view']['can_continue']
 
 
 def test_scope_idempotency_and_old_gate(env):

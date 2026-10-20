@@ -14,6 +14,7 @@ from app.modules.errors import DomainError
 from app.modules.learning.development_content import CONTENT_VERSION, UNIT_ID
 from app.modules.learning.content_catalog import get_pack
 from app.modules.learning.numeric_verifier import VERIFIER_VERSION, verify
+from app.modules.learning.answer_interpretation import interpret,check_explicit_equalities
 from app.modules.learning.tutor_contracts import TutorView
 from app.modules.planning.service import PROMPTS
 
@@ -45,6 +46,9 @@ def public_view(data):
     if not data.get("adaptive_support") or (data.get("skill_runtime") or {}).get("execution",{}).get("support_mode")=="step_first":
         unassisted = 0
     support = {"mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
+    if practice and (data.get('feedback') or {}).get('status') in {'failed','unverifiable'}:
+        support.update(mode='restored_step_support',basis='本题未通过或表达未确定，恢复具体支持；不沿用之前的成功推断当前掌握。')
+    if data.get('last_teaching_decision'):support['agenda_decision']=data['last_teaching_decision']
     pedagogy=item.tasks[index].get('pedagogy') if index<len(item.tasks) else None
     if practice and pedagogy and pedagogy.get('profile')=='rational-agent.v2':
         status=(data.get('feedback') or {}).get('status')
@@ -57,7 +61,7 @@ def public_view(data):
         task_count=len(item.tasks), attempts=data["attempts"], hints=data["hints"], feedback=data["feedback"],
         can_answer=phase in {"diagnostic", "practice", "checkpoint"} and not data["answered"],
         can_hint=practice and len(data["hints"]) < 4,
-        can_continue=phase in {"diagnostic", "checkpoint"} and data["answered"],
+        can_continue=phase in {"diagnostic", "checkpoint"} and (data["answered"] or (data.get("feedback") or {}).get("status") == "unverifiable"),
         can_skip=practice and data["attempts"] > 0, can_reflect=phase == "reflection",
         pending_reviews=data["unknowns"], records=data["records"]).model_dump()
 
@@ -94,9 +98,16 @@ def record(data, status):
         "attempts": data["attempts"], "hints_used": len(data["hints"]), "reflection": ""})
 
 
-def next_task(data):
-    data["index"] += 1
+def next_task(data,decision=None):
     tasks = content_for(data).tasks
+    if data['phase']=='reflection':
+        completed={r['task_id'] for r in data['records'] if r['stage']=='practice'}
+        remaining=[i for i,t in enumerate(tasks) if t['stage']=='practice' and t['id'] not in completed]
+        requested=(decision or {}).get('next_task_id')
+        chosen=next((i for i in remaining if tasks[i]['id']==requested),None)
+        data['index']=chosen if chosen is not None else remaining[0] if remaining else next((i for i,t in enumerate(tasks) if t['stage']=='checkpoint'),len(tasks))
+        if chosen is not None:data['last_teaching_decision']=decision
+    else:data['index'] += 1
     data["phase"] = tasks[data["index"]]["stage"] if data["index"] < len(tasks) else "summary"
     data.update(attempts=0, hints=[], feedback=None, answered=False)
 
@@ -108,20 +119,25 @@ def interaction(state: TutorState):
     task = content_for(data).tasks[data["index"]]
     action, review_task = decision["action"], None
     if action == "answer":
-        status = verify(decision["answer"], task["answer"])
+        interpretation = interpret(decision["answer"])
+        status = interpretation.check(task["answer"])
+        reasoning_check=check_explicit_equalities(decision.get('reasoning') or decision['answer'])
         messages = {"passed": "数值结果验证通过。步骤和依据尚未审核，请再代入检查。",
                     "failed": "数值结果与本题条件不一致。请检查等式两边的运算和代入结果。",
-                    "unverifiable": "当前验证器无法确认这种输入，已记录待复核；这不代表答错。可使用数值、分数或四则运算重新表达。"}
+                    "unverifiable": "还不能可靠确定你的最终答案，这不代表答错。请明确一个数值或分数；可以说‘我的答案是3’。含单位、多个候选或证明需另行评阅。"}
         if content_for(data).unit_id != UNIT_ID:
             messages["failed"] = "数值结果与本题参考结果不一致。请核对条件、运算顺序和数值。步骤尚未审核。"
+        if reasoning_check['status']=='contradiction_found':
+            messages[status]+=' 你写出的算术等式存在不相等，请单独检查理由；最终数值与理由分别记录。'
         envelope = ActionEnvelope(type=ActionType.FEEDBACK, params={"text": messages[status]})
         feedback = ActionGovernor().decide(envelope, GovernorContext(MentalStateSnapshot(learner_id=state["learner_id"]), 0, 0, 4, 0))
-        data["feedback"] = {"status": status, "message": feedback.envelope.params["text"], "reasoning_reviewed": False}
+        data["feedback"] = {"status": status, "message": feedback.envelope.params["text"], "reasoning_reviewed": False,
+            "interpretation": {"version": interpretation.version, "candidate": interpretation.candidate, "reason": interpretation.reason,'reasoning_check':reasoning_check}}
         data["attempts"] += 1
         if status == "unverifiable":
             data["unknowns"] += 1
             review_task = task["id"]
-        if data["phase"] != "practice" or status == "passed":
+        if status != "unverifiable" and (data["phase"] != "practice" or status == "passed"):
             record(data, status)
             data["answered"] = True
             if data["phase"] == "practice":
@@ -142,8 +158,10 @@ def interaction(state: TutorState):
         data["answered"], data["phase"] = True, "reflection"
     elif action == "reflect":
         data["records"][-1]["reflection"] = decision["reflection"]
-        next_task(data)
+        next_task(data,decision.get('teaching_decision'))
     elif action == "next":
+        if not data["answered"] and (data.get("feedback") or {}).get("status") == "unverifiable":
+            record(data, "unverifiable")
         next_task(data)
     turn = state["turn"] + 1
     return {"data": data, "view": public_view(data), "turn": turn, "review_task": review_task,

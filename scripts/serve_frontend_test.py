@@ -19,6 +19,8 @@ def test_provider(config, snapshot):
     """Test server never calls real providers; failure markers only exist in this script."""
     if config.vendor != 'fake':
         raise ProviderError('test_real_model_forbidden')
+    if snapshot.get('purpose') in {'skill_semantic','course_semantic_review','resource_semantic_review'}:
+        return ModelTaskRunner._provider(config,snapshot)
     if '[开发故障：超时]' in snapshot.get('student_text', ''):
         return FakeProvider((ProviderError('timeout'),))
     if snapshot.get('purpose') == 'course_generation':

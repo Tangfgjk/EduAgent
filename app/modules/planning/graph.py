@@ -17,6 +17,7 @@ class PlanningState(TypedDict):
     run_id: str
     gate_id: str
     view: dict
+    self_service: bool
 
 
 def admin_review(state: PlanningState):
@@ -34,13 +35,14 @@ def student_confirm(state: PlanningState):
 
 def advance_strategy(run_id, payload, image):
     policy = SoftPolicy.model_validate(payload["candidate"]).model_dump() if not image else None
-    initial = {"run_id": run_id, "gate_id": str(uuid5(NAMESPACE_URL, run_id + ":admin")),
-               "view": {"phase": "admin_review", "policy": policy, "checks": CHECKS,
+    automatic = (payload.get('bundle', {}).get('release_decision') or {}).get('kind') == 'system_auto'
+    initial = {"run_id": run_id, "self_service": automatic, "gate_id": str(uuid5(NAMESPACE_URL, run_id + (":student" if automatic else ":admin"))),
+               "view": {"phase": "student_confirm" if automatic else "admin_review", "policy": policy, "checks": CHECKS,
                         "source": "model_candidate" if payload.get('operation') == 'strategy_model_ready' else "development_template"}}
     graph = StateGraph(PlanningState)
     graph.add_node("admin_review", admin_review)
     graph.add_node("student_confirm", student_confirm)
-    graph.add_edge(START, "admin_review")
+    graph.add_conditional_edges(START, lambda state: 'student_confirm' if state.get('self_service') else 'admin_review')
     graph.add_conditional_edges("admin_review", lambda state: "done" if state["view"]["phase"] == "rejected" else "student",
                                 {"done": END, "student": "student_confirm"})
     graph.add_edge("student_confirm", END)

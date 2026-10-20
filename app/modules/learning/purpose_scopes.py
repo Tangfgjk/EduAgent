@@ -48,6 +48,9 @@ def scopes(config, session=None):
             data_scope='仅标准初中数学关键词，固定三域白名单；无学生原文',output_scope='Tavily Basic 发现结果，不能直接作为已授权教材；每主题两次、全站每日二十次',
             max_output_tokens=0,account_daily_calls=None,site_daily_calls=20)
         resource_enabled=session.scalar(select(ResourceBudget.id).where(ResourceBudget.enabled.is_(True)).limit(1))
+        by_id['skill_evolution'].update(enabled=bool(config),data_scope='仅模拟/成人当前项目最多6条脱敏记录与受限策略；不含其他项目和私有测验',
+            output_scope='语义候选单项参数；最多2048输出tokens，独立评测后可按学生同意个人试用；教学效果待验证',max_output_tokens=2048,
+            account_daily_calls=config.account_daily_calls if config else None,site_daily_calls=config.site_daily_calls if config else None)
         by_id['resource_generation'].update(enabled=bool(config and config.vendor=='deepseek' and resource_enabled),budget_group='resource_run_tokens',
             data_scope='已审核数学主题及讲解，不含账号、学生诊断原文；本机独立 OpenMAIC',
             output_scope='首轮一门三场景文本；20 次请求；整次输入128000/输出32768 tokens；资源仍需审核',max_output_tokens=4096)

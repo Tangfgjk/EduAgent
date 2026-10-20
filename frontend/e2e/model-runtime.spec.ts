@@ -30,7 +30,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
   await page.getByLabel('追问模式', { exact: false }).selectOption('probability.followup.v3');
   await page.getByLabel('确认仅用于开发测试', { exact: false }).check();
   await page.getByRole('button', { name: '发布开发模型配置', exact: true }).click();
-  await expect(page.getByText('开发模型配置已发布，用于概率陪学与我教 AI 开发追问。')).toBeVisible();
+  await expect(page.getByText('开发模型配置已发布，按已开放用途运行；新服务商需独立验收。')).toBeVisible();
   await expect(page.getByText('每账号 不限次数，全站 不限次数，输出上限 512 tokens', { exact: true })).toBeVisible();
   const context = await browser.newContext();
   const student = await context.newPage();
@@ -45,10 +45,11 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await student.getByRole('button', { name: '开始开发单元', exact: true }).click();
     await expect(student.getByText('先试一题', { exact: true })).toBeVisible();
     await expect(student.getByRole('button', { name: '提交思路并请求追问' })).toHaveCount(0);
-    await student.getByLabel('我的数值答案').fill('1/6');
-    await student.getByRole('button', { name: '检查我的解答' }).click();
+    await student.getByLabel('我的回答').fill('1/6');
+    await student.getByRole('button', { name: '发送' }).click();
     await expect(student.getByRole('button', { name: '继续下一步', exact: true })).toBeEnabled();
     await student.getByRole('button', { name: '继续下一步', exact: true }).click();
+    await student.getByText('模型任务与取消',{exact:true}).click();
     await expect(student.getByLabel('我想让 AI 帮我澄清的思路')).toBeEnabled();
     await expect(student.getByText('开发测试：每日模型调用次数不限，调用与 token 用量继续记录。')).toBeVisible();
     await student.getByLabel('我想让 AI 帮我澄清的思路').fill('我认为偶数共有三种可能');
@@ -57,6 +58,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await expect(student.getByText('模拟模型 · scripted', { exact: true })).toBeVisible();
     await expect(student.getByText('“我认为偶数共有三种可能”', { exact: true })).toBeVisible();
     await student.reload();
+    await student.getByText('模型任务与取消',{exact:true}).click();
     await expect(student.getByText('追问建议已保存', { exact: true })).toBeVisible();
     await expect(student.getByText('本次上下文：1 轮（含本轮）', { exact: true })).toBeVisible();
     await student.getByLabel('我想让 AI 帮我澄清的思路').fill('我改口了，现在想确认每个点数为何等可能');
@@ -65,6 +67,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await student.getByText('查看本次带入的历史交流', { exact: true }).click();
     await expect(student.getByText('我认为偶数共有三种可能', { exact: true })).toBeVisible();
     await student.reload();
+    await student.getByText('模型任务与取消',{exact:true}).click();
     await expect(student.getByText('本次上下文：2 轮（含本轮）', { exact: true })).toBeVisible();
     const history = student.locator('.study-history');
     await history.locator('summary').first().click();
@@ -73,6 +76,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await expect(history.getByText('AI 当时的建议', { exact: true })).toHaveCount(2);
     await expect(history.getByText('程序数值核验', { exact: true })).toHaveCount(1);
     await student.reload();
+    await student.getByText('模型任务与取消',{exact:true}).click();
     await student.locator('.study-history > summary').click();
     await expect(student.locator('.study-history').getByText('AI 当时的建议', { exact: true })).toHaveCount(2);
     mkdirSync('test-results/screens', { recursive: true });
@@ -104,15 +108,18 @@ test('模型超时后保留提示，耗尽额度可继续作答，独立检测�
     // exactly one further Fake call per repetition, rather than resetting counters.
     max_output_tokens: 512, account_daily_calls: testInfo.repeatEachIndex + 1, site_daily_calls: 100, acknowledge_development_only: true,
   } })).ok()).toBeTruthy();
-  await login(page, 'student', 's03.one');
+  const freshName='quota.'+Date.now();
+  expect((await page.request.post('/api/v1/admin/students',{headers:adminHeaders,data:{username:freshName,password:'S03-test-only-password!',display_name:'独立额度测试'}})).ok()).toBeTruthy();
+  await login(page, 'student', freshName);
   const studentHeaders = await headers(page, 'student');
   const workspace = await (await page.request.post('/api/v1/student/workspaces', { headers: { ...studentHeaders, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: '故障降级验收' } })).json();
   await page.goto(`/student/study?workspace=${workspace.workspace_id}&unit=${unitId}`);
   await confirmFixtureCourse(page);
   await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
-  await page.getByLabel('我的数值答案').fill('1/6');
-  await page.getByRole('button', { name: '检查我的解答' }).click();
+  await page.getByLabel('我的回答').fill('1/6');
+  await page.getByRole('button', { name: '发送' }).click();
   await page.getByRole('button', { name: '继续下一步', exact: true }).click();
+  await page.getByText('模型任务与取消',{exact:true}).click();
   await expect(page.getByLabel('我想让 AI 帮我澄清的思路')).toBeEnabled();
   await page.getByLabel('我想让 AI 帮我澄清的思路').fill('[开发故障：超时] 我想核对计数依据');
   await page.getByRole('button', { name: '提交思路并请求追问' }).click();
@@ -120,14 +127,15 @@ test('模型超时后保留提示，耗尽额度可继续作答，独立检测�
   await expect(page.getByText('今日模型调用额度已用完。可以继续作答或使用可用的预设提示。', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '提交思路并请求追问' })).toBeDisabled();
   await page.reload();
+  await page.getByText('模型任务与取消',{exact:true}).click();
   await expect(page.getByRole('button', { name: '提交思路并请求追问' })).toBeDisabled();
-  await page.getByRole('button', { name: '再给我一级提示', exact: true }).click();
-  await expect(page.locator('.study-hint').filter({ has: page.getByText('L1', { exact: true }) })).toBeVisible();
+  await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
+  await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toBeVisible();
   for (const answer of ['1/2', '2/5']) {
-    await page.getByLabel('我的数值答案').fill(answer);
-    await page.getByRole('button', { name: '检查我的解答' }).click();
-    await page.locator('#math-reflection').fill('逐一列出基本结果，检查总数和符合条件数。');
-    await page.getByRole('button', { name: '保存反思并继续' }).click();
+    await page.getByLabel('我的回答').fill(answer);
+    await page.getByRole('button', { name: '发送' }).click();
+    await page.getByLabel('我的反思',{exact:true}).fill('逐一列出基本结果，检查总数和符合条件数。');
+    await page.getByRole('button', { name: '发送' }).click();
   }
   await expect(page.getByText('无辅助检测', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: '提交思路并请求追问' })).toHaveCount(0);

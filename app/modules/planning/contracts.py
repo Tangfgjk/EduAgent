@@ -61,9 +61,10 @@ class ReleaseIn(Contract):
 
 
 class StartStrategy(SoftPolicy):
+    self_service: bool = Field(default=False, strict=True)
     request_model: bool = Field(default=False, strict=True)
     learning_experience: str = Field(min_length=2, max_length=1000)
-    material_ids: list[UUID] = Field(min_length=1, max_length=5)
+    material_ids: list[UUID] = Field(default_factory=list, max_length=5)
 
     @field_validator("learning_experience")
     @classmethod
@@ -131,6 +132,8 @@ from app.modules.evidence.insight_contracts import PlanningObservations
 
 
 class PlanningBundle(Contract):
+    default_reference: dict | None = None
+    release_decision: dict | None = None
     learning_observations: PlanningObservations | None = None
     skill_compilation: dict | None = None
     policy_changes: list[dict] | None = None

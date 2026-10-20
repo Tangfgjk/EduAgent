@@ -84,8 +84,13 @@ class ContentRepository:
         return ActivityPack(row.unit_id, spec['title'], parent.unit_id, tasks[spec['task_id']], templates, row.version,
             spec['kind'] + '_cycle_v1', spec.get('verification_task') or tasks[spec['verification_task_id']], parent)
 
-    def register(self, actor, spec: GeneratedContentSpec, workspace_id=None, validation_report=None):
-        if actor.account.role != 'admin':
+    def register(self, actor, spec: GeneratedContentSpec, workspace_id=None, validation_report=None, *, system_build_id=None):
+        automatic=False
+        if system_build_id:
+            from app.modules.generation.quality import authorize_registration
+            authorize_registration(self.session,actor,system_build_id,workspace_id,spec)
+            automatic=True
+        if actor.account.role != 'admin' and not automatic:
             raise DomainError(403, 'role_forbidden', '仅管理员可登记开发内容')
         # A single registry namespace spans two tables. Serialize registrations
         # to prevent a pack ID racing an activity ID in a second transaction.

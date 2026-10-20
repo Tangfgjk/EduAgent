@@ -38,6 +38,10 @@ def freeze_request(bundle, candidate, account, config):
         sources[key] = redact(text, account)[:limit]
         refs[key] = reference
     add('experience', bundle['student_experience'][:1000], {'kind': 'student_experience'})
+    if bundle.get('default_reference'):
+        reference = bundle['default_reference']
+        add('material:default', reference['body'], {'kind': 'development_reference',
+            'source_id': reference['source_id'], 'content_hash': reference['content_hash']}, 800)
     for index, material in enumerate(bundle['materials'], 1):
         add('material:' + str(index), material['body'][:800], {'kind': 'material', 'material_id': material['material_id'],
             'content_hash': material['content_hash'], 'truncated': len(material['body']) > 800}, 800)
