@@ -63,8 +63,8 @@ export function ClassroomPlayer({ wid, resourceId, hash, manifest }: { wid: stri
       {!!(save.data?.body?.check??query.data?.body?.check)&&<><p role="status">课堂数值核验：{String(((save.data?.body?.check??query.data?.body?.check) as {status:string}).status)}；不计入独立检测或掌握证明。</p><Link className="button" to={`/study?workspace=${wid}`}>回到当前课程练习，核对自己的方法</Link></>}
       {scene.media?.map(asset=><figure key={asset.id}>{asset.kind==='image'?<img src={asset.src} alt={asset.alt} style={{width:'100%',maxHeight:400,objectFit:'contain'}}/>:mediaElement(asset.id,asset.kind,asset.src,asset.captions)}<figcaption>{asset.captions}</figcaption></figure>)}
       <details><summary>无障碍文字与全部讲解</summary><h3>{scene.title}</h3>{scene.elements.filter(e=>e.text).map(e=><p key={e.id}>{e.kind==='latex'?<Formula text={e.text!}/>:e.text}</p>)}{scene.actions.filter(a=>a.kind==='speech').map((a,i)=><p key={i}>{a.text}</p>)}</details>
-    </div></div><label className="inline"><input type="checkbox" checked={localVoice} onChange={event=>setVoice(event.target.checked)}/>使用本机中文语音（仅 localService；没有本机音色时只展示字幕，不调用外部语音服务）</label><ErrorNotice error={save.error}/>
-    {!!manifest.unsupported.length&&<p className="notice">部分产物未提供受支持的资源，已保留可用内容：{manifest.unsupported.join('、')}。没有因此执行原始脚本或加载外部网址。</p>}
-    <p className="card-note">布局和媒体来自此课堂版本；播放、互动与数学掌握分别记录。切换独立检测后，后台将拒绝课堂读取与进度提交。</p>
+    </div></div><label className="inline"><input type="checkbox" checked={localVoice} onChange={event=>setVoice(event.target.checked)}/>使用本机语音朗读（需要设备支持中文音色）</label><ErrorNotice error={save.error}/>
+    {!!manifest.unsupported.length&&<p className="notice">部分素材暂不可用，你仍可阅读文字与公式。</p>}
+    <p className="card-note">独立检测期间请独立完成作答，课堂辅助将暂时关闭。</p>
   </section>;
 }

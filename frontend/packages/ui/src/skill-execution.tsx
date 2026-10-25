@@ -1,4 +1,6 @@
 export function SkillExecution({snapshot}:{snapshot?:Record<string,unknown>|null}) {
   if (!snapshot) return null;
-  return <details className="soft-box section-gap"><summary>本任务冻结的执行策略</summary><p className="card-note">版本：{String(snapshot.strategy_version_id)}<br/>策略指纹：<code style={{overflowWrap:'anywhere'}}>{String(snapshot.policy_hash)}</code></p><p>本任务沿用开始时的配置；后续回滚影响新任务。</p><pre className="strategy-json">{JSON.stringify(snapshot,null,2)}</pre></details>;
+  const execution = snapshot.execution as Record<string, unknown> | undefined;
+  if (!execution) return null;
+  return <div className="soft-box section-gap"><p>练习安排：{execution.practice_order==='errors_first'?'优先复练本项目错题':'按课程顺序练习'}。</p><p>学习支持：{execution.support_mode==='adaptive'?'先独立尝试，需要时恢复帮助':'逐步提供提示'}。</p><p className="card-note">本轮沿用开始时的学习安排，后续调整从新任务生效。</p></div>;
 }

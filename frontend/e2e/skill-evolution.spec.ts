@@ -40,7 +40,7 @@ test('离线Skill：原始材料、冻结评测、人工复核、待审提案及
   await expect(page.locator('.evolution-detail')).toContainText('等待开发评测复核');
   await expect(page.getByText('工程检查通过，可申请人工复核',{exact:true})).toBeVisible();
   await page.getByText('查看冻结来源与原始材料',{exact:true}).click();
-  await page.getByRole('listitem').filter({hasText:/^P-EQ-01 · failed/}).getByRole('button',{name:'查看原始材料',exact:true}).click();
+  await page.getByRole('listitem').filter({hasText:/学习记录.*需要复习/}).first().getByRole('button',{name:'查看原始材料',exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText('原答案：0');await page.getByRole('button',{name:'关闭弹窗',exact:true}).click();
   await admin.goto('/admin/skill-evolution');await admin.getByRole('button',{name:new RegExp(data.title)}).click();
   await expect(admin.getByRole('heading',{name:'冻结机制评测',exact:true})).toBeVisible();

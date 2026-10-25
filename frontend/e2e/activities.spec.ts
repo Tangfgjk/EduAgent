@@ -57,7 +57,7 @@ for (const kind of ['roundtable', 'teach'] as const) {
     await page.getByLabel('我的数值表达', { exact: true }).fill('12/2');
     await page.getByLabel('我的比较、纠错与检查依据', { exact: true }).fill('移项代表两边做相同运算，代入得12−7=5。');
     await page.getByRole('button', { name: '保存核验，生成小结', exact: true }).click();
-    await expect(page.getByRole('heading', { name: kind === 'teach' ? 'TeachReport · 讲解记录' : '圆桌讨论小结', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: kind === 'teach' ? '讲解回顾' : '圆桌讨论小结', exact: true })).toBeVisible();
     await expect(page.getByText('数值核验通过', { exact: true })).toBeVisible();
     await expect(page.getByText('学生原始贡献', { exact: true })).toHaveCount(2);
     await expect(page.getByText('辅助后的核验 · 不是独立检测', { exact: true })).toBeVisible();

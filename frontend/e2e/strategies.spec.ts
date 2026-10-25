@@ -47,7 +47,7 @@ async function propose(page: Page, materialTitle: string, model = false, executi
     await page.getByLabel('生成课程支持方式',{exact:true}).selectOption('step_first');
     await page.getByLabel('通用追问重点',{exact:true}).selectOption('verification');
   }
-  if (model) await page.getByLabel('使用已开放模型生成有来源的候选').check();
+  await page.getByLabel('使用已开放模型生成有来源的候选').setChecked(model);
   await page.route('**/api/v1/student/workspaces/*/strategies',async route=>{
     if(route.request().method()==='POST')await route.continue({postData:JSON.stringify({...route.request().postDataJSON(),self_service:false})});
     else await route.continue();
@@ -81,7 +81,7 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await login(page, 'student', 's03.one');
     await create(page, project);
     await propose(page, materialTitle,false,true);
-    await expect(page.getByRole('heading',{name:'执行策略编译与差异',exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'本次学习方式调整',exact:true})).toBeVisible();
     await page.reload();
     await expect(page.locator('.strategy-detail').getByText('等待管理员审核', { exact: true })).toBeVisible();
     await review(admin, project, true);
@@ -91,8 +91,9 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await page.getByRole('button', { name: '我确认，激活此策略', exact: true }).click();
     await expect(page.locator('.strategy-detail').getByText('已确认并激活', { exact: true })).toBeVisible();
     await expect(page.getByText('已激活', { exact: true })).toBeVisible();
-    await page.getByText('查看 Skill.md 与 Harness 候选', { exact: true }).click();
-    await expect(page.getByRole('link', { name: '下载此版本 Skill.md', exact: true })).toBeVisible();
+    await expect(page.getByText('查看 Skill.md 与 Harness 候选', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('查看编译配置及消费者',{exact:true})).toHaveCount(0);
+    await expect(page.getByText('查看完整版本与引用明细',{exact:true})).toHaveCount(0);
     mkdirSync('test-results/screens', { recursive: true });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: 'test-results/screens/student-strategy.png', fullPage: true });
@@ -106,7 +107,7 @@ test('策略闭环：资料发布、管理员审核、学生确认、后续陪�
     await navigate(page, '津津陪学');
     await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始开发单元', exact: true }).click();
-    await page.getByText('本任务冻结的执行策略',{exact:true}).click();
+    await expect(page.getByText('本任务冻结的执行策略',{exact:true})).toHaveCount(0);
     await page.getByLabel('我的回答', { exact: true }).fill('3');
     await page.getByRole('button', { name: '发送', exact: true }).click();
     await page.getByRole('button', { name: '继续下一步', exact: true }).click();
@@ -165,7 +166,7 @@ test('模型规划：来源引用、全局计数、审核后学生确认及回�
     await propose(page, title, true);
     await expect(page.getByText('模型建议与来源引用', { exact: true })).toBeVisible();
     await expect(page.getByText('全局宏观计数（包含当前项目）', { exact: true })).toBeVisible();
-    await expect(page.getByText('Fake 规划 · 仅工程验证', { exact: true })).toBeVisible();
+    await expect(page.getByText('Fake 规划 · 仅工程验证', { exact: true })).toHaveCount(0);
     await page.reload();
     await expect(page.getByText('模型建议与来源引用', { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('planning-sources.png'), fullPage: true });

@@ -29,7 +29,7 @@ export function CourseBar({ workspace }: { workspace: Workspace }) {
   const course = query.data, locked = workspace.status !== 'active' || save.isPending || select.isPending;
   const missing = [topic.trim().length < 2 ? '学习主题至少填写2个字' : '', title.trim().length < 2 ? '课程名称至少填写2个字' : '', !units.length ? '请选择至少一个课程单元' : '', !active ? '请选择起始单元' : ''].filter(Boolean);
   return <section className="card" aria-label="课程上下文" style={{ marginBottom: 20 }}>
-    {course.active_unit_id ? <><div className="card-head"><div><strong>主题：{course.topic}</strong><p className="card-note">课程：{course.title} · 版本 {course.curriculum_version?.slice(0, 8)} · 改项目名不会改变课程</p></div><button className="button small" disabled={locked} onClick={() => {
+    {course.active_unit_id ? <><div className="card-head"><div><strong>主题：{course.topic}</strong><p className="card-note">课程：{course.title}</p></div><button className="button small" disabled={locked} onClick={() => {
       setTopic(course.topic ?? ''); setTitle(course.title ?? ''); setUnits((course.units ?? []).map(u => String(u.unit_id))); setActive(course.active_unit_id ?? ''); setEditing(!editing);
     }}>{editing ? '收起' : '调整课程'}</button></div>
       <label className="field">当前课程单元<select value={course.active_unit_id} disabled={locked} onChange={e => select.mutate(e.target.value)}>{(course.units ?? []).map(unit => <option key={String(unit.unit_id)} value={String(unit.unit_id)}>{String(unit.title)}</option>)}</select></label>

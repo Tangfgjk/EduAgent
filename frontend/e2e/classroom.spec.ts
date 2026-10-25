@@ -50,7 +50,9 @@ test('课堂布局、KaTeX、真实本机音视频、互动及断点恢复，无
  const rid=(await imported.json()).resource_id;
  expect((await page.request.post('/api/v1/admin/resources/'+rid+'/review',{headers:admin,data:{expected_revision:1,approve:true,note:'离线自编布局、公式、图片、WAV、WebM与互动问题检查，仅开发验收'}})).ok()).toBeTruthy();
  const network:string[]=[];page.on('request',r=>{if(r.url().startsWith('http')&&!r.url().startsWith('http://127.0.0.1:8781/'))network.push(r.url());});
+ await page.route('**/api/v1/student/workspaces/*/media-budgets',route=>route.fulfill({json:{items:[{budget_id:'closed-acceptance-budget',resource_id:rid,workspace_id:wid,enabled:false,revision:8,body:{reserved_microyuan:1107760},operations:[{operation_id:'internal-operation',slot:'audio:0',kind:'audio',status:'unknown',reserved_microyuan:2320,receipt:{billing_unknown:true}}]}]}}));
  await page.goto(`/student/classroom?workspace=${wid}`);await expect(page.getByRole('heading',{name:'互动课堂',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'互动课堂',exact:true})).toHaveAttribute('href',`/student/classroom?workspace=${wid}`);
+ await expect(page.getByText('外部媒体预算与任务',{exact:true})).toHaveCount(0);await expect(page.getByText('closed-acceptance-budget',{exact:false})).toHaveCount(0);await expect(page.getByText('已预占',{exact:false})).toHaveCount(0);
  const player=page.getByRole('region',{name:'互动课堂播放器'});await expect(player).toBeVisible();await expect(player.locator('.katex').first()).toBeVisible();
  await expect.poll(()=>player.locator('audio').evaluate((n:HTMLAudioElement)=>n.readyState)).toBeGreaterThan(0);
  await expect.poll(()=>player.locator('video').evaluate((n:HTMLVideoElement)=>({ready:n.readyState,error:n.error?.message,length:n.currentSrc.length}))).toMatchObject({ready:expect.any(Number),error:undefined});

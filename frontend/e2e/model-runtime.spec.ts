@@ -49,16 +49,16 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await student.getByRole('button', { name: '发送' }).click();
     await expect(student.getByRole('button', { name: '继续下一步', exact: true })).toBeEnabled();
     await student.getByRole('button', { name: '继续下一步', exact: true }).click();
-    await student.getByText('模型任务与取消',{exact:true}).click();
+    await student.getByText('AI 追问与取消',{exact:true}).click();
     await expect(student.getByLabel('我想让 AI 帮我澄清的思路')).toBeEnabled();
-    await expect(student.getByText('开发测试：每日模型调用次数不限，调用与 token 用量继续记录。')).toBeVisible();
+    await expect(student.getByText('开发测试：每日模型调用次数不限，调用与 token 用量继续记录。')).toHaveCount(0);
     await student.getByLabel('我想让 AI 帮我澄清的思路').fill('我认为偶数共有三种可能');
     await student.getByRole('button', { name: '提交思路并请求追问' }).click();
     await expect(student.getByText('追问建议已保存', { exact: true })).toBeVisible();
-    await expect(student.getByText('模拟模型 · scripted', { exact: true })).toBeVisible();
+    await expect(student.getByText('模拟学伴', { exact: true })).toBeVisible();
     await expect(student.getByText('“我认为偶数共有三种可能”', { exact: true })).toBeVisible();
     await student.reload();
-    await student.getByText('模型任务与取消',{exact:true}).click();
+    await student.getByText('AI 追问与取消',{exact:true}).click();
     await expect(student.getByText('追问建议已保存', { exact: true })).toBeVisible();
     await expect(student.getByText('本次上下文：1 轮（含本轮）', { exact: true })).toBeVisible();
     await student.getByLabel('我想让 AI 帮我澄清的思路').fill('我改口了，现在想确认每个点数为何等可能');
@@ -67,7 +67,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await student.getByText('查看本次带入的历史交流', { exact: true }).click();
     await expect(student.getByText('我认为偶数共有三种可能', { exact: true })).toBeVisible();
     await student.reload();
-    await student.getByText('模型任务与取消',{exact:true}).click();
+    await student.getByText('AI 追问与取消',{exact:true}).click();
     await expect(student.getByText('本次上下文：2 轮（含本轮）', { exact: true })).toBeVisible();
     const history = student.locator('.study-history');
     await history.locator('summary').first().click();
@@ -76,7 +76,7 @@ test('管理端发布v3候选模拟模型，学生概率思路追问可刷新恢
     await expect(history.getByText('AI 当时的建议', { exact: true })).toHaveCount(2);
     await expect(history.getByText('程序数值核验', { exact: true })).toHaveCount(1);
     await student.reload();
-    await student.getByText('模型任务与取消',{exact:true}).click();
+    await student.getByText('AI 追问与取消',{exact:true}).click();
     await student.locator('.study-history > summary').click();
     await expect(student.locator('.study-history').getByText('AI 当时的建议', { exact: true })).toHaveCount(2);
     mkdirSync('test-results/screens', { recursive: true });
@@ -119,7 +119,7 @@ test('模型超时后保留提示，耗尽额度可继续作答，独立检测�
   await page.getByLabel('我的回答').fill('1/6');
   await page.getByRole('button', { name: '发送' }).click();
   await page.getByRole('button', { name: '继续下一步', exact: true }).click();
-  await page.getByText('模型任务与取消',{exact:true}).click();
+  await page.getByText('AI 追问与取消',{exact:true}).click();
   await expect(page.getByLabel('我想让 AI 帮我澄清的思路')).toBeEnabled();
   await page.getByLabel('我想让 AI 帮我澄清的思路').fill('[开发故障：超时] 我想核对计数依据');
   await page.getByRole('button', { name: '提交思路并请求追问' }).click();
@@ -127,7 +127,7 @@ test('模型超时后保留提示，耗尽额度可继续作答，独立检测�
   await expect(page.getByText('今日模型调用额度已用完。可以继续作答或使用可用的预设提示。', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '提交思路并请求追问' })).toBeDisabled();
   await page.reload();
-  await page.getByText('模型任务与取消',{exact:true}).click();
+  await page.getByText('AI 追问与取消',{exact:true}).click();
   await expect(page.getByRole('button', { name: '提交思路并请求追问' })).toBeDisabled();
   await page.getByRole('button', { name: '给我一点提示', exact: true }).click();
   await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toBeVisible();

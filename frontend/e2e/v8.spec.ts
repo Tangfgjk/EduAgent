@@ -80,7 +80,7 @@ test('V8：内容核对开放、评测分类复核、我教 AI 新题验证与�
     await student.getByLabel('我的数值表达', { exact: true }).fill('3/7');
     await student.getByLabel('本题独立检查依据').fill('七个等可能球中有三个黑球。');
     await student.getByRole('button', { name: '提交本题验证，查看报告', exact: true }).click();
-    await expect(student.getByRole('heading', { name: 'TeachReport · 讲解记录', exact: true })).toBeVisible();
+    await expect(student.getByRole('heading', { name: '讲解回顾', exact: true })).toBeVisible();
     await expect(student.getByText('另一题验证：数值通过', { exact: true })).toBeVisible();
     await expect(student.getByText('学生原始贡献', { exact: true })).toHaveCount(3);
     await student.setViewportSize({ width: 390, height: 844 });
