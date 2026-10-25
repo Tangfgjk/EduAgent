@@ -98,4 +98,19 @@ def pack_for_task(task_id, version, session=None):
     for activity in ContentRepository(session, include_private=True).activities():
         if activity.parent.version == version and activity.verification_task and activity.verification_task['id'] == task_id:
             return activity.parent
+    if session is not None and task_id.startswith('ADAPT-'):
+        from sqlalchemy import select
+        from app.infrastructure.db.models import LearningFact
+        from app.modules.learning.adaptive import materialize
+        fact = session.scalar(select(LearningFact).where(LearningFact.task_id==task_id, LearningFact.content_version==version).limit(1))
+        if fact:
+            task=fact.payload.get('task_snapshot',{})
+            blueprint=task.get('adaptive_blueprint',{})
+            try:
+                variant=task.get('adaptive_variant') or {'kind':blueprint['kind'],'parameters':blueprint['parameters'],'stem':task['stem']}
+                rebuilt=materialize(variant,version)
+                if rebuilt!=task:raise ValueError('adaptive_snapshot_mismatch')
+                for item in ContentRepository(session, include_private=True).packs():
+                    if item.version==version:return item
+            except (KeyError,ValueError,TypeError):pass
     raise DomainError(409, "source_version_conflict", "内容版本已变化，不能自动执行此历史任务")

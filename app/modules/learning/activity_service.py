@@ -48,7 +48,7 @@ def public_activity(session, run):
             record['result'] = render_result(op.result) if op.status == 'succeeded' else None
             history.append(record)
     open_round = run.view and (run.view['phase'] == 'opening' or (run.view['phase'] == 'challenge'
-        and run.kind == 'teach' and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3))
+        and (run.kind=='teach' or generic_enabled(session)) and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3))
     model_busy = coaching and coaching['status'] in model_tasks.ACTIVE
     return {'skill_execution':for_run(session,run),'coaching': coaching, 'coaching_history': history, 'coaching_available': bool(config and eligible and run.status == 'awaiting_input'
         and open_round and not model_busy and (remaining is None or remaining > 0)),
@@ -124,7 +124,7 @@ class Activities(Learning):
         check_action(run.view, payload["action"])
         conversation = session.get(Conversation, run.conversation_id)
         teach_allowed = self.kind == 'teach' and (item.unit_id == TEACH_UNIT or generic_enabled(session)) and payload['action'] in {'contribute', 'refine'}
-        roundtable_allowed = self.kind == 'roundtable' and (item.unit_id == ROUNDTABLE_UNIT or generic_enabled(session)) and payload['action'] == 'contribute'
+        roundtable_allowed = self.kind == 'roundtable' and (item.unit_id == ROUNDTABLE_UNIT or generic_enabled(session)) and (payload['action'] == 'contribute' or (generic_enabled(session) and payload['action']=='refine'))
         if payload.get('request_model') and not (teach_allowed or roundtable_allowed):
             raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于概率讲解与修正，不用于独立验证')
         if payload['action'] == 'refine':

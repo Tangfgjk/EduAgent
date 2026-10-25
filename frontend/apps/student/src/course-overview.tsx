@@ -30,6 +30,6 @@ export function CourseOverview({ workspace }: { workspace: Workspace }) {
       const status = failed ? '状态读取失败' : loading ? '正在核对' : !bound ? '先确认课程' : archived ? '可查看历史' : !item.available ? '当前单元尚未开放' : item.route === 'study' && !planReady ? '先确认计划' : '内容已开放';
       return <article className="course-route" key={item.route}><span className="badge neutral">{status}</span><h3>{item.title}</h3><p>{item.description}</p><Link className="button small" to={`/${item.route}?workspace=${wid}`}>{archived ? '查看历史' : '查看'+item.title}</Link></article>;
     })}</div><p className="card-note">同一空间依次进行陪学和活动；已有任务请先完成或结束。未开放不代表你不会，也不会自动切换成其他单元。</p>
-    <div className="actions"><Link className="button small" to={'/review?workspace='+wid}>错题与复习</Link><Link className="button small" to={'/evidence?workspace='+wid}>查看成长证据</Link><Link className="button small" to={'/planner?workspace='+wid}>规划与策略</Link><a className="text-link" href="#course-resources">查看课程资源 ↓</a></div>
+    <div className="actions"><Link className="button small" to={'/review?workspace='+wid}>错题与复习</Link><Link className="button small" to={'/evidence?workspace='+wid}>查看成长证据</Link><Link className="button small" to={'/planner?workspace='+wid}>规划与策略</Link><Link className="button small" to={'/classroom?workspace='+wid}>进入互动课堂</Link><a className="text-link" href="#course-resources">查看文字与其他资料 ↓</a></div>
   </section>;
 }

@@ -221,6 +221,7 @@ def request(row, account, config):
     concepts=row.intent['target_concepts']
     payload={'topic':redact(row.topic,account),'goal':redact(row.intent.get('learning_goal',''),account),
         'target_concepts':{key:GOALS[key] for key in concepts},'allowed_forms':{key:FORMS[key] for key in concepts},
+        'diagnostic_expressions':[{'student_answer':redact(a.get('answer',''),account)[:200],'numeric_status':a['status']} for a in row.attempts[-4:]],
         'diagnostic_observations':row.plan['concept_observations'],'focus':row.plan.get('student_focus','basis'),
         'sources':[{'source_id':s['source_id'],'text':s['text'][:800]} for s in row.sources],
         'exposed_probes':[probe['probe_problem'] for probe in row.diagnostics]}

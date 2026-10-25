@@ -26,7 +26,7 @@ def test_provider(config, snapshot):
     if snapshot.get('purpose') == 'course_generation':
         return FakeProvider((json.dumps(snapshot['fake_candidate'], ensure_ascii=False),))
     if snapshot.get('purpose','').startswith('generic_'):
-        return FakeProvider((json.dumps({'quote':snapshot['student_text'][:80],'focus':'basis'},ensure_ascii=False),))
+        return ModelTaskRunner._provider(config,snapshot)
     if snapshot.get('purpose') == 'planning':
         from app.modules.planning.model import fake_proposal
         return FakeProvider((json.dumps(fake_proposal(snapshot), ensure_ascii=False),))

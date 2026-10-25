@@ -204,7 +204,7 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
             and run.view.get('model_requested') and max(1, run.view.get('model_rounds', 1)) < 3)
         teach_allowed = run.kind == 'teach' and teach_item.unit_id == TEACH_UNIT and (initial or followup)
         roundtable_allowed = run.kind == 'roundtable' and teach_item.unit_id == ROUNDTABLE_UNIT and initial
-        if not (teach_allowed or roundtable_allowed or (generic and (initial or (run.kind == "teach" and followup)))):
+        if not (teach_allowed or roundtable_allowed or (generic and (initial or (run.kind in {'teach','roundtable'} and followup)))):
             raise DomainError(409, 'model_scope_forbidden', '模型追问仅用于有界概率讲解，不用于另一题验证')
     if generic:
         if run.kind == 'tutor' and (run.view['phase'] != 'practice' or not run.view['can_hint']):
@@ -272,6 +272,16 @@ def reserve(session, account, run, entry, text, *, teach_item=None, planning_bun
             context = {'history': history, 'context_sources': sources}
         snapshot = freeze_teach(teach_item, text, entry.payload['answer'], account,
             config.max_output_tokens, config.prompt_version, **context)
+    # Shared goal/evidence identity is injected once for all model consumers.
+    # It contains six structured records, no independent tasks or other project text.
+    from app.modules.learning.goal_context import snapshot as goal_snapshot, external
+    goal = goal_snapshot(session, run.workspace_id, account)
+    snapshot['learning_goal'] = goal
+    if snapshot.get('generation') and (snapshot.get('purpose','').startswith('generic_') or snapshot.get('purpose') in {'planning','skill_semantic','course_generation','course_semantic_review','resource_semantic_review'}):
+        messages=snapshot['generation']['messages']
+        user=json.loads(messages[-1]['content'])
+        user['learning_goal']=external(goal, snapshot.get('purpose') not in {'planning','skill_semantic'})
+        messages[-1]['content']=json.dumps(user,ensure_ascii=False)
     op = ModelOperation(input_id=entry.id, run_id=run.id, workspace_id=run.workspace_id, account_id=account.id,
         configuration_id=config.id, run_revision=run.revision + 1, policy_epoch=policy.stop_epoch, task_id='skill-semantic.v1' if evolution_dataset is not None else 'course.production.v1' if course_build is not None else 'planning.sources.v1' if planning_bundle is not None else run.view["task"]["task_id"],
         hint_level=len((run.view or {}).get("hints", [])), request=snapshot, request_hash=request_hash(snapshot), created_at=reservation_time)
@@ -320,7 +330,8 @@ class ModelTaskRunner:
                 from app.modules.skill_evolution.semantic import fake
                 return FakeProvider((json.dumps(fake(snapshot), ensure_ascii=False),))
             if snapshot.get('purpose', '').startswith('generic_'):
-                return FakeProvider((json.dumps({'quote':snapshot['student_text'][:80], 'focus':'basis'},ensure_ascii=False),))
+                from app.modules.generation.interaction import fake
+                return FakeProvider((json.dumps(fake(snapshot),ensure_ascii=False),))
             if snapshot.get('purpose') == 'course_generation':
                 return FakeProvider((json.dumps(snapshot['fake_candidate'], ensure_ascii=False),))
             if snapshot.get('purpose') == 'planning':

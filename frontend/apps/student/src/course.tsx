@@ -27,6 +27,7 @@ export function CourseBar({ workspace }: { workspace: Workspace }) {
   if (query.isPending) return <Loading text="读取课程上下文…"/>;
   if (query.isError) return <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/>;
   const course = query.data, locked = workspace.status !== 'active' || save.isPending || select.isPending;
+  const missing = [topic.trim().length < 2 ? '学习主题至少填写2个字' : '', title.trim().length < 2 ? '课程名称至少填写2个字' : '', !units.length ? '请选择至少一个课程单元' : '', !active ? '请选择起始单元' : ''].filter(Boolean);
   return <section className="card" aria-label="课程上下文" style={{ marginBottom: 20 }}>
     {course.active_unit_id ? <><div className="card-head"><div><strong>主题：{course.topic}</strong><p className="card-note">课程：{course.title} · 版本 {course.curriculum_version?.slice(0, 8)} · 改项目名不会改变课程</p></div><button className="button small" disabled={locked} onClick={() => {
       setTopic(course.topic ?? ''); setTitle(course.title ?? ''); setUnits((course.units ?? []).map(u => String(u.unit_id))); setActive(course.active_unit_id ?? ''); setEditing(!editing);
@@ -37,14 +38,15 @@ export function CourseBar({ workspace }: { workspace: Workspace }) {
     </> : <><strong>请确认此空间的学习主题和课程</strong><p className="card-note">空间名称不用于推断课程。旧记录会保留，确认后新学习使用统一的当前单元；可先进入“主题与课程”，让智能体准备来源、诊断和课程候选；也可手动选择已有内容。</p></>}
     {!course.active_unit_id && <Link className="button primary section-gap" to={'/courses?workspace='+workspace.workspace_id}>从学习主题准备课程</Link>}
     {(!course.active_unit_id || editing) && location.pathname !== '/courses' && workspace.status === 'active' && <form onSubmit={submit} className="form-stack">
-      <div className="grid two"><label className="field">学习主题<input required minLength={2} maxLength={120} value={topic} onChange={e => setTopic(e.target.value)}/></label><label className="field">课程名称<input required minLength={2} maxLength={120} value={title} onChange={e => setTitle(e.target.value)}/></label></div>
+      <div className="grid two"><label className="field">学习主题<span aria-hidden="true">（必填）</span><input aria-label="学习主题" placeholder="例如：等可能事件概率" required minLength={2} maxLength={120} value={topic} onChange={e => setTopic(e.target.value)}/></label><label className="field">课程名称<span aria-hidden="true">（必填）</span><input aria-label="课程名称" placeholder="例如：概率入门课程" required minLength={2} maxLength={120} value={title} onChange={e => setTitle(e.target.value)}/></label></div>
       <fieldset disabled={locked} style={{ minWidth: 0 }}><legend>课程单元（仅能选择已发布开发内容）</legend>{catalog.data?.items.filter(u => u.enabled).map(unit => <label className="inline" key={unit.unit_id} style={{ marginRight: 16 }}><input type="checkbox" style={{ width: 16, minWidth: 16, flex: '0 0 16px' }} checked={units.includes(unit.unit_id)} onChange={e => {
         const next = e.target.checked ? [...units, unit.unit_id] : units.filter(id => id !== unit.unit_id);
         setUnits(next); if (!next.includes(active)) setActive(next[0] ?? '');
       }}/>{unit.title}</label>)}</fieldset>
       <ErrorNotice error={catalog.error}/>{catalog.isSuccess && !catalog.data.items.some(u => u.enabled) && <p>暂无已发布内容，请管理员先审核并启用。</p>}
       <label className="field">起始单元<select required value={active} disabled={locked} onChange={e => setActive(e.target.value)}><option value="" disabled>请选择</option>{units.map(id => <option key={id} value={id}>{catalog.data?.items.find(u => u.unit_id === id)?.title ?? id}</option>)}</select></label>
-      <button className="button primary" disabled={locked || !units.length || !topic.trim() || !title.trim() || !active}>确认课程绑定</button>
+      <p id="course-binding-hint" role="status" className="card-note">{missing.length ? '还需完成：'+missing.join('；')+'。' : '已填写完整，可以确认课程绑定。'}</p>
+      <button className="button primary" aria-describedby="course-binding-hint" disabled={locked || missing.length > 0}>确认课程绑定</button>
     </form>}
     <ErrorNotice error={save.error ?? select.error}/>
   </section>;

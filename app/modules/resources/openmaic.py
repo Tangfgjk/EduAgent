@@ -108,7 +108,7 @@ class OpenMAICRunner:
             row.lease_until=now()+90;row.next_poll_at=now()+60
             if not remote: row.status='submitting'
             # Only approved mathematical content; no student diagnosis or identifiers.
-            requirement='制作初中数学中文文本课堂，恰好三个幻灯片场景，不含练习答案或检测题，不含媒体、搜索、语音或交互脚本。主题：'+build.candidate['spec']['title']+'。仅讲概念、条件与自我检查。资料：'+build.candidate['lesson'][:2000]
+            requirement='制作初中数学中文文本课堂，恰好三个幻灯片场景，不含练习答案或检测题，不含媒体、搜索、语音或交互脚本。主题：'+build.candidate['spec']['title']+'。本课程目标：'+'；'.join(build.candidate.get('objectives',[]))[:800]+'。仅讲概念、条件与自我检查。资料：'+build.candidate['lesson'][:2000]
         client=OpenMAICPort(owner,self.transport);value=None;artifact=None;error=None
         try:
             if readonly:

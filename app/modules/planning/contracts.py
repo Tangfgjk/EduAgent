@@ -132,6 +132,7 @@ from app.modules.evidence.insight_contracts import PlanningObservations
 
 
 class PlanningBundle(Contract):
+    learning_goal: dict | None = None
     default_reference: dict | None = None
     release_decision: dict | None = None
     learning_observations: PlanningObservations | None = None

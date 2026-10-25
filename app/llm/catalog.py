@@ -26,13 +26,21 @@ def credential(vendor):
 
 
 def catalog():
-    return [{'vendor':key,'name':value[0],'protocol':value[1],'endpoint':value[2],
+    return [{'vendor':key,'name':value[0],'protocol':value[1],'endpoint':endpoint_for(key),
         'key_configured':bool(credential(key)),'text_adapter_implemented':True,
         'live_validation':'development_record_available' if key=='deepseek' else 'not_run',
         'tools':False,'multimodal':False,'streaming':False} for key,value in PROFILES.items()]
 
 
+def endpoint_for(vendor):
+    if vendor == 'qwen':
+        from app.modules.resources.media import api_host
+        return api_host() + '/compatible-mode/v1'
+    return PROFILES[vendor][2]
+
+
 def provider(vendor,model,limit):
     if vendor not in PROFILES:raise ProviderError('unsupported_vendor')
-    _,protocol,endpoint,_=PROFILES[vendor]
+    _,protocol,_,_=PROFILES[vendor]
+    endpoint=endpoint_for(vendor)
     return create_provider(ProviderConfig(vendor=protocol,base_url=endpoint,model=model,api_key=credential(vendor),max_output_tokens=limit))

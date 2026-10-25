@@ -88,7 +88,7 @@ test('主题生成、管理员审核、三路线同课、课堂导入与安全�
     await expect(page.getByLabel('我的数值表达')).toBeVisible();
     await page.getByLabel('我的数值表达').fill('0');
     await page.getByLabel('我的讲解', { exact: false }).fill('先看符号，再按运算顺序处理，最后检查计算条件');
-    await page.getByRole('checkbox', { name: '让 AI 根据本次讲解选择追问方向', exact: true }).check();
+    await page.getByRole('checkbox', { name: '让 AI 根据讲解与历史提出具体问题', exact: true }).check();
     await page.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(page.getByText('学伴追问已保存', { exact: false }).first()).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });

@@ -21,6 +21,7 @@ export function ModelRuntimePanel() {
   if (query.isPending) return <Loading text="正在读取模型配置…"/>;
   if (query.isError) return <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/>;
   const state = query.data, active = state.active;
+  const mediaProvider = state.provider_catalog?.find(p => p.vendor === 'qwen');
   const status: Record<string, string> = { waiting: '等待教学步骤', pending: '等待调用', running: '模型处理中', succeeded: '已保存建议', failed: '失败，保留预设提示', cancelled: '已取消', discarded: '过期结果已拦截', unknown: '结果未知，不自动重试' };
   return <section className="card section-gap"><div className="card-head"><h2>模型与运行配置</h2><span className="badge">{active ? `${active.vendor === 'fake' ? '模拟' : 'DeepSeek'} · 已开放开发测试` : '已停用'}</span></div>
     <p className="body-copy">允许模拟/成人测试账号；原概率路线继续使用，新增通用课程与互动用途在“课程生成与资源”单独开启。诊断与独立检测不调用模型。单轮发送题目与本轮思路；多轮最多增加同题、同空间、同配置下 3 轮已完成交流，含本轮最多 4 轮。我教 AI 仅发送当前题目、数值表达与本次讲解，由模型选择讨论方向，以安全模板展示问题。所有模型追问均不作为能力评价。</p>
@@ -35,6 +36,7 @@ export function ModelRuntimePanel() {
       <div className="actions"><button className="button primary" disabled={mutation.isPending || !acknowledged || (vendor === 'deepseek' && !state.deepseek_key_configured)}>发布开发模型配置</button><button type="button" className="button" disabled={mutation.isPending || !active} onClick={() => mutation.mutate('pause')}>停用模型追问</button></div>
     </form>
     <ErrorNotice error={mutation.error}/>{notice && <Success>{notice}</Success>}
+    <section className="soft-box section-gap" aria-label="百炼媒体 API 配置"><h3>百炼媒体 API 配置</h3><p>用于课堂图片、配音和视频；教学对话继续使用上方当前模型。</p><dl className="definition-list"><div><dt>服务端密钥</dt><dd>{mediaProvider?.key_configured ? '已配置（不返回原值）' : '未配置'}</dd></div><div><dt>兼容接口地址</dt><dd style={{overflowWrap:'anywhere'}}>{String(mediaProvider?.endpoint ?? '未读取')}</dd></div></dl><p>媒体使用相同域名的 DashScope 接口。密钥已配置不代表生成验收已通过；真实调用还需要课堂和独立预算。</p><p>图片：qwen-image-2.0-2026-03-03；配音：qwen3-tts-flash；视频：wan2.2-t2v-plus。</p><a className="button small" href="/admin/generation">查看课堂与预算</a></section>
     <h3 className="section-gap">最近 20 次模型任务</h3><p className="card-note">保留配置与调用状态；不在管理概览展示学生原文。发布新配置不改写旧任务；停用会阻止旧结果生效。</p>
     {state.recent.length ? <div className="table-scroll"><table><thead><tr><th>任务</th><th>服务 / 型号</th><th>状态</th><th>已知 token</th><th>耗时</th></tr></thead><tbody>{state.recent.map(op => <tr key={op.operation_id}><td>{op.task_id}</td><td>{op.simulated ? '模拟 · ' : ''}{op.model}</td><td>{status[op.status]}{op.error_code ? `（${op.error_code}）` : ''}</td><td>{op.usage?.input_tokens ?? '未知'} / {op.usage?.output_tokens ?? '未知'}</td><td>{op.elapsed_ms === null ? '—' : `${op.elapsed_ms} ms`}</td></tr>)}</tbody></table></div> : <p className="card-note">尚无模型任务。</p>}
   </section>;

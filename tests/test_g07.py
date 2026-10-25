@@ -110,9 +110,12 @@ def test_model_cannot_choose_new_execution_fields_and_data_scope_unchanged(env):
         op=session.get(ModelOperation,run['generation']['operation_id'])
         assert 'execution' not in json.loads(op.request['generation']['messages'][1]['content'])['requested_policy']
         from app.modules.planning.model import validate_proposal,fake_proposal
-        hostile=fake_proposal(op.request);hostile['policy']['execution']=EXEC
+        candidate=fake_proposal(op.request);candidate['policy']['execution']={**EXEC,'question_focus':'verification'}
+        assert validate_proposal(json.dumps(candidate,ensure_ascii=False),op.request)['policy']['execution']['question_focus']=='verification'
         from app.llm.provider import ProviderError
-        with pytest.raises(ProviderError):validate_proposal(json.dumps(hostile,ensure_ascii=False),op.request)
+        for mutation in ({'support_mode':'never_help'},{'disable_verification':True}):
+            hostile=deepcopy(candidate);hostile['policy']['execution'].update(mutation)
+            with pytest.raises(ProviderError):validate_proposal(json.dumps(hostile,ensure_ascii=False),op.request)
 
 
 def test_generic_question_consumes_frozen_preference_with_safe_clarification():

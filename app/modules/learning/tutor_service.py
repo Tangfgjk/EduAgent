@@ -113,12 +113,20 @@ class Tutoring(Learning):
                 ModelOperation.task_id==run.view['task']['task_id'],ModelOperation.status=='succeeded')
                 .order_by(ModelOperation.created_at.desc(),ModelOperation.id.desc()).limit(1))
             policy = session.get(ModelPolicy, 1)
-            if suggestion and suggestion.configuration_id == policy.active_id and suggestion.result and suggestion.result.get('next_task_id'):
+            if suggestion and suggestion.configuration_id == policy.active_id and suggestion.result and suggestion.policy_epoch==policy.stop_epoch:
+                result=suggestion.result
                 completed={r['task_id'] for r in run.view['records']}
-                target=suggestion.result['next_task_id']
-                if any(t['id']==target and t['stage']=='practice' and target not in completed for t in item.tasks):
-                    operation['teaching_decision']={'next_task_id':target,'operation_id':suggestion.id,
-                        'reason':suggestion.result.get('decision_reason','模型基于本题表达选择后续练习，未作能力判断')}
+                target=result.get('next_task_id')
+                from app.modules.learning.goal_context import snapshot as goal_snapshot
+                frozen=suggestion.request.get('learning_goal')
+                fresh=not frozen or (frozen['course_revision']==goal_snapshot(session,wid,actor.account)['course_revision'])
+                if fresh:
+                    operation['teaching_decision']={**result.get('teaching_decision',{}),'operation_id':suggestion.id,
+                        'reason':result.get('teaching_decision',{}).get('reason') or result.get('decision_reason','基于当前表达调整，效果待观察')}
+                    if any(t['id']==target and t['stage']=='practice' and target not in completed for t in item.tasks):
+                        operation['teaching_decision']['next_task_id']=target
+                    if result.get('variant') and result.get('teaching_decision',{}).get('action')=='variant':
+                        operation['teaching_decision']['variant']=result['variant']
         conversation = session.get(Conversation, run.conversation_id)
         entry = self.spaces.accept_input(session, actor, wid, run.conversation_id, key, conversation.revision, operation)
         run.status, run.gate_id = "queued", None

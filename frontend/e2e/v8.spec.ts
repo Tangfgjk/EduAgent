@@ -67,7 +67,7 @@ test('V8：内容核对开放、评测分类复核、我教 AI 新题验证与�
     await student.getByRole('button', { name: '开始我教 AI', exact: true }).click();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的讲解', { exact: true }).fill('我先用颜色列结果，再检查这样是否等可能。');
-    const modelChoice = student.getByLabel('让 AI 根据本次讲解选择追问方向', { exact: true });
+    const modelChoice = student.getByLabel('让 AI 根据讲解与历史提出具体问题', { exact: true });
     if (await modelChoice.count()) await modelChoice.uncheck();
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('预设误区 · 待纠正', { exact: true })).toBeVisible();

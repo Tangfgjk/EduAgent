@@ -6,6 +6,7 @@ from app.modules.workspaces.service import Workspaces
 
 
 class NextAction(Contract):
+    learning_goal: dict | None = None
     workspace_id: str
     stage: str
     title: str
@@ -17,8 +18,10 @@ class NextAction(Contract):
 
 def next_action(session, actor, wid):
     space = Workspaces().owned(session, actor, wid)
+    from app.modules.learning.goal_context import handoff
+    goal = handoff(session, wid, actor.account)
     def result(stage, title, reason, path, run_id=None):
-        return NextAction(workspace_id=wid, stage=stage, title=title, explanation=reason,
+        return NextAction(learning_goal=goal, workspace_id=wid, stage=stage, title=title, explanation=reason,
             destination=path, run_id=run_id, read_only=space.status != 'active')
     if space.status != 'active':
         return result('archived', '回顾学习记录', '此空间已归档，恢复后可继续学习。', 'evidence')
@@ -39,5 +42,8 @@ def next_action(session, actor, wid):
     completed = session.scalar(select(AgentRun).where(AgentRun.workspace_id == wid, AgentRun.kind == 'tutor',
         AgentRun.status == 'completed').order_by(AgentRun.created_at.desc()).limit(1))
     if completed:
+        advice = goal.get('decisions', [])
+        if advice and advice[0]['action'] == 'resource':
+            return result('resource', '查看当前目标的配套资源', advice[0]['reason']+'；没有可用资源时可在课程页准备，不自动开启收费生成。', 'courses', completed.id)
         return result('reflect', '看看证据，再选择复习', '本轮已经结束；先回顾独立检测与提示记录，再决定下一步。', 'evidence', completed.id)
     return result('learn', '开始学习与诊断', '课程与节奏已准备好，从自己的尝试开始。', 'study')

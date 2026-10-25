@@ -1,10 +1,8 @@
-"""Render model-selected intents through reviewed text; never trust prose as proof.
+"""Compatibility renderer for legacy intents and checked model-authored questions.
 
-The model may select a focus grounded in student input. Its free-form question is
-not a public artifact, including old stored questions. No regex can prove that
-arbitrary Chinese prose contains no solution. This is deliberately a bounded
-renderer until a separately reviewed content verification pipeline exists.
-"""
+New dialogue artifacts keep their prose after structural checks; this does not
+certify pedagogical correctness or prove that arbitrary prose contains no answer.
+Legacy modes retain the original restricted renderer."""
 from copy import deepcopy
 
 VERSION = 'intent-renderer.v1'
@@ -26,6 +24,9 @@ def render_result(result):
     """Idempotent, also used at history read boundaries; preserves student quotes."""
     if not result:
         return result
+    if result.get('rendering_mode')=='grounded-dialogue.v1':
+        from app.modules.generation.grounded_response import render
+        return render(result)
     if result.get('rendering_mode')=='rational-agent-intent.v2':
         bank=result.get('approved_questions') or {}
         if set(bank)!={'clarify','basis','representation','verification','compare'} or result.get('focus') not in bank:

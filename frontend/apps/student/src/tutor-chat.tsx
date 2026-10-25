@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useInfiniteQuery,useMutation,useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState,useRef, type FormEvent } from 'react';
 import { Lightbulb, Send } from 'lucide-react';
@@ -46,7 +47,7 @@ export function TutorChat({ run, locked, send }: { run: TutorRun; locked: boolea
         {(row.answer || row.thinking || row.reflection) && <p className="chat-message student"><strong>我</strong>{row.answer || row.thinking || row.reflection}</p>}
         {row.numeric_status && <p className="chat-message assistant"><strong>数学核验</strong>{checks[row.numeric_status]}</p>}
         {row.preset_hint && <p className="chat-message assistant"><strong>学习支持</strong>{row.preset_hint}</p>}
-        {row.model?.result && <div className="chat-message assistant"><strong>AI 追问</strong><p>{row.model.result.question}</p><small>模型建议，未作为数学真值。</small>{row.model.result.answer_understanding && <p>AI 对这段表达的理解：最终数值可能是 {String(row.model.result.answer_understanding.candidate)}；请先确认后在“回答这道题”提交，当前未据此判分。</p>}</div>}
+        {row.model?.result && <div className="chat-message assistant"><strong>AI 追问</strong><p>{row.model.result.question}</p><small>模型建议，未作为数学真值。</small>{row.model.result.teaching_decision && <p className="card-note">本轮安排：{String(row.model.result.teaching_decision.reason)}{row.model.result.teaching_decision.action==='resource' && <Link className="button small" to={'/courses?workspace='+run.workspace_id+'#course-resources'}>查看当前课程资源</Link>}</p>}{row.model.result.answer_understanding && <p>AI 对这段表达的理解：最终数值可能是 {String(row.model.result.answer_understanding.candidate)}；请先确认后在“回答这道题”提交，当前未据此判分。</p>}</div>}
         {row.model && ['failed', 'unknown', 'cancelled', 'discarded'].includes(row.model.status) && <p className="chat-message assistant">本次 AI 未产生可用结果（{row.model.status}），不会自动重试；可以继续回答或使用现有提示。</p>}
         {!row.processed && row.action !== 'start' && <p className="card-note">这条表达已保存，正在处理。</p>}
       </div>)}

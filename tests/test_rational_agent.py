@@ -122,7 +122,8 @@ def test_agent_course_review_runtime_and_targeted_questions(env):
     run=client.get(path).json();op=run['coaching']
     assert ModelTaskRunner(env.db).step(operation_id=op['operation_id'])
     run=client.get(path).json();result=run['coaching']['result']
-    assert result['rendering_mode']=='rational-agent-intent.v2'
+    assert result['rendering_mode']=='grounded-dialogue.v1'
+    assert '我不确定绝对值和相反数的表示' in result['question']
     assert render_result(result)['question']==result['question']
     assert '绝对值' in result['question'] or '相反数' in result['question']
     assert client.get(f'/api/v1/student/workspaces/{wid}/resources').status_code==200

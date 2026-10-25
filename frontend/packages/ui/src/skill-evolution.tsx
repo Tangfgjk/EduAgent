@@ -15,7 +15,7 @@ export function EvolutionWorkbench({workspace,admin=false}:{workspace?:Workspace
  const query=useQuery({queryKey:['evolutions',admin,wid,offset],queryFn:({signal})=>api.evolutions(wid,offset,signal),enabled,refetchInterval:2000});
  const list=query.data?.items??[],rid=selected??list[0]?.run_id;
  const detail=useQuery({queryKey:['evolution',admin,wid,rid],queryFn:({signal})=>api.evolution(rid!,wid,signal),enabled:enabled&&!!rid,refetchInterval:2000});
- const [mode,setMode]=useState<'offline'|'semantic'>('offline'),[trial,setTrial]=useState(false);
+ const [mode,setMode]=useState<'offline'|'semantic'>('semantic'),[trial,setTrial]=useState(false);
  const automation=useQuery({queryKey:['learning-automation',wid],queryFn:({signal})=>api.learningAutomation(wid!,signal),enabled:!admin&&!!wid&&enabled});
  const configure=useMutation({mutationFn:(on:boolean)=>api.configureLearningAutomation(wid!,on,automation.data!.revision),onSuccess:()=>{void automation.refetch();refresh();}});
  const startKey=useRef(crypto.randomUUID());

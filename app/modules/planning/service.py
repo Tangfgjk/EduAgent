@@ -228,6 +228,8 @@ class Planning(Learning):
                 'learning_effect_validated': False}
         from app.modules.evidence.insights import report as learning_insights
         bundle['learning_observations']=learning_insights(session,actor,wid,days=30,source=actor.account.source_kind)['planning_summary']
+        from app.modules.learning.goal_context import handoff
+        bundle['learning_goal']=handoff(session,wid,actor.account)
         if body.get('request_model'):
             from app.modules.planning.model import global_snapshot
             bundle['global_summary'] = global_snapshot(session, actor.account)

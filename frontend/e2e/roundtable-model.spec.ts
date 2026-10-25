@@ -20,6 +20,8 @@ test('模型圆桌：审核启用、三视角、刷新、学生比较及另一�
     expected_revision: state.revision, vendor: 'fake', prompt_version: 'probability.followup.v3', max_output_tokens: 512,
     account_daily_calls: 0, site_daily_calls: 0, acknowledge_development_only: true,
   } })).ok()).toBeTruthy();
+  const generation=await(await page.request.get('/api/v1/admin/generation-policy',{headers:auth})).json();
+  expect((await page.request.post('/api/v1/admin/generation-policy',{headers:auth,data:{expected_revision:generation.revision,courses:true,interaction:true,search:false,private_auto_release:true,acknowledge_development_only:true}})).ok()).toBeTruthy();
   const base = (await (await page.request.get('/api/v1/admin/content-catalog', { headers: auth })).json()).items.find((x: { unit_id: string }) => x.unit_id === 'math.g9.probability.dev1');
   expect((await page.request.post(`/api/v1/admin/content-catalog/${base.unit_id}/development-release`, { headers: auth,
     data: { content_version: base.content_version, expected_revision: base.revision, enabled: true, acknowledge_development_only: true } })).ok()).toBeTruthy();
@@ -42,12 +44,12 @@ test('模型圆桌：审核启用、三视角、刷新、学生比较及另一�
     await student.goto(`/student/roundtable?workspace=${space.workspace_id}&activity=math.g9.probability.roundtable.dev2`);
     await confirmFixtureCourse(student);
     await student.getByRole('button', { name: '开始圆桌讨论', exact: true }).click();
-    await expect(student.getByLabel('让 AI 根据本次思路选择讨论方向')).toBeChecked();
+    await expect(student.getByLabel('让 AI 根据思路与历史生成针对性讨论')).toBeChecked();
     await student.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await student.getByLabel('我的初步思路', { exact: true }).fill('我把红和蓝两种颜色作为两个结果，各一半。');
     await student.getByRole('button', { name: '保存表达，邀请学伴', exact: true }).click();
     await expect(student.getByText('圆桌视角已保存', { exact: true })).toBeVisible();
-    for (const role of ['思路提出者', '质疑者', '整理者']) await expect(student.getByRole('heading', { name: `${role} · 安全模板追问`, exact: true })).toBeVisible();
+    for (const role of ['思路提出者', '质疑者', '整理者']) await expect(student.getByRole('heading', { name: `${role} · AI 生成追问`, exact: true })).toBeVisible();
     await student.reload();
     await expect(student.getByText('圆桌视角已保存', { exact: true })).toBeVisible();
     await student.screenshot({ path: testInfo.outputPath('roundtable-three-voices.png'), fullPage: true });

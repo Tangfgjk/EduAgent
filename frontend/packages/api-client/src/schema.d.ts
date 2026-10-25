@@ -3001,6 +3001,14 @@ export interface components {
         };
         /** CoachingResultOut */
         CoachingResultOut: {
+            /** Teaching Decision */
+            teaching_decision?: {
+                [key: string]: unknown;
+            } | null;
+            /** Variant */
+            variant?: {
+                [key: string]: unknown;
+            } | null;
             /** Answer Understanding */
             answer_understanding?: {
                 [key: string]: unknown;
@@ -4287,6 +4295,10 @@ export interface components {
         };
         /** NextAction */
         NextAction: {
+            /** Learning Goal */
+            learning_goal?: {
+                [key: string]: unknown;
+            } | null;
             /** Workspace Id */
             workspace_id: string;
             /** Stage */
@@ -4484,6 +4496,10 @@ export interface components {
         };
         /** PlanningBundle */
         PlanningBundle: {
+            /** Learning Goal */
+            learning_goal?: {
+                [key: string]: unknown;
+            } | null;
             /** Default Reference */
             default_reference?: {
                 [key: string]: unknown;

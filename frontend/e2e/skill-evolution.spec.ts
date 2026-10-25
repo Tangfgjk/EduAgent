@@ -36,7 +36,7 @@ test('离线Skill：原始材料、冻结评测、人工复核、待审提案及
   await login(admin,'admin','s03.admin');await login(page,'student','s03.one');
   const data=await seed(page,admin);
   await page.goto('/student/skill-evolution?workspace='+data.wid);
-  await page.getByRole('button',{name:'生成离线改进候选',exact:true}).click();
+  await page.getByLabel('改进方式').selectOption('offline');await page.getByRole('button',{name:'生成离线改进候选',exact:true}).click();
   await expect(page.locator('.evolution-detail')).toContainText('等待开发评测复核');
   await expect(page.getByText('工程检查通过，可申请人工复核',{exact:true})).toBeVisible();
   await page.getByText('查看冻结来源与原始材料',{exact:true}).click();
@@ -71,7 +71,7 @@ test('离线Skill：原始材料、冻结评测、人工复核、待审提案及
 test('手机Skill改进：缺少执行基线提示、临时空间隔离与布局',async({page})=>{
  await page.setViewportSize({width:390,height:844});await login(page,'student','s03.two');const h=await headers(page,'student');
  let response=await page.request.post('/api/v1/student/workspaces',{headers:{...h,'Idempotency-Key':crypto.randomUUID()},data:{kind:'project',title:'手机待准备 '+Date.now()}});const project=await response.json();
- await page.goto('/student/skill-evolution?workspace='+project.workspace_id);await page.getByRole('button',{name:'生成离线改进候选',exact:true}).click();
+ await page.goto('/student/skill-evolution?workspace='+project.workspace_id);await page.getByLabel('改进方式').selectOption('offline');await page.getByRole('button',{name:'生成离线改进候选',exact:true}).click();
  await expect(page.getByText('请先审核并激活含四项执行参数的策略作为基线',{exact:false})).toBeVisible();
  response=await page.request.post('/api/v1/student/workspaces',{headers:{...h,'Idempotency-Key':crypto.randomUUID()},data:{kind:'temporary',title:'局部探索 '+Date.now()}});const temp=await response.json();
  await page.goto('/student/skill-evolution?workspace='+temp.workspace_id);await expect(page.getByText('Skill改进从正式项目开始',{exact:true})).toBeVisible();

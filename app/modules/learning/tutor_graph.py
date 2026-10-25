@@ -45,15 +45,21 @@ def public_view(data):
     unassisted = sum(r["stage"] == "practice" and r["status"] == "passed" and r["hints_used"] == 0 for r in data["records"])
     if not data.get("adaptive_support") or (data.get("skill_runtime") or {}).get("execution",{}).get("support_mode")=="step_first":
         unassisted = 0
-    support = {"mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
+    support = {"adaptive_enabled": bool(data.get("adaptive_support")), "mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
     if practice and (data.get('feedback') or {}).get('status') in {'failed','unverifiable'}:
         support.update(mode='restored_step_support',basis='本题未通过或表达未确定，恢复具体支持；不沿用之前的成功推断当前掌握。')
-    if data.get('last_teaching_decision'):support['agenda_decision']=data['last_teaching_decision']
+    if data.get('last_teaching_decision'):
+        decision=data['last_teaching_decision']
+        support['agenda_decision']={k:v for k,v in decision.items() if k!='variant'}
+        if decision.get('support')=='restore':support.update(mode='restored_step_support',basis=decision.get('reason','学生需要恢复支持'))
+        elif decision.get('support')=='fade' and unassisted:support.update(mode='socratic_first',basis=decision.get('reason','依据独立练习记录渐撤'))
+    if practice and (data.get('feedback') or {}).get('status') in {'failed','unverifiable'}:
+        support.update(mode='restored_step_support',basis='本题出现困难，恢复具体支持，模型旧建议不能覆盖当前失败记录。')
     pedagogy=item.tasks[index].get('pedagogy') if index<len(item.tasks) else None
     if practice and pedagogy and pedagogy.get('profile')=='rational-agent.v2':
         status=(data.get('feedback') or {}).get('status')
         focus='representation' if status in {'failed','unverifiable'} else 'basis' if len(data['hints'])>=2 else 'verification' if unassisted else 'basis'
-        support.update(profile='rational-agent.v2',concept=pedagogy['concept_label'],action=focus,
+        support.update(profile='rational-agent.v2',concept=pedagogy['concept_label'],concept_id=pedagogy['concept'],action=focus,
             question=pedagogy['questions'][focus],plan_rationale=pedagogy['rationale'],
             basis='本题数值未通过或不可验证，先换表示核对；未判定具体语义误区。' if status in {'failed','unverifiable'} else '依据本轮实际提示和数值记录选择已审核的概念支持，允许继续求助。')
     return TutorView(support_decision=support, strategy_version_id=data.get("strategy_version_id"), reflection_prompt=PROMPTS[data.get("reflection_focus", "basis")], unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
@@ -99,6 +105,8 @@ def record(data, status):
 
 
 def next_task(data,decision=None):
+    from app.modules.learning.adaptive import apply
+    if data['phase']=='reflection':apply(data,decision)
     tasks = content_for(data).tasks
     if data['phase']=='reflection':
         completed={r['task_id'] for r in data['records'] if r['stage']=='practice'}
@@ -175,7 +183,7 @@ def advance_tutor(run_id, learner_id, payload, image, *, item=None):
     if item is not None:
         from dataclasses import asdict
         data["unit_id"] = item.unit_id
-        data["adaptive_support"] = item.unit_id.startswith("dynamic.generated.")
+        data["adaptive_support"] = True
         data["content_snapshot"] = asdict(item)
     initial = {"run_id": run_id, "learner_id": learner_id, "turn": 0, "data": data,
         "view": public_view(data), "gate_id": str(uuid5(NAMESPACE_URL, run_id + ":tutor:0")), "review_task": None}

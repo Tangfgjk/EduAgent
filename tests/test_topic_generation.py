@@ -100,7 +100,8 @@ def test_generation_diagnostic_review_activation_private_content_and_resources(e
     run=client.get(path).json()
     assert run['coaching']['status']=='succeeded',run
     assert run['coaching']['result']['focus']=='basis'
-    assert run['coaching']['result']['rendering_mode']=='generic-intent.v1'
+    assert run['coaching']['result']['rendering_mode']=='grounded-dialogue.v1'
+    assert '先乘除再加减' in run['coaching']['result']['question']
     # Withdrawing sources blocks future use, without deleting student contributions.
     assert env.admin.post('/api/v1/admin/knowledge-sources/builtin.MATH.G7.RATIONAL/state',json={'expected_revision':0,'enabled':False}).status_code==200
     assert client.post(root+'/'+row['build_id']+'/activate',json={'expected_revision':result['revision'],'course_revision':1}).status_code==409

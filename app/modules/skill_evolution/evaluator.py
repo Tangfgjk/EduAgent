@@ -17,6 +17,7 @@ def signature():
     app_root=Path(__file__).resolve().parents[2]
     paths=['modules/skill_evolution/semantic.py','modules/skill_evolution/trials.py','modules/learning/answer_interpretation.py','modules/skill_evolution/evaluator.py','modules/skill_evolution/graph.py','modules/skill_evolution/service.py','modules/planning/service.py','modules/memory/service.py','modules/planning/compiler.py',
         'modules/planning/runtime.py','modules/learning/tutor_graph.py','modules/learning/numeric_verifier.py','modules/learning/output_gate.py','modules/planning/contracts.py','core/rules.py','core/actions.py','modules/generation/interaction.py']
+    paths.extend(['worker.py','modules/memory/facts.py','modules/generation/mathematics.py','modules/learning/content_catalog.py','modules/learning/adaptive.py','modules/learning/goal_context.py','modules/generation/grounded_response.py'])
     paths.append('modules/skill_evolution/automation.py')
     paths.append('modules/skill_evolution/shadow.py')
     return {'engine':ENGINE,'compiler':COMPILER,'rules_hash':registry_hash(),'corpus_hash':content_hash(corpus()),

@@ -4,6 +4,7 @@ Unknown submissions are never retried. Asset downloads never receive API keys.
 The existing OpenMAIC text budget is neither read nor changed by this module.
 """
 import hashlib
+import os
 import json
 import re
 import io
@@ -26,6 +27,22 @@ MODELS={'image':'qwen-image-2.0-2026-03-03','audio':'qwen3-tts-flash','video':'w
 PRICE={'image':200_000,'audio':80,'video':700_000}  # microyuan/image, microyuan/character, microyuan/5s
 ROOT=Path('.local/media-assets')
 BASE='https://dashscope.aliyuncs.com'
+
+
+def api_host():
+    """Only Beijing provider hosts may receive the media credential."""
+    path = Path('.local/providers/qwen.host')
+    value = os.getenv('WENJIN_BAILIAN_API_HOST', '').strip()
+    if not value and path.is_file():
+        value = path.read_text(encoding='utf-8').strip()
+    value = (value or BASE).rstrip('/')
+    parsed = urlsplit(value)
+    if (parsed.scheme != 'https' or parsed.username or parsed.password or
+            parsed.port not in (None, 443) or parsed.path or parsed.query or parsed.fragment or
+            not (parsed.hostname == 'dashscope.aliyuncs.com' or
+                 re.fullmatch(r'ws-[a-z0-9]+\.cn-beijing\.maas\.aliyuncs\.com', parsed.hostname or ''))):
+        raise ValueError('invalid_bailian_beijing_host')
+    return value
 
 
 def fail(code,message):raise DomainError(409,code,message)
@@ -182,7 +199,7 @@ def classroom_overlay(session,resource):
 
 class BailianMedia:
     def __init__(self,key,transport=None):
-        self.client=httpx.Client(base_url=BASE,headers={'Authorization':'Bearer '+key},timeout=60,trust_env=False,follow_redirects=False,transport=transport)
+        self.client=httpx.Client(base_url=api_host(),headers={'Authorization':'Bearer '+key},timeout=60,trust_env=False,follow_redirects=False,transport=transport)
         self.transport=transport
     def close(self):self.client.close()
     def json(self,method,path,**kwargs):

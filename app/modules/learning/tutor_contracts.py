@@ -98,6 +98,8 @@ class RoundtableVoiceOut(Contract):
 
 
 class CoachingResultOut(Contract):
+    teaching_decision: dict | None = None
+    variant: dict | None = None
     answer_understanding: dict | None = None
     next_task_id: str | None = None
     decision_reason: str | None = None

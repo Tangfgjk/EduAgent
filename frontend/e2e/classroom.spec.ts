@@ -50,7 +50,7 @@ test('课堂布局、KaTeX、真实本机音视频、互动及断点恢复，无
  const rid=(await imported.json()).resource_id;
  expect((await page.request.post('/api/v1/admin/resources/'+rid+'/review',{headers:admin,data:{expected_revision:1,approve:true,note:'离线自编布局、公式、图片、WAV、WebM与互动问题检查，仅开发验收'}})).ok()).toBeTruthy();
  const network:string[]=[];page.on('request',r=>{if(r.url().startsWith('http')&&!r.url().startsWith('http://127.0.0.1:8781/'))network.push(r.url());});
- await page.goto(`/student/courses?workspace=${wid}`);await page.locator('summary').filter({hasText:'自编布局媒体课堂 ·'}).click();
+ await page.goto(`/student/classroom?workspace=${wid}`);await expect(page.getByRole('heading',{name:'互动课堂',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'互动课堂',exact:true})).toHaveAttribute('href',`/student/classroom?workspace=${wid}`);
  const player=page.getByRole('region',{name:'互动课堂播放器'});await expect(player).toBeVisible();await expect(player.locator('.katex').first()).toBeVisible();
  await expect.poll(()=>player.locator('audio').evaluate((n:HTMLAudioElement)=>n.readyState)).toBeGreaterThan(0);
  await expect.poll(()=>player.locator('video').evaluate((n:HTMLVideoElement)=>({ready:n.readyState,error:n.error?.message,length:n.currentSrc.length}))).toMatchObject({ready:expect.any(Number),error:undefined});
@@ -62,7 +62,7 @@ test('课堂布局、KaTeX、真实本机音视频、互动及断点恢复，无
  await player.getByRole('button',{name:'下一步',exact:true}).click();await player.getByLabel('课堂互动回答').fill('这个答案是3');await player.getByRole('button',{name:'检查本次回答'}).click();
  await expect(player.getByText('课堂数值核验：passed',{exact:false})).toBeVisible();
  await player.getByRole('button',{name:'2. 运算顺序',exact:true}).click();await player.getByRole('button',{name:'保存进度',exact:true}).click();await expect(player.getByText('进度已保存',{exact:true})).toBeVisible();
- await page.reload();await page.locator('summary').filter({hasText:'自编布局媒体课堂 ·'}).click();await expect(player.getByText('场景 2/3',{exact:true})).toBeVisible();
+ await page.reload();await expect(player.getByText('场景 2/3',{exact:true})).toBeVisible();
  await page.screenshot({path:info.outputPath('classroom-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBeTruthy();await page.screenshot({path:info.outputPath('classroom-mobile.png'),fullPage:true});
  expect(network).toEqual([]);expect(errors).toEqual([]);await expect(player.locator('iframe')).toHaveCount(0);
 });

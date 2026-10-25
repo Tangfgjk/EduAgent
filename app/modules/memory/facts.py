@@ -29,7 +29,8 @@ def publish_turn(session, run, entry, before, state, refresh=True):
     if existing:
         return existing
     pack = get_pack(before["unit_id"], session)
-    task = next(item for item in pack.tasks if item["id"] == before["task"]["task_id"])
+    from app.modules.learning.tutor_graph import content_for
+    task = next(item for item in content_for(state["data"]).tasks if item["id"] == before["task"]["task_id"])
     status = state["view"]["feedback"]["status"] if action == "answer" else "skipped" if action == "skip" else None
     fact = LearningFact(workspace_id=run.workspace_id, run_id=run.id, input_id=entry.id,
         kind="reflection" if action == "reflect" else action, source_kind=entry.source_kind,

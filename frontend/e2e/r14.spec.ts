@@ -7,6 +7,50 @@ async function login(page:Page,role:'student'|'admin'){
   return {'X-Wenjin-Client':role,'X-CSRF-Token':cookies.find(c=>c.name===`wenjin_${role}_csrf`)!.value};
 }
 
+test('V15 生成式圆桌三轮、历史恢复与目标入口',async({page})=>{
+  test.setTimeout(120_000);
+  const admin=await login(page,'admin');
+  const model=await(await page.request.get('/api/v1/admin/model-runtime',{headers:admin})).json();
+  expect((await page.request.post('/api/v1/admin/model-runtime/publish',{headers:admin,data:{expected_revision:model.revision,vendor:'fake',max_output_tokens:512,account_daily_calls:0,site_daily_calls:0,prompt_version:'probability.followup.v3',acknowledge_development_only:true}})).ok()).toBeTruthy();
+  const policy=await(await page.request.get('/api/v1/admin/generation-policy',{headers:admin})).json();
+  expect((await page.request.post('/api/v1/admin/generation-policy',{headers:admin,data:{expected_revision:policy.revision,courses:true,interaction:true,search:false,private_auto_release:true,acknowledge_development_only:true}})).ok()).toBeTruthy();
+  await login(page,'student');
+  await page.getByRole('button',{name:'开启临时会话',exact:false}).click();
+  await page.getByLabel('空间名称').fill('生成式圆桌'+Date.now());
+  await page.getByRole('button',{name:'保存空间',exact:true}).click();
+  await page.getByRole('region',{name:'当前空间的下一步'}).getByRole('link',{name:'告诉我你想学什么'}).click();
+  await expect(page.getByRole('region',{name:'共享学习目标与依据'})).toBeVisible();
+  await page.getByLabel('我想学什么？').fill('负数乘除和运算顺序');
+  await page.getByRole('checkbox',{name:'启用有理数教学 Agent 设计',exact:false}).uncheck();
+  await page.getByRole('button',{name:'解析主题并准备诊断'}).click();
+  await page.getByLabel('诊断 1 答案').fill('0');await page.getByLabel('诊断 2 答案').fill('0');
+  await page.getByRole('button',{name:'保存诊断并查看课程范围'}).click();
+  await page.getByRole('button',{name:'确认范围并生成课程'}).click();
+  await expect(page.getByRole('button',{name:'确认使用这份课程'})).toBeVisible({timeout:40_000});
+  await page.getByRole('button',{name:'确认使用这份课程'}).click();
+  const wid=new URL(page.url()).searchParams.get('workspace')!;
+  await page.goto(`/student/roundtable?workspace=${wid}`);
+  await page.getByRole('button',{name:'开始圆桌讨论',exact:true}).click();
+  await page.getByLabel('我的数值表达').fill('0');
+  await page.getByLabel('我的初步思路').fill('先核对除法的符号，再说明依据');
+  await page.getByRole('checkbox',{name:'让 AI 根据思路与历史生成针对性讨论'}).check();
+  await page.getByRole('button',{name:'保存表达，邀请学伴',exact:true}).click();
+  await expect(page.getByText('圆桌视角已保存',{exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'思路提出者 · AI 生成追问'})).toBeVisible();
+  for(const text of ['我改用乘法检验符号','我现在能区分符号与运算顺序']){
+    await page.getByLabel('我的数值表达').fill('0');
+    await page.getByLabel('我的比较、纠错与检查依据').fill(text);
+    await page.getByRole('button',{name:'保存回应，继续追问',exact:true}).click();
+    await expect(page.getByText('圆桌视角已保存',{exact:true})).toBeVisible();
+  }
+  await expect(page.getByRole('button',{name:'保存回应，继续追问',exact:true})).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('第 1 轮圆桌',{exact:false})).toBeVisible();
+  await expect(page.getByText('第 2 轮圆桌',{exact:false})).toBeVisible();
+  await expect(page.locator('nav').getByRole('link',{name:'规划与策略'})).toBeVisible();
+  await expect(page.locator('nav').getByRole('link',{name:'Skill 改进'})).toBeVisible();
+});
+
 test('R14 学生引导、自主课程开放、中文回答与对话恢复',async({page},info)=>{
   test.setTimeout(120_000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   const admin=await login(page,'admin');

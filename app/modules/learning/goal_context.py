@@ -1,0 +1,66 @@
+"""One owner-scoped learning goal, shared by teaching and planning consumers.
+
+This is a bounded evidence snapshot, never a diagnosis or an instruction source.
+No independent task text, answer key, or other project's records are exported.
+"""
+from sqlalchemy import select
+from app.infrastructure.db.models import CourseBinding, CurriculumVersion, LearningFact, Workspace
+from app.modules.learning.content_repository import content_hash
+from app.modules.learning.model_coaching import redact
+
+
+def snapshot(session, wid, account):
+    space = session.get(Workspace, wid)
+    if not space or space.owner_id != account.id:
+        raise ValueError('goal_owner_mismatch')
+    binding = session.get(CourseBinding, wid)
+    curriculum = session.get(CurriculumVersion, binding.curriculum_id) if binding else None
+    body = curriculum.snapshot if curriculum else {}
+    facts = list(session.scalars(select(LearningFact).where(
+        LearningFact.workspace_id == wid, LearningFact.source_kind == account.source_kind)
+        .order_by(LearningFact.created_at.desc(), LearningFact.id.desc()).limit(6)))
+    evidence = [{'id': f.id, 'kind': f.kind, 'stage': f.payload.get('stage'),
+                 'status': f.payload.get('status'), 'hints_used': f.payload.get('hints_used', 0),
+                 'content_version': f.content_version} for f in reversed(facts)]
+    value = {'schema_version': 'learning-goal.v1', 'workspace_id': wid,
+             'course_revision': binding.revision if binding else 0,
+             'unit_id': binding.active_unit_id if binding else None,
+             'topic': redact(str(body.get('topic', '')), account)[:120],
+             'course_title': redact(str(body.get('title', '')), account)[:120],
+             'evidence': evidence, 'effect_status': 'not_validated'}
+    return {**value, 'fingerprint': content_hash(value)}
+
+
+def handoff(session, wid, account):
+    """Local navigation advice, distinct from the bounded external snapshot."""
+    from app.infrastructure.db.models import ModelOperation, ModelPolicy
+    goal = snapshot(session, wid, account)
+    policy = session.get(ModelPolicy, 1)
+    decisions = []
+    if policy and policy.active_id:
+        rows = session.scalars(select(ModelOperation).where(
+            ModelOperation.workspace_id == wid, ModelOperation.account_id == account.id,
+            ModelOperation.configuration_id == policy.active_id,
+            ModelOperation.policy_epoch == policy.stop_epoch,
+            ModelOperation.status == 'succeeded').order_by(
+                ModelOperation.created_at.desc(), ModelOperation.id.desc()).limit(20))
+        for row in rows:
+            frozen = row.request.get('learning_goal', {})
+            if frozen.get('course_revision') != goal['course_revision'] or frozen.get('unit_id') != goal['unit_id']:
+                continue
+            choice = (row.result or {}).get('teaching_decision')
+            if choice:
+                decisions.append({'operation_id': row.id, **choice,
+                                  'goal_fingerprint': frozen.get('fingerprint'),
+                                  'source_ids': [f['id'] for f in frozen.get('evidence', [])]})
+            if len(decisions) == 3:
+                break
+    return {**goal, 'decisions': decisions}
+
+
+def external(goal, include_evidence=True):
+    """Use ephemeral evidence aliases; database IDs are only kept locally."""
+    return {key: goal[key] for key in ('schema_version', 'course_revision', 'unit_id',
+            'topic', 'course_title', 'effect_status') if key in goal} | {
+        'evidence': [{**{k:v for k,v in row.items() if k!='id'}, 'ref': 'observation:'+str(i)}
+                     for i,row in enumerate(goal.get('evidence', []) if include_evidence else [],1)]}

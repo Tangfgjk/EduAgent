@@ -73,3 +73,22 @@ test('动态内容登记审核与课程绑定：三条路线同单元、改名�
   await expect(page.getByLabel('当前课程单元')).toHaveValue(spec.unit_id);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBeTruthy();
 });
+
+
+test('手动绑定明确提示必填项，填写后可提交', async ({page}) => {
+  const headers = await login(page, 'student');
+  const response = await page.request.post('/api/v1/student/workspaces', {headers:{...headers,'Idempotency-Key':crypto.randomUUID()},data:{kind:'temporary',title:'课程绑定必填引导'}});
+  expect(response.ok()).toBeTruthy();
+  const space = await response.json();
+  await page.goto('/student/study?workspace='+space.workspace_id);
+  const form = page.getByRole('region',{name:'课程上下文'});
+  await form.getByRole('checkbox').first().check();
+  await expect(form.getByRole('button',{name:'确认课程绑定',exact:true})).toBeDisabled();
+  await expect(form.getByRole('status')).toContainText('学习主题至少填写2个字');
+  await expect(form.getByRole('status')).toContainText('课程名称至少填写2个字');
+  await form.getByLabel('学习主题',{exact:true}).fill('概率');
+  await form.getByLabel('课程名称',{exact:true}).fill('概率入门');
+  await expect(form.getByRole('button',{name:'确认课程绑定',exact:true})).toBeEnabled();
+  await form.getByRole('button',{name:'确认课程绑定',exact:true}).click();
+  await expect(page.getByLabel('当前课程单元')).toBeVisible();
+});

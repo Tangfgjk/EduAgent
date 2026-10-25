@@ -31,7 +31,7 @@ def accept(session, op):
         if not pointer or pointer.version_id != parent.id:
             raise DomainError(409, 'strategy_base_changed', '策略基线已改变，不能覆盖新版本')
         # Preserve signed reference/compiled policy and append an explicit trial receipt.
-        bundle = {**parent.bundle, 'evidence': evidence_snapshot(session, run.workspace_id),
+        bundle = {**parent.bundle, 'learning_goal': dataset.body.get('learning_goal'), 'evidence': evidence_snapshot(session, run.workspace_id),
             'created_at': now(), 'base_version_id': parent.id, 'student_experience': '学生同意的个人开发试用，教学效果待验证',
             'skill_compilation': candidate['compilation'], 'policy_base': parent.policy, 'policy_changes': candidate['diff'],
             'evolution_reference': {'kind':'personal_semantic_trial','candidate_id':run.id,

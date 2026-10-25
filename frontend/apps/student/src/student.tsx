@@ -1,3 +1,4 @@
+import { InteractiveClassroomPage } from './interactive-classroom';
 import {PrivacyControls} from '@wenjin/ui';
 import { EvolutionWorkbench } from '@wenjin/ui';
 import { Units } from './units';
@@ -21,8 +22,11 @@ import { PlannerPage } from './planner';
 const navigation: NavItem[] = [
   { path: 'home', label: '学习工作台', icon: Compass },
   { path: 'spaces', label: '学习空间', icon: FolderOpen },
+  { path: 'classroom', label: '互动课堂', icon: GraduationCap },
   { path: 'review', label: '复习', icon: History },
   { path: 'evidence', label: '成长', icon: ChartNoAxesCombined },
+  { path: 'planner', label: '规划与策略', icon: Compass },
+  { path: 'skill-evolution', label: 'Skill 改进', icon: GraduationCap },
   { path: 'settings', label: '我的', icon: Settings },
 ];
 type Action = { mode: 'create'; kind: Workspace['kind'] } | { mode: 'rename' | 'archive' | 'restore'; id: string };
@@ -56,6 +60,7 @@ export function StudentApp({ account }: { account: Account }) {
       <Route path="home" element={<Home account={account} items={items} current={current} search={search} create={kind => setAction({ mode: 'create', kind })} enter={enter}/>}/>
       <Route path="spaces" element={<Spaces items={items} current={current} enter={enter} action={setAction}/>}/>
       <Route path="courses" element={current ? <GenerationPage key={current.workspace_id} workspace={current}/> : <Empty title="先创建或选择学习空间">主题准备和生成课程归属于自己的项目或临时会话。</Empty>}/>
+      <Route path="classroom" element={current ? <InteractiveClassroomPage key={current.workspace_id} workspace={current}/> : <Empty title="先选择学习空间">课堂将围绕当前项目的已确认课程展开。</Empty>}/>
       <Route path="units" element={<Units search={search}/>}/>
       <Route path="settings" element={<SettingsView account={account}/>}/>
       <Route path="skill-evolution" element={current?<EvolutionWorkbench key={current.workspace_id} workspace={current}/>:<Empty title="先选择正式项目">请先选择自己的项目。</Empty>}/>

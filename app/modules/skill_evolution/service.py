@@ -53,7 +53,9 @@ def source_snapshot(session,actor,wid):
     base=session.get(StrategyVersion,version)
     identity={'facts':[f.id for f in facts],'notes':[n.id for n in notes],'judgments':[j.id for j in judgments],
         'course':course_baseline(session,wid),'source_kind':actor.account.source_kind,'parent_strategy_id':version,'parent_hash':base.content_hash,'strategy_revision':session.get(ActiveStrategy,wid).revision}
-    return {'schema_version':'evolution-dataset.v1','fingerprint':content_hash(identity),'identity':identity,'signature':signature(),
+    from app.modules.learning.goal_context import snapshot as goal_snapshot
+    goal=goal_snapshot(session,wid,actor.account)
+    return {'learning_goal':goal,'schema_version':'evolution-dataset.v1','fingerprint':content_hash(identity),'identity':identity,'signature':signature(),
         'baseline':{'strategy_id':version,'content_hash':base.content_hash,'policy':policy},'unit_id':pack.unit_id,'content_version':pack.version,
         'facts':[{'id':f.id,'task_id':f.task_id,'kind':f.kind,'stage':f.payload.get('stage'),'status':f.payload.get('status'),'hints_used':f.payload.get('hints_used',0)} for f in facts[-60:]],
         'judgments':[{'id':j.id,'fact_id':j.fact_id,'conclusion':j.conclusion} for j in judgments[-3:]],

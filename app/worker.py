@@ -140,7 +140,8 @@ class Worker:
                             run.view = state["view"]
                             publish_turn(session, run, entry, previous_view, state)
                             if state.get("review_task"):
-                                task = next(item for item in tutor_pack.tasks if item["id"] == state["review_task"])
+                                from app.modules.learning.tutor_graph import content_for
+                                task = next(item for item in content_for(state["data"]).tasks if item["id"] == state["review_task"])
                                 session.add(AnswerReview(input_id=entry.id, run_id=run.id, task_id=task["id"],
                                     content_version=tutor_pack.version, task_snapshot=task))
                         elif run.kind in {"roundtable", "teach"}:

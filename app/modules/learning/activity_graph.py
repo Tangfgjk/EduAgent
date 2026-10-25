@@ -27,7 +27,7 @@ def version_for(unit_id=UNIT_ID, item=None):
 
 def check_action(view, action):
     if action == 'refine':
-        if (view['kind'] != 'teach' or view['flow'] != 'teach_cycle_v1' or view['phase'] != 'challenge'
+        if (view['kind'] not in {'teach','roundtable'} or view['flow'] not in {'teach_cycle_v1','roundtable_cycle_v1'} or view['phase'] != 'challenge'
                 or not view.get('model_requested') or view.get('model_rounds', 1) >= 3):
             raise DomainError(409, 'action_unavailable', '本轮不再开放追问，请保存修正并进入独立验证')
         return
@@ -79,11 +79,11 @@ def interaction(state: ActivityState, item=None):
             'reasoning_reviewed': False, 'independent': not decision.get('assessment_seen_before', False)}
         view['phase'] = 'summary'
         view['report'] = ['已分别保留初次讲解、各轮修正和新题验证。',
-            '本轮请求模型选择追问方向，展示文字来自安全模板；模型不评价讲解质量。' if view.get('model_requested') else '学伴追问为预设模板，未自动理解你的讲解。',
+            '本轮保留模型追问与各轮讲解；新版本可根据上下文生成问题，历史模板记录保留原来源；不据此评价讲解质量。' if view.get('model_requested') else '学伴追问为预设模板，未自动理解你的讲解。',
             '新题未提供辅助，仅核验数值；不据此判定教学效果、迁移能力或素养。']
         if state['kind'] == 'roundtable':
             view['report'] = ['已保留学生初始思路、自己的比较修正与另一题验证。',
-                '同一模型选择讨论方向，三种视角由安全模板展示；不是独立专家或教师结论。' if view.get('model_requested') else '使用固定角色模板，不自动理解学生思路。',
+                '同一模型生成三种讨论视角，并保留各轮修正；不是独立专家、教师结论或学习效果认证。' if view.get('model_requested') else '使用固定角色模板，不自动理解学生思路。',
                 '数值由程序另行核验，不评价解释质量、掌握、迁移或教学效果。']
     else:
         status = verify(decision["answer"], item.task["answer"])
