@@ -60,8 +60,9 @@ class Learning:
                        creation_hash=request_hash(payload), version=VERSION)
         session.add(run)
         session.flush()
+        from app.modules.learning.schedule import capture
         self.spaces.accept_input(session, actor, wid, conversation.id, "start:" + run.id, 1,
-                                 {**payload, "run_id": run.id, "operation": "start"})
+                                 {**payload, 'plan_context':capture(session,wid),"run_id": run.id, "operation": "start"})
         event(session, run, "run.queued")
         session.add(AuditEvent(actor_id=actor.account.id, action="plan.start", target_id=run.id))
         session.flush()

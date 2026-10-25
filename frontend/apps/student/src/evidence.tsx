@@ -1,51 +1,71 @@
-import { GoalPanel } from './goal-panel';
-import { EvidenceCalendar } from './evidence-visuals';
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChartNoAxesCombined, FileSearch } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type EvidenceReport, type EvidenceCategory, type EvidenceSource, type Workspace } from '@wenjin/api-client';
 import { Empty, ErrorNotice, Heading, Loading } from '@wenjin/ui';
 import { LearningAnalysis } from './learning-insights';
+import { EvidenceCalendar } from './evidence-visuals';
 import { SourceDialog, type Trace } from './review';
 import './evidence.css';
-
-const sources: Record<string, string> = { synthetic: '模拟数据', adult_test: '成人测试', real_student: '真实学生' };
-const kinds: Record<string, string> = { answer: '作答与复做', checkpoint: '首次曝光检测', hint: '提示', reflection: '反思', activity: '互动贡献', self_report: '学生自述', human_judgment: '人工判断', process: '过程' };
-const statuses: Record<string, string> = { passed: '数值通过', failed: '数值未通过', unverifiable: '不可验证', skipped: '未完成', correct: '人工判定数值正确', incorrect: '人工判定数值错误', unresolved: '人工仍无法判断' };
-const stages: Record<string, string> = { diagnostic: '初始诊断', practice: '练习', checkpoint: '检测提交（含重复/曝光未知）', review: '原题复做', roundtable: '圆桌讨论', teach: '我教 AI' };
-
-export function EvidencePage({ workspace }: { workspace?: Workspace }) {
-  const [scope, setScope] = useState<'global' | 'workspace'>('global'), [days, setDays] = useState<14 | 30 | 90>(30);
-  const [source, setSource] = useState<EvidenceSource>('all'), [category, setCategory] = useState<EvidenceCategory>('all'), [offset, setOffset] = useState(0);
-  const [assistance,setAssistance]=useState('all');
-  const [trace, setTrace] = useState<Trace>(), [includeArchived,setIncludeArchived] = useState(true);
-  const query = useQuery({ queryKey: ['evidence', scope, workspace?.workspace_id, days, source, category, offset, includeArchived,assistance], staleTime: 0, refetchInterval: 5000,
-    queryFn: ({ signal }) => api.evidence(scope === 'workspace' ? workspace?.workspace_id : undefined, days, source, category, offset, signal,includeArchived,assistance) });
-  const insights = useQuery({ queryKey: ['learning-insights',scope,workspace?.workspace_id,days,source,includeArchived,assistance], staleTime: 0, refetchInterval: 5000, queryFn: ({signal}) => api.learningInsights(scope==='workspace'?workspace?.workspace_id:undefined,days,source,includeArchived,signal,assistance) });
-  function changeScope(value: 'global' | 'workspace') { setScope(value); setOffset(0); }
-  return <>{workspace && <GoalPanel workspace={workspace}/>} <div className="actions section-gap"><Link className="button" to={"/planner?workspace=" + (workspace?.workspace_id ?? "")}>学习建议与策略</Link><Link className="button" to={"/skill-evolution?workspace=" + (workspace?.workspace_id ?? "")}>Skill 改进与评测</Link></div><Heading kicker="GROWTH, WITH ITS SOURCES" title="成长证据" description="把过程看清，把依据留下；每个统计都能回到原始记录。"/>
-    <div className="tabs" role="tablist" aria-label="证据范围"><button role="tab" aria-selected={scope === 'global'} onClick={() => changeScope('global')}>全局宏观</button><button role="tab" aria-selected={scope === 'workspace'} disabled={!workspace} onClick={() => changeScope('workspace')}>当前空间局部</button></div>
-    <div className="notice"><ChartNoAxesCombined size={20}/><div>{scope === 'global' ? `汇集你的正式项目，${includeArchived?'包含':'排除'}归档项目，排除临时探索。` : workspace?.kind === 'temporary' ? '临时空间只展示局部过程，不并入全局正式项目。' : `仅查看「${workspace?.title}」的记录。`}<br/>模拟、成人测试、真实学生来源分别统计；数值核验、学生自述和人工判断分开保留。</div></div>
-    <div className="evidence-filters section-gap"><label className="field">时间范围<select value={days} onChange={e => { setDays(Number(e.target.value) as typeof days); setOffset(0); }}><option value={14}>最近 14 天</option><option value={30}>最近 30 天</option><option value={90}>最近 90 天</option></select></label><label className="field">数据来源<select value={source} onChange={e => { setSource(e.target.value as EvidenceSource); setOffset(0); }}><option value="all">全部来源（分别展示）</option>{Object.entries(sources).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label><label className="field">辅助条件<select value={assistance} onChange={e=>{setAssistance(e.target.value);setOffset(0);}}><option value="all">全部条件（分类展示）</option><option value="unassisted_practice">本轮未用提示的练习</option><option value="assisted">辅助后与互动表达</option><option value="independent">首次曝光独立检测</option></select></label><button className="button" disabled={query.isFetching} onClick={() => { void query.refetch(); void insights.refetch(); }}>刷新证据</button></div>
-    {query.isPending ? <Loading text="正在核对这个范围的学习记录…"/> : query.isError ? <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/> : <>
-      <p className="page-note">{query.data.workspace_count} 个空间 · 日期按 UTC+08:00 自然日 · 截至 {new Date(query.data.as_of * 1000).toLocaleString()}。来源列表分页不影响上方完整范围的统计。</p>
-      {scope==='global'&&<label className="inline section-gap"><input type="checkbox" checked={includeArchived} onChange={e=>{setIncludeArchived(e.target.checked);setOffset(0);}}/>全局包含归档项目</label>}
-      {insights.isPending?<Loading text="正在整理知识点与支架来源…"/>:insights.isError?<ErrorNotice error={insights.error}/>:<LearningAnalysis key={scope+workspace?.workspace_id+days+source+includeArchived+assistance} report={insights.data} trace={setTrace} workspaceId={scope==='workspace'&&workspace?.kind==='project'?workspace.workspace_id:undefined}/>}
-      {query.data.groups.length ? <>
-        <div className="grid section-gap">{query.data.groups.map(group => <section className="card" key={group.source_kind}><div className="card-head"><h2>{sources[group.source_kind] ?? group.source_kind} · 过程概览</h2><span className="badge neutral">来源独立统计</span></div><div className="evidence-kpis">{[
-          ['学习事实', group.facts], ['作答与原题复做', group.answers], ['陪学首次曝光检测数值通过', `${group.checkpoint_passed} / ${group.checkpoint_answers}`], ['提示请求', group.hints], ['反思', group.reflections], ['互动贡献', group.activity_contributions], ['学生自述', group.self_reports], ['人工判断', group.human_judgments],
-        ].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><p className="card-note">统计单位为提交/记录次数。同题多次尝试分别保留；通过数不等于知识点覆盖、掌握度或素养。</p></section>)}</div>
-        <section className="card section-gap"><h2>数值核验的来源与阶段</h2><div className="evidence-table-wrap"><table className="evidence-table"><caption>只统计作答和原题复做；互动后的核验不混入独立检测。</caption><thead><tr><th>来源</th><th>阶段</th><th>通过</th><th>未通过</th><th>不可验证</th></tr></thead><tbody>{query.data.stages.map(row => <tr key={row.source_kind + row.stage}><td>{sources[row.source_kind] ?? row.source_kind}</td><td>{stages[row.stage] ?? row.stage}</td><td>{row.passed}</td><td>{row.failed}</td><td>{row.unverifiable}</td></tr>)}</tbody></table></div>{!query.data.stages.length && <p className="card-note">当前只有过程材料，尚无这些阶段的数值提交。</p>}</section>
-        <EvidenceCalendar report={query.data}/><Trend key={scope + workspace?.workspace_id + days + source + includeArchived} report={query.data}/>
-      </> : <section className="card section-gap"><Empty title="当前范围还没有过程证据">调整时间或来源筛选，或在陪学、复习、圆桌和我教 AI 中留下自己的尝试。没有记录不会显示为能力零分。</Empty></section>}
-      <section className="card section-gap"><div className="card-head"><h2>证据来源记录</h2><FileSearch size={20}/></div><label className="field evidence-record-filter">记录类型<select value={category} onChange={e => { setCategory(e.target.value as EvidenceCategory); setOffset(0); }}><option value="all">全部记录</option>{Object.entries(kinds).filter(([key]) => key !== 'process').map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><p className="card-note">当前筛选 {query.data.record_count} 条。自述反映学生体验，人工判断只代表所写的复核范围，均不覆盖原始自动核验。</p>
-        {query.data.records.length ? <ol className="evidence-records">{query.data.records.map(record => <li key={record.record_kind + record.record_id}><div className="card-head"><strong>{record.workspace_title}{record.archived ? ' · 已归档' : ''}</strong><span className="badge neutral">{sources[record.source_kind] ?? record.source_kind} · {kinds[record.record_kind] ?? '过程'}</span></div><p className="card-note">{record.task_id} · {stages[record.stage] ?? record.stage} · {new Date(record.created_at * 1000).toLocaleString()}</p><p className="evidence-excerpt">{record.excerpt}</p><div className="card-head"><span>{record.status ? statuses[record.status] ?? record.status : '过程记录 · 不作能力判断'}</span><button className="button small" onClick={() => setTrace({ wid: record.workspace_id, fid: record.fact_id, archived: record.archived })}>查看原始来源</button></div></li>)}</ol> : <Empty title="此类型暂时没有记录">其他类型或时间范围可能有记录；这不代表对应能力为零。</Empty>}
-        <div className="pagination section-gap"><button className="button" disabled={offset === 0 || query.isFetching} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</button><span>第 {offset / 20 + 1} 页</span><button className="button" disabled={offset + 20 >= query.data.record_count || query.isFetching} onClick={() => setOffset(offset + 20)}>下一页</button></div>
-      </section>
-    </>}
-    {trace && <SourceDialog key={trace.wid + trace.fid} trace={trace} close={() => {setTrace(undefined);void query.refetch();void insights.refetch();}}/>}
-  </>;
+const sources:Record<string,string>={synthetic:'模拟数据',adult_test:'成人测试',real_student:'真实学生'};
+const statuses:Record<string,string>={passed:'数值通过',failed:'需要复习',unverifiable:'尚未确定',skipped:'未完成'};
+const sections=[['overview','总览'],['knowledge','知识与表现'],['support','复习与支持'],['competency','素养材料'],['records','学习记录']];
+export function EvidencePage({workspace}:{workspace?:Workspace}){
+ const [params,setParams]=useSearchParams(),[trace,setTrace]=useState<Trace>(),client=useQueryClient();
+ const view=sections.some(([id])=>id===params.get('view'))?params.get('view')!:'overview';
+ const scope=params.get('scope')==='global'||!workspace?'global':'workspace';
+ const days=([14,30,90].includes(Number(params.get('days')))?Number(params.get('days')):30) as 14|30|90;
+ const source=(['all','synthetic','adult_test','real_student'].includes(params.get('source')??'')?params.get('source'):'all') as EvidenceSource;
+ const assistance=['all','unassisted_practice','assisted','independent'].includes(params.get('assistance')??'')?params.get('assistance')!:'all',offset=Math.max(0,Math.floor(Number(params.get('offset'))||0)),onDay=/^\d{4}-\d{2}-\d{2}$/.test(params.get('day')??'')?params.get('day')!:'',includeArchived=params.get('archived')!=='false';
+ const panel=(view==='support'?['review','help']:['map','performance']).includes(params.get('panel')??'')?params.get('panel')!:(view==='support'?'review':'map');
+ const wid=scope==='workspace'?workspace?.workspace_id:undefined;
+ const activity=useQuery({queryKey:['next-action',workspace?.workspace_id],enabled:!!workspace,
+   queryFn:({signal})=>api.nextAction(workspace!.workspace_id,signal),staleTime:0,
+   refetchInterval:q=>q.state.data?.processing?750:false});
+ useEffect(()=>{if(activity.data&&!activity.data.processing){
+   void client.invalidateQueries({queryKey:['evidence']});
+   void client.invalidateQueries({queryKey:['learning-insights']});
+ }},[activity.dataUpdatedAt,activity.data?.processing,client]);
+ function change(key:string,value:string){const p=new URLSearchParams(params);if(value)p.set(key,value);else p.delete(key);if(key!=='offset')p.delete('offset');if(key==='view')p.delete('panel');setParams(p);}
+ const category=(['all','answer','checkpoint','hint','reflection','activity','self_report','human_judgment'].includes(params.get('category')??'')?params.get('category')!:'all') as EvidenceCategory;
+ const query=useQuery({queryKey:['evidence',scope,wid,days,source,offset,onDay,includeArchived,assistance,category,view],enabled:['overview','records'].includes(view),queryFn:({signal})=>api.evidence(wid,days,source,view==='records'?category:'all',offset,signal,includeArchived,assistance,view==='records'?onDay:'')});
+ const insights=useQuery({queryKey:['learning-insights',scope,wid,days,source,includeArchived,assistance],enabled:['knowledge','support','competency'].includes(view),queryFn:({signal})=>api.learningInsights(wid,days,source,includeArchived,signal,assistance)});
+ const active=['overview','records'].includes(view)?query:insights;
+ const sums=query.data?.groups.reduce((v,g)=>({facts:v.facts+g.facts,hints:v.hints+g.hints,reflections:v.reflections+g.reflections,checks:v.checks+g.checkpoint_answers}),{facts:0,hints:0,reflections:0,checks:0});
+ return <><Heading kicker="GROWTH, WITH ITS SOURCES" title="成长" description="从概览到具体作品，找到你想看的学习依据。"/>
+ <div className="growth-toolbar"><label className="field">查看范围<select value={scope} onChange={e=>change('scope',e.target.value)}><option value="workspace" disabled={!workspace}>当前空间局部</option><option value="global">全局宏观</option></select></label><label className="field">时间范围<select value={days} onChange={e=>change('days',e.target.value)}><option value="14">最近14天</option><option value="30">最近30天</option><option value="90">最近90天</option></select></label><label className="field">数据来源<select value={source} onChange={e=>change('source',e.target.value)}><option value="all">全部来源（分别统计）</option>{Object.entries(sources).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label></div>
+ <p className="card-note">{scope==='workspace'?`仅查看「${workspace?.title}」；${workspace?.kind==='temporary'?'临时探索不进入全局。':''}`:'全部正式项目；排除临时会话。'} · 数量代表学习记录，不是能力得分。</p>
+ <nav className="tabs growth-tabs" aria-label="成长内容分类">{sections.map(([id,label])=><button key={id} role="tab" id={'growth-tab-'+id} aria-selected={view===id} aria-controls="growth-panel" onClick={()=>change('view',id)}>{label}</button>)}</nav>
+ <section id="growth-panel" role="tabpanel" aria-labelledby={'growth-tab-'+view}>
+ {active.isPending?<Loading/>:active.isError?<ErrorNotice error={active.error} retry={()=>{void active.refetch();}}/>:<>
+ {view==='overview'&&query.data&&<><div className="grid four growth-stats">{[['学习记录',sums?.facts??0],['独立检测提交',sums?.checks??0],['求助记录',sums?.hints??0],['我的反思',sums?.reflections??0]].map(([n,v])=><section className="card" key={n}><small>{n}</small><strong>{v}</strong></section>)}</div><div className="grid two section-gap">{query.data.groups.length?<Trend key={scope+wid+days+source} report={query.data}/>:<section className="card"><Empty title="还没有学习记录">从一次自己的尝试开始，记录会出现在这里。</Empty></section>}<GrowthNextStep workspace={workspace} returnTo={'/evidence?'+params.toString()}/></div></>}
+ {['knowledge','support','competency'].includes(view)&&insights.data&&<>{view!=='competency'&&<div className="tabs" aria-label="分类内容">{(view==='knowledge'?[['map','知识覆盖'],['performance','作答表现']]:[['review','复习安排'],['help','帮助使用']]).map(([id,label])=><button key={id} aria-pressed={panel===id} onClick={()=>change('panel',id)}>{label}</button>)}</div>}<LearningAnalysis key={view+panel+wid+days+source} report={insights.data} trace={setTrace} workspaceId={wid} view={view} panel={panel}/></>}
+ {view==='records'&&query.data&&<><label className="field evidence-record-filter">记录类型<select value={category} onChange={e=>change('category',e.target.value)}>{[['all','全部记录'],['answer','作答'],['hint','提示'],['reflection','反思'],['activity','互动'],['checkpoint','独立检测'],['self_report','我的自述'],['human_judgment','专业复核']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><EvidenceCalendar report={query.data} selectedDay={onDay} onSelectDay={v=>change('day',v)}/><section className="card section-gap"><div className="card-head"><h2>{onDay?onDay+' · 学习记录':'学习记录'}</h2>{onDay&&<button className="button small" onClick={()=>change('day','')}>查看整个时间范围</button>}</div><p className="card-note">共{query.data.record_count}条 · 每条可回到原始表达。</p>{query.data.records.length?<ol className="evidence-records">{query.data.records.map(record=><li key={record.record_kind+record.record_id}><strong>{record.workspace_title}{record.archived?' · 已归档':''}</strong><p className="card-note">{new Date(record.created_at*1000).toLocaleString()} · {sources[record.source_kind]} · {record.status?statuses[record.status]??'学习过程':'学习过程'}</p><p>{record.excerpt}</p><button className="button small" onClick={()=>setTrace({wid:record.workspace_id,fid:record.fact_id,archived:record.archived})}>查看原始来源</button></li>)}</ol>:<Empty title="这个范围还没有记录">可以选择其他日期，或在学习活动中留下尝试。</Empty>}<div className="pagination"><button className="button" disabled={!offset} onClick={()=>change('offset',String(Math.max(0,offset-20)))}>上一页</button><span>第{Math.floor(offset/20)+1}页</span><button className="button" disabled={offset+20>=query.data.record_count} onClick={()=>change('offset',String(offset+20))}>下一页</button></div></section></>}
+ </>}
+ </section><details className="section-gap"><summary>高级筛选</summary><label className="inline"><input type="checkbox" checked={includeArchived} onChange={e=>change('archived',String(e.target.checked))}/>包含归档项目</label><label className="field">辅助情况<select value={assistance} onChange={e=>change('assistance',e.target.value)}><option value="all">全部</option><option value="unassisted_practice">无提示练习</option><option value="assisted">有辅助</option><option value="independent">首次曝光独立检测</option></select></label></details>
+ {trace&&<SourceDialog key={trace.wid+trace.fid} trace={trace} close={()=>{setTrace(undefined);void client.invalidateQueries({queryKey:['evidence']});void client.invalidateQueries({queryKey:['learning-insights']});}}/>}
+ </>;
+}
+function GrowthNextStep({workspace,returnTo}:{workspace?:Workspace;returnTo:string}){
+ const next=useQuery({queryKey:['next-action',workspace?.workspace_id],enabled:!!workspace,queryFn:({signal})=>api.nextAction(workspace!.workspace_id,signal)});
+ const due=useQuery({queryKey:['growth-due',workspace?.workspace_id],enabled:!!workspace,queryFn:({signal})=>api.reviewCards(workspace!.workspace_id,'due',0,signal)});
+ function target(path:string){return '/'+path+'?workspace='+workspace!.workspace_id+'&growth_return='+encodeURIComponent(returnTo);}
+ const resume=next.data?.stage==='resume';
+ const hasDue=!!due.data?.items.length;
+ return <section className="card section-gap">
+   <h2>下一步，回到具体的问题</h2>
+   {!workspace ? <Link className="button primary section-gap" to="/spaces">选择一个项目继续</Link>
+     : next.isPending||due.isPending ? <Loading/>
+     : next.isError||due.isError ? <ErrorNotice error={next.error??due.error} retry={()=>{void next.refetch();void due.refetch();}}/>
+     : <>
+       <p>以下建议针对当前所选项目「{workspace.title}」，依据实际任务和复习队列。</p>
+       {workspace.status==='archived' ? <Link className="button" to="/spaces">恢复项目后继续</Link> : <>
+         <p className="body-copy">{resume?next.data!.explanation:hasDue?`目前至少有 ${due.data!.items.length} 项到期复习，先从一项开始。`:next.data!.explanation}</p>
+         <Link className="button primary" to={target(resume?next.data!.destination:hasDue?'review':next.data!.destination)}>{resume?'继续原任务':hasDue?'复习一项到期问题':next.data!.title}</Link>
+         <Link className="button section-gap" to={target('planner')}>基于记录调整学习方式</Link>
+       </>}
+     </>}
+ </section>;
 }
 
 function Trend({ report }: { report: EvidenceReport }) {

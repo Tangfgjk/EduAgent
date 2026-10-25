@@ -1,9 +1,12 @@
-import { GoalPanel } from './goal-panel';
 import {MediaBudgets} from '@wenjin/ui';
 import { ClassroomPlayer, Formula } from './classroom-deferred';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { WorkspaceGuide } from './workspace-guide';
+import { SessionGuard } from './session-guard';
+import { PlanPage } from './plan';
+import { CourseBar } from './course';
 import { api, type Workspace } from '@wenjin/api-client';
 import { Heading, ErrorNotice, Loading, Empty, Success } from '@wenjin/ui';
 import { useCourse } from './course';
@@ -12,9 +15,11 @@ import { CourseOverview } from './course-overview';
 const rationalGoals: Record<string,string> = { number_line: '数轴位置与移动', opposite: '相反数', absolute: '绝对值与距离', comparison: '大小比较', add_subtract: '加减法', multiply_divide: '乘除法', mixed_order: '混合运算顺序' };
 
 type Build = Awaited<ReturnType<typeof api.startCourseBuild>>;
-const names: Record<string, string> = { semantic_review:'系统正在检查课程解释与条件', diagnostic: '先尝试诊断', confirm_plan: '请确认课程范围', queued: '已进入生成队列', generating: '正在生成', pending_review: '数学检查通过 · 内容待开发审核', ready: '课程已发布 · 等待你的选择', failed: '本次生成未完成', unknown: '调用结果未知 · 不自动重发', needs_clarification: '主题需要澄清', out_of_scope: '超出当前学科范围', source_missing: '缺少可用知识依据', cancelled: '已取消', rejected: '审核退回', source_revoked: '来源已撤回', source_conflict: '知识来源冲突 · 等待核对' };
+const names: Record<string, string> = { semantic_review:'系统正在检查课程解释与条件', diagnostic: '先尝试诊断', confirm_plan: '请确认课程范围', queued: '已进入生成队列', generating: '正在生成', pending_review: '数学检查通过 · 内容待开发审核', ready: '课程已发布 · 等待你的选择', failed: '本次生成未完成', unknown: '调用结果未知 · 不自动重发', needs_clarification: '主题需要澄清', out_of_scope: '超出当前学科范围', unsupported: '当前尚未支持此主题', source_missing: '缺少可用知识依据', cancelled: '已取消', rejected: '审核退回', source_revoked: '来源已撤回', source_conflict: '知识来源冲突 · 等待核对' };
 
 export function GenerationPage({ workspace }: { workspace: Workspace }) {
+  const [params,setParams]=useSearchParams();
+  const tab=['current','plan','resources'].includes(params.get('tab')??'')?params.get('tab')!:'current';
   const [agentMode, setAgentMode] = useState(true), [goal, setGoal] = useState(''), [goals, setGoals] = useState<string[]>([]);
   const [topic, setTopic] = useState(''), [selected, setSelected] = useState<string>(), [offset, setOffset] = useState(0);
   const key = useRef(crypto.randomUUID()), client = useQueryClient(), course = useCourse(workspace.workspace_id);
@@ -25,13 +30,15 @@ export function GenerationPage({ workspace }: { workspace: Workspace }) {
   } });
   function update() { void client.invalidateQueries({ queryKey: ['course-builds', workspace.workspace_id] }); }
   const row = query.data?.items.find(item => item.build_id === selected) ?? query.data?.items[0];
-  return <>{workspace && <GoalPanel workspace={workspace}/>} <Heading kicker="A TOPIC BECOMES A LEARNING PATH" title="主题与课程" description="从一个想弄懂的问题开始，先看依据、尝试诊断，再确认范围与学习课程。"/>
-    <CourseOverview workspace={workspace}/>
-    <ResourcePanel workspace={workspace}/>
-    <section className="card section-gap"><h2>准备新的主题课程</h2><form onSubmit={(e: FormEvent) => { e.preventDefault(); start.mutate(); }} className="form-stack"><label className="field">我想学什么？<textarea rows={3} required minLength={2} maxLength={600} value={topic} onChange={e => setTopic(e.target.value)} placeholder="例如：负数乘除和运算顺序，想说明每一步依据"/></label><p className="card-note">限初中数学。有理数可由教学Agent设计多概念任务和活动；其他主题仍沿用当前受限题族。证明与解释质量需专业复核。准备新候选不自动替换当前课程。</p><label className="inline"><input type="checkbox" checked={agentMode} onChange={e => setAgentMode(e.target.checked)}/>启用有理数教学 Agent 设计（其他主题沿用受限生成）</label>{agentMode && <><label className="field">本轮具体想学会什么？<textarea maxLength={400} value={goal} onChange={e => setGoal(e.target.value)} placeholder="例如：能区分绝对值与相反数，并说明数轴依据"/></label><fieldset><legend>有理数本轮重点（最多3项，也可由具体主题识别）</legend>{Object.entries(rationalGoals).map(([id,label]) => <label className="inline" key={id}><input type="checkbox" checked={goals.includes(id)} disabled={!goals.includes(id) && goals.length>=3} onChange={e => setGoals(old => e.target.checked ? [...old,id] : old.filter(v=>v!==id))}/>{label}</label>)}</fieldset><p className="card-note">宽泛的“有理数”需要先选重点。系统会根据所选重点设计任务与活动，并核验数值答案。</p></>}<button className="button primary" disabled={workspace.status !== 'active' || start.isPending || topic.trim().length < 2}>解析主题并准备诊断</button><ErrorNotice error={start.error}/></form></section>
+  const tabs=<nav className="tabs" aria-label="课程内容">{[['current','当前课程'],['plan','学习安排'],['resources','配套资源']].map(([id,label])=><button key={id} aria-pressed={tab===id} onClick={()=>{const p=new URLSearchParams(params);p.set('tab',id);setParams(p);}}>{label}</button>)}</nav>;
+  return <><Heading kicker="A TOPIC BECOMES A LEARNING PATH" title="课程与安排" description="说明主题 → 尝试诊断 → 确认课程。准备过程随时保存，可以回来继续。"/>{tabs}
+    {tab==='plan'?<SessionGuard workspace={workspace} destination="plan"><PlanPage workspace={workspace}/></SessionGuard>:tab==='resources'?<><ResourcePanel workspace={workspace}/><Link className="button section-gap" to={'/units?workspace='+workspace.workspace_id}>浏览数学单元库</Link></>:<>
+    {course.data?.active_unit_id&&<><WorkspaceGuide workspace={workspace}/><CourseOverview workspace={workspace}/></>}
+    <details open={!course.data?.active_unit_id} className="section-gap"><summary>准备新的主题课程</summary><section className="card"><h2>说明本轮主题</h2><form onSubmit={(e: FormEvent) => { e.preventDefault(); start.mutate(); }} className="form-stack"><label className="field">我想学什么？<textarea rows={3} required minLength={2} maxLength={600} value={topic} onChange={e => setTopic(e.target.value)} placeholder="例如：负数乘除和运算顺序，想说明每一步依据"/></label><p className="card-note">限初中数学。有理数可由教学Agent设计多概念任务和活动；其他主题仍沿用当前受限题族。证明与解释质量需专业复核。准备新候选不自动替换当前课程。</p><details><summary>具体目标与课程设计选项（可选）</summary><label className="inline"><input type="checkbox" checked={agentMode} onChange={e => setAgentMode(e.target.checked)}/>使用有理数多概念设计（其他支持主题使用受限题族）</label>{agentMode && <><label className="field">本轮具体想学会什么？<textarea maxLength={400} value={goal} onChange={e => setGoal(e.target.value)} placeholder="例如：能区分绝对值与相反数，并说明数轴依据"/></label><fieldset><legend>有理数本轮重点（最多3项，也可由具体主题识别）</legend>{Object.entries(rationalGoals).map(([id,label]) => <label className="inline" key={id}><input type="checkbox" checked={goals.includes(id)} disabled={!goals.includes(id) && goals.length>=3} onChange={e => setGoals(old => e.target.checked ? [...old,id] : old.filter(v=>v!==id))}/>{label}</label>)}</fieldset><p className="card-note">宽泛的“有理数”需要先选重点。系统会根据所选重点设计任务与活动，并核验数值答案。</p></>}</details><button className="button primary" disabled={workspace.status !== 'active' || start.isPending || topic.trim().length < 2}>解析主题并准备诊断</button><ErrorNotice error={start.error}/></form></section></details>
     {query.isPending ? <Loading/> : query.isError ? <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/> : row ? <BuildView key={row.build_id} row={row} workspace={workspace} courseRevision={course.data?.revision ?? 0} update={update}/> : <Empty title="还没有主题课程">提交主题后会显示来源、诊断与待确认步骤。</Empty>}
+    <details className="section-gap"><summary>手动选择或调整已发布课程</summary><CourseBar workspace={workspace} standalone/></details>
     {!!query.data?.items.length && <section className="card section-gap"><h2>这个空间的课程准备记录</h2><div className="actions">{query.data.items.map(item => <button className="button small" key={item.build_id} onClick={() => setSelected(item.build_id)}>{item.topic} · {names[item.status] ?? item.status}</button>)}</div><div className="actions section-gap"><button className="button small" disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 20))}>上一批</button><button className="button small" disabled={query.data.items.length < 20} onClick={() => setOffset(offset + 20)}>下一批</button></div></section>}
-  </>;
+  </>}</>;
 }
 
 function BuildView({ row, workspace, courseRevision, update }: { row: Build; workspace: Workspace; courseRevision: number; update: () => void }) {

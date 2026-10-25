@@ -17,15 +17,15 @@ import { GenerationManagement } from './generation';
 const navigation: NavItem[] = [
   { path: 'overview', label: '试点概览', icon: LayoutDashboard, section: '教学支持' },
   { path: 'students', label: '学生账号', icon: Users },
-  { path: 'content', label: '知识点与题库', icon: BookOpen, section: '质量与依据' },
+  { path: 'content', label: '知识点与题库', icon: BookOpen, section: '内容与质量' },
   { path: 'generation', label: '课程生成与资源', icon: Sparkles },
   { path: 'review', label: '内容与解答复核', icon: ClipboardCheck },
-  { path: 'runs', label: '运行记录', icon: ListChecks },
-  { path: 'effect-studies', label: '教学效果验证', icon: ClipboardCheck },
+    { path: 'effect-studies', label: '教学效果验证', icon: ClipboardCheck },
   { path: 'evaluations', label: '评测工作台', icon: ClipboardCheck },
   { path: 'skill-evolution', label: 'Skill 进化评测', icon: Sparkles },
   { path: 'strategies', label: '策略评审', icon: FileCheck2 },
-  { path: 'config', label: '配置与权限', icon: Settings, section: '管理' },
+  { path: 'runs', label: '运行记录', icon: ListChecks, section: '平台管理' },
+  { path: 'config', label: '配置与权限', icon: Settings },
 ];
 
 export function AdminApp({ account }: { account: Account }) {
@@ -44,10 +44,21 @@ export function AdminApp({ account }: { account: Account }) {
 function Overview({ account }: { account: Account }) {
   const query = useQuery({ queryKey: ['students', account.id, 0], queryFn: ({ signal }) => api.students(0, signal) });
   return <><Heading kicker="CARE, WITH ACCOUNTABILITY" title="教学支持工作台" description="为学生保留思考空间，为内容与调整留下可靠依据。" actions={<Link className="button primary" to="/students?create=1"><Plus size={16}/>创建学生账号</Link>}/>
-    <section className="hero card admin-hero"><div><span className="kicker">教与学之间，是审慎的支持</span><h2 className="serif">让每一步学习，<br/>都有值得信任的支撑。</h2><p>先管理好参与者与空间，再让内容、过程和策略形成可追溯的闭环。</p><Link className="button primary" to="/students">管理学生账号<ArrowRight size={16}/></Link></div><MathGarden/></section>
+    <AdminAttention/>
+    <details className="section-gap"><summary>平台教学支持说明</summary><section className="hero card admin-hero"><div><span className="kicker">教与学之间，是审慎的支持</span><h2 className="serif">让每一步学习，<br/>都有值得信任的支撑。</h2><p>先管理好参与者与空间，再让内容、过程和策略形成可追溯的闭环。</p><Link className="button primary" to="/students">管理学生账号<ArrowRight size={16}/></Link></div><MathGarden/></section></details>
     <div className="grid three section-gap"><section className="card metric-card"><span className="muted">学生账号</span><div className="metric"><Users size={26}/><strong>已开放</strong></div><p>创建、重置密码、禁用与权限控制。</p><Link className="text-link" to="/students">进入账号管理<ArrowRight size={14}/></Link></section><section className="card metric-card"><span className="muted">内容与解答质量</span><div className="metric"><ClipboardCheck size={26}/><strong>开发版已开放</strong></div><p>题目、提示、解答与人工复核队列。</p><Link className="text-link" to="/review">进入解答复核<ArrowRight size={14}/></Link></section><section className="card metric-card"><span className="muted">策略与运行治理</span><div className="metric"><ShieldCheck size={26}/><strong>开发版已开放</strong></div><p>有来源、可评审、经确认、可回滚。</p><Link className="text-link" to="/strategies">查看评审流程<ArrowRight size={14}/></Link></section></div>
     <div className="grid two section-gap"><section className="card"><div className="card-head"><h2>学生账号速览</h2><Link className="text-link" to="/students">查看账号<ArrowRight size={15}/></Link></div>{query.isPending ? <Loading/> : query.isError ? <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/> : query.data.items.length ? <div className="recent-list">{query.data.items.slice(-5).reverse().map(student => <div className="recent-row" key={student.id}><span className="avatar">{student.display_name.slice(0, 1)}</span><div><strong>{student.display_name}</strong><small>{student.username}</small></div><span className={`badge ${student.enabled ? '' : 'neutral'}`}>{student.enabled ? '启用' : '已禁用'}</span></div>)}{query.data.items.length === 20 && <p className="card-note">当前展示账号列表首批中的记录。完整分页请进入账号管理。</p>}</div> : <Empty title="从创建第一个学生账号开始" action={<Link className="button" to="/students?create=1">创建学生账号</Link>}>账号创建后，学生即可登录并建立自己的学习项目。</Empty>}</section><section className="card align-start"><h2>一次策略调整的路径</h2><ol className="detail-list"><li>学习证据与课程材料提供输入</li><li>规划提出候选，不直接修改生效策略</li><li>检查通过后进入管理评审</li><li>学生确认后激活，保留回滚路径</li></ol><p className="card-note">策略提案与课程资料审核已开放。教学效果和运行监测仍需后续验证。</p></section></div>
   </>;
+}
+
+function AdminAttention(){
+ const reviews=useQuery({queryKey:['admin-attention','reviews'],queryFn:({signal})=>api.answerReviews('pending',0,signal)});
+ const courses=useQuery({queryKey:['admin-attention','courses'],queryFn:({signal})=>api.adminCourseBuilds(0,signal)});
+ const resources=useQuery({queryKey:['admin-attention','resources'],queryFn:({signal})=>api.resourceCandidates(0,signal)});
+ const cards=[{title:'待澄清解答',path:'/review',query:reviews,count:reviews.data?.items.length},
+ {title:'课程待处理',path:'/generation',query:courses,count:courses.data?.items.filter(r=>['pending_review','failed','unknown','source_conflict'].includes(r.status)).length},
+ {title:'资源待复核',path:'/generation',query:resources,count:resources.data?.items.filter(r=>r.status==='pending_review').length}];
+ return <section className="section-gap"><h2>先处理影响学习的事项</h2><p className="card-note">以下为各队列最近一页的真实状态，完整队列在对应页面；不是全站总量。</p><div className="grid three section-gap">{cards.map(c=><article className="card" key={c.title}><h3>{c.title}</h3>{c.query.isPending?<Loading/>:c.query.isError?<ErrorNotice error={c.query.error}/>:<p>{c.count?`最近一页有 ${c.count} 项待处理`:'最近一页没有待处理事项'}</p>}<Link className="button small section-gap" to={c.path}>进入处理</Link></article>)}</div></section>;
 }
 
 type AccountAction = { mode: 'create' } | { mode: 'reset' | 'disable'; account: Account };

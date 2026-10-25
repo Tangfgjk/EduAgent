@@ -29,8 +29,9 @@ test('主题生成、管理员审核、三路线同课、课堂导入与安全�
   const wid = space.workspace_id;
   await page.goto('/student/courses?workspace='+wid);
   await page.getByLabel('我想学什么？').fill('负数乘除和运算顺序');
-  await expect(page.getByRole('region', { name: '当前课程概览' })).toContainText('等待课程确认');
-  await expect(page.getByRole('region', { name: '当前课程资源' })).toContainText('先确认课程');
+  const input=await page.getByLabel('我想学什么？').boundingBox();
+  expect(input&&input.y+input.height<1000).toBeTruthy();
+  await expect(page.getByRole('button',{name:'配套资源',exact:true})).toBeVisible();
   await page.getByRole('button', { name: '解析主题并准备诊断' }).click();
   await expect(page.getByLabel('诊断 1 答案')).toBeVisible();
   await page.getByLabel('诊断 1 答案').fill('0');
@@ -65,7 +66,6 @@ test('主题生成、管理员审核、三路线同课、课堂导入与安全�
     await page.getByRole('button', { name: '确认使用这份课程' }).click();
     await expect(page.getByText('课程已由你确认，三条学习路线使用同一单元。')).toBeVisible();
     await expect(page.getByRole('region', { name: '当前课程概览' })).toContainText('内容已开放');
-    await expect(page.getByRole('region', { name: '当前课程资源' })).toContainText('份可用');
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole('region', { name: '当前课程概览' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBeTruthy();
@@ -76,6 +76,8 @@ test('主题生成、管理员审核、三路线同课、课堂导入与安全�
     expect(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBeTruthy();
     await adminPage.screenshot({ path: info.outputPath('course-admin-mobile.png'), fullPage: true });
     await page.screenshot({ path: info.outputPath('generated-course-desktop.png'), fullPage: true });
+    await page.getByRole('button',{name:'配套资源',exact:true}).click();
+    await expect(page.getByRole('region',{name:'当前课程资源'})).toContainText('份可用');
     await page.locator('#course-resources summary').filter({hasText:'浏览器导入资源'}).click();
     await expect(page.getByRole('region',{name:'互动课堂播放器'})).toContainText('浏览器导入资源');
     await expect(page.locator('iframe')).toHaveCount(0);
@@ -107,6 +109,7 @@ test('宽泛有理数先澄清目标，支持绝对值与相反数的开发诊�
   await page.getByRole('button', { name: '解析主题并准备诊断' }).click();
   await expect(page.getByText('有理数包含多个目标，请先选择1至3个本轮重点，再重新准备。', { exact: true })).toBeVisible();
   await expect(page.getByLabel('诊断 1 答案')).toHaveCount(0);
+  await page.getByText('具体目标与课程设计选项（可选）',{exact:true}).click();
   await page.getByRole('checkbox', { name: '相反数', exact: true }).check();
   await page.getByRole('checkbox', { name: '绝对值与距离', exact: true }).check();
   await page.getByLabel('本轮具体想学会什么？').fill('分清相反数与绝对值，能说明它们的数轴含义');

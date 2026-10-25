@@ -56,7 +56,8 @@ test('学生真实项目创建、刷新、重命名、归档恢复与临时路�
   await expect(page.getByRole('heading', { name: '我教 AI', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '开始我教 AI' })).toBeVisible();
   await navigateStudent(page,'成长证据');
-  await page.getByRole('tab', { name: '当前空间局部' }).click();
+  await page.getByRole('combobox',{name:'查看范围',exact:true}).selectOption('workspace');
+  await page.getByRole('tab',{name:'素养材料',exact:true}).click();
   await expect(page.getByText('尚无评分', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.context-bar')).toContainText(renamed);
@@ -147,6 +148,7 @@ test('手机布局、键盘弹窗、核心入口没有横向溢出', async ({ pa
   await page.goto('/student/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await login(page, 'student', 's03.one');
+  await navigateStudent(page,'项目与会话');
   await page.getByRole('button', { name: '新建学习项目', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');

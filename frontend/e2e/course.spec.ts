@@ -38,6 +38,7 @@ test('动态内容登记审核与课程绑定：三条路线同单元、改名�
   const created = await page.request.post('/api/v1/student/workspaces', { headers: { ...student, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: '名称不必匹配主题 '+suffix } });
   const space = await created.json(), wid = space.workspace_id;
   await page.goto('/student/study?workspace='+wid);
+  await page.getByRole('button',{name:'手动选择已有单元',exact:true}).click();
   await page.getByLabel('学习主题', { exact: true }).fill('有理数运算和每一步依据');
   await page.getByLabel('课程名称', { exact: true }).fill('显式有理数课程');
   await page.getByRole('checkbox', { name: spec.title, exact: true }).check();
@@ -60,7 +61,8 @@ test('动态内容登记审核与课程绑定：三条路线同单元、改名�
   await expect(page.getByLabel('我的数值表达')).toBeVisible();
   for (const route of ['review', 'evidence', 'planner', 'plan']) {
     await page.goto(`/student/${route}?workspace=${wid}`);
-    await expect(page.getByLabel('当前课程单元')).toHaveValue(spec.unit_id);
+    if(route==='evidence')await expect(page.getByRole('heading',{name:'成长',exact:true})).toBeVisible();
+    else await expect(page.getByLabel('当前课程单元')).toHaveValue(spec.unit_id);
   }
   const another = await (await page.request.post('/api/v1/student/workspaces', { headers: { ...student, 'Idempotency-Key': crypto.randomUUID() }, data: { kind: 'temporary', title: '另一个空间' } })).json();
   await page.goto('/student/roundtable?workspace='+another.workspace_id);
@@ -82,6 +84,7 @@ test('手动绑定明确提示必填项，填写后可提交', async ({page}) =>
   const space = await response.json();
   await page.goto('/student/study?workspace='+space.workspace_id);
   const form = page.getByRole('region',{name:'课程上下文'});
+  await form.getByRole('button',{name:'手动选择已有单元',exact:true}).click();
   await form.getByRole('checkbox').first().check();
   await expect(form.getByRole('button',{name:'确认课程绑定',exact:true})).toBeDisabled();
   await expect(form.getByRole('status')).toContainText('学习主题至少填写2个字');

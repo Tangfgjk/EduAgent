@@ -30,10 +30,28 @@ def public_tutor(session, run):
         and (view["unit_id"] == model_tasks.UNIT or generic_enabled(session)) and view["phase"] == "practice" and view["can_hint"])
     remaining = model_tasks.remaining_calls(session, account.id, config) if config and account.source_kind in {"synthetic", "adult_test"} else None
     available = available and (remaining is None or remaining > 0)
+    from app.infrastructure.db.models import ModelOperation
+    used=session.scalar(select(func.count()).select_from(ModelOperation).where(ModelOperation.run_id==run.id,ModelOperation.request['purpose'].as_string().like('generic_%')))
+    if generic_enabled(session) and used>=3:available=False
+    coaching=model_tasks.latest(session,run)
+    waiting=bool(coaching and coaching['status'] in model_tasks.ACTIVE)
+    available=available and run.status=='awaiting_input' and not waiting
+    reason=None
+    if view and view['phase']=='practice' and not available:
+        reason=('AI追问尚未开放，可继续作答或使用预设提示。' if not config else
+            '当前账号未开放AI追问。' if account.source_kind not in {'synthetic','adult_test'} else
+            '本次活动的AI追问次数已用完，可继续作答或使用提示。' if generic_enabled(session) and used>=3 else
+            '今日AI额度已用完。' if remaining==0 else
+            '本题支持次数已用完，可以继续作答或保留未确定。' if not view['can_hint'] else
+            'AI正在回应本轮表达，可以停止本次生成或继续独立作答。' if waiting else
+            '本轮输入正在保存处理，请稍候。' if run.status!='awaiting_input' else
+            '当前单元尚未开放AI追问，可继续使用课程提示。')
     return {"run_id": run.id, **{key: getattr(run, key) for key in (
         "workspace_id", "conversation_id", "status", "revision", "gate_id", "error_code", "event_seq", "created_at")},
-        "skill_execution": for_run(session,run), "view": view, "coaching": model_tasks.latest(session, run), "coaching_available": available,
+        "skill_execution": for_run(session,run), "view": view, "coaching": coaching, "coaching_available": available,
         "coaching_context_limit": context_limit(config.prompt_version) if config else 1,
+        "coaching_activity_remaining":max(0,3-used) if generic_enabled(session) else None,
+        "coaching_unavailable_reason":reason,
         "coaching_remaining_calls": remaining, "queue": queue_status(session, run)}
 
 
@@ -77,9 +95,11 @@ class Tutoring(Learning):
         session.add(run)
         session.flush()
         strategy_id, strategy_policy, _ = effective_policy(session, wid)
+        from app.modules.learning.schedule import apply_confirmed
+        runtime=apply_confirmed(session,plan_id,item,capture(session,wid,actor.account,item))
         self.spaces.accept_input(session, actor, wid, conversation.id, "start:" + run.id, 1,
             {**payload, "run_id": run.id, "operation": "tutor_start", "plan_run_id": plan_id,
-             "strategy_version_id": strategy_id, "reflection_focus": strategy_policy["reflection_focus"],"skill_runtime":capture(session,wid,actor.account,item)})
+             "strategy_version_id": strategy_id, "reflection_focus": strategy_policy["reflection_focus"],"skill_runtime":runtime})
         event(session, run, "run.queued")
         session.add(AuditEvent(actor_id=actor.account.id, action="tutor.start", target_id=run.id))
         session.flush()
@@ -114,7 +134,8 @@ class Tutoring(Learning):
                 .order_by(ModelOperation.created_at.desc(),ModelOperation.id.desc()).limit(1))
             policy = session.get(ModelPolicy, 1)
             if suggestion and suggestion.configuration_id == policy.active_id and suggestion.result and suggestion.policy_epoch==policy.stop_epoch:
-                result=suggestion.result
+                from app.modules.learning.output_gate import render_result
+                result=render_result(suggestion.result) or {}
                 completed={r['task_id'] for r in run.view['records']}
                 target=result.get('next_task_id')
                 from app.modules.learning.goal_context import snapshot as goal_snapshot

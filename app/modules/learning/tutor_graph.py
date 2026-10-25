@@ -114,6 +114,9 @@ def next_task(data,decision=None):
         requested=(decision or {}).get('next_task_id')
         chosen=next((i for i in remaining if tasks[i]['id']==requested),None)
         data['index']=chosen if chosen is not None else remaining[0] if remaining else next((i for i,t in enumerate(tasks) if t['stage']=='checkpoint'),len(tasks))
+        if decision and decision.get('execution'):
+            decision['execution']['next_task_id']=tasks[data['index']]['id'] if data['index']<len(tasks) else None
+            if decision.get('action')=='practice':decision['execution']['status']='practice_selected' if remaining else 'no_practice_remaining'
         if chosen is not None:data['last_teaching_decision']=decision
     else:data['index'] += 1
     data["phase"] = tasks[data["index"]]["stage"] if data["index"] < len(tasks) else "summary"

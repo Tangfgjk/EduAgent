@@ -12,7 +12,7 @@ import struct
 import wave
 from copy import deepcopy
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 import httpx
 from sqlalchemy import select
 from app.infrastructure.db.models import (MediaBudget,MediaOperation,MediaAsset,ResourceArtifact,CourseBuild,
@@ -27,6 +27,19 @@ MODELS={'image':'qwen-image-2.0-2026-03-03','audio':'qwen3-tts-flash','video':'w
 PRICE={'image':200_000,'audio':80,'video':700_000}  # microyuan/image, microyuan/character, microyuan/5s
 ROOT=Path('.local/media-assets')
 BASE='https://dashscope.aliyuncs.com'
+
+
+def safe_identifier(value):
+    return value if isinstance(value,str) and not value.lower().startswith(('sk-','tvly-','bearer')) and re.fullmatch(r'[A-Za-z0-9_.:-]{1,100}',value) else None
+
+
+class MediaFailure(ValueError):
+    """Bounded diagnostic metadata only; never retain response prose or URLs."""
+    def __init__(self, code, *, status=None, request_id=None, provider_code=None, uncertain=True):
+        super().__init__(code)
+        self.receipt={'error_code':code,'http_status':status,'billing_unknown':True,'submission_outcome_unknown':uncertain}
+        for key,value in (('request_id',request_id),('provider_code',provider_code)):
+            if safe_identifier(value):self.receipt[key]=safe_identifier(value)
 
 
 def api_host():
@@ -105,7 +118,8 @@ def authorize(session,actor,row,revision,enabled,ack):
 def reserve(session,actor,row,kind,index):
     from app.modules.workspaces.service import Workspaces
     Workspaces().owned(session,actor,row.workspace_id,active=True)
-    if kind not in CAPS or type(index) is not int or not 0<=index<CAPS[kind]:fail('media_slot_invalid','首轮媒体槽位不支持')
+    caps=row.body.get('caps',CAPS)
+    if kind not in CAPS or type(index) is not int or not 0<=index<min(CAPS[kind],caps.get(kind,0)):fail('media_slot_invalid','此批次未授权该媒体槽位')
     slot=kind+':'+str(index)
     existing=session.scalar(select(MediaOperation).where(MediaOperation.budget_id==row.id,MediaOperation.slot==slot))
     if existing:return public(session,row)
@@ -136,6 +150,10 @@ def reserve(session,actor,row,kind,index):
 def download_url(value):
     if not isinstance(value,str):raise ValueError('invalid_media_url')
     url=urlsplit(value)
+    # The provider's TTS API can return an HTTP OSS URL. Upgrade only an
+    # otherwise trusted OSS host; never send media or credentials over HTTP.
+    if url.scheme=='http' and url.hostname and re.fullmatch(r'[a-z0-9.-]+\.oss-cn-beijing\.aliyuncs\.com',url.hostname):
+        url=url._replace(scheme='https');value=urlunsplit(url)
     if url.scheme!='https' or url.username or url.password or url.fragment or url.port not in {None,443} or not url.hostname or not url.hostname.endswith('.aliyuncs.com'):
         raise ValueError('untrusted_media_host')
     return value
@@ -204,13 +222,22 @@ class BailianMedia:
     def close(self):self.client.close()
     def json(self,method,path,**kwargs):
         with self.client.stream(method,path,**kwargs) as response:
-            if response.status_code!=200:raise ValueError('media_upstream_rejected')
             raw=bytearray()
             for chunk in response.iter_bytes():
                 raw.extend(chunk)
                 if len(raw)>1_000_000:raise ValueError('media_response_bounds')
-        value=json.loads(raw)
+            status=response.status_code
+            request_id=response.headers.get('X-Request-Id')
+        try:value=json.loads(raw)
+        except ValueError:
+            raise MediaFailure('provider_response_invalid',status=status,request_id=request_id,uncertain=status>=500 or status==200) from None
+        if status!=200:
+            error=value.get('error',{}) if isinstance(value,dict) else {}
+            payload=value if isinstance(value,dict) else {}
+            raise MediaFailure('provider_rejected',status=status,request_id=payload.get('request_id',request_id),
+                provider_code=payload.get('code') or (error.get('code') if isinstance(error,dict) else None),uncertain=status>=500 or status==408)
         if not isinstance(value,dict) or value.get('code'):raise ValueError('invalid_media_response')
+        value['request_id']=safe_identifier(value.get('request_id'))
         return value
     def submit(self,request):
         kind=request['kind'];model=request['model'];prompt=request['prompt']
@@ -251,12 +278,14 @@ class BailianMedia:
 
 class MediaRunner:
     def __init__(self,db,transport=None):self.db,self.transport=db,transport
-    def step(self):
+    def step(self, operation_id=None):
         with self.db.transaction() as session:
             for stale in session.scalars(select(MediaOperation).where(MediaOperation.status=='submitting',MediaOperation.lease_until<now()).with_for_update(skip_locked=True)):
                 stale.status='unknown';stale.receipt={'error_code':'submit_outcome_unknown','billing_unknown':True}
-            row=session.scalar(select(MediaOperation).where(MediaOperation.status.in_(['pending','running']),MediaOperation.next_poll_at<=now(),
-                (MediaOperation.lease_until.is_(None))|(MediaOperation.lease_until<now())).order_by(MediaOperation.created_at,MediaOperation.id).with_for_update(skip_locked=True).limit(1))
+            statement=select(MediaOperation).where(MediaOperation.status.in_(['pending','running']),MediaOperation.next_poll_at<=now(),
+                (MediaOperation.lease_until.is_(None))|(MediaOperation.lease_until<now()))
+            if operation_id:statement=statement.where(MediaOperation.id==operation_id)
+            row=session.scalar(statement.order_by(MediaOperation.created_at,MediaOperation.id).with_for_update(skip_locked=True).limit(1))
             if not row:return False
             budget=session.get(MediaBudget,row.budget_id,with_for_update=True)
             if session.scalar(select(MediaOperation.id).where(MediaOperation.budget_id==row.budget_id,MediaOperation.id!=row.id,
@@ -271,23 +300,28 @@ class MediaRunner:
             row.next_poll_at=now()+15;row.polls+=1
             if not remote:row.status='submitting'
         from app.llm.catalog import credential
-        key=credential('qwen');result=None;asset=None;error=None
+        key=credential('qwen');result=None;asset=None;error=None;stage='poll' if remote else 'submit'
         try:
             if not key:raise ValueError('media_key_missing')
             port=BailianMedia(key,self.transport)
             try:
                 result=port.poll(remote) if remote else port.submit(request)
-                if result and result.get('url'):asset=port.download(result['url'],request['kind'])
+                if result and result.get('url'):
+                    stage='download';asset=port.download(result['url'],request['kind'])
             finally:port.close()
             if asset:
-                metadata=inspect_asset(asset[0],request['kind'],asset[1])
-        except (ValueError,KeyError,IndexError,TypeError,ZeroDivisionError,struct.error,wave.Error,EOFError,httpx.HTTPError):error='media_outcome_unknown'
+                stage='asset_validation';metadata=inspect_asset(asset[0],request['kind'],asset[1])
+        except MediaFailure as failure:error={**failure.receipt,'stage':stage}
+        except (ValueError,KeyError,IndexError,TypeError,ZeroDivisionError,struct.error,wave.Error,EOFError,httpx.HTTPError):
+            error={'error_code':'media_'+stage+'_failed','stage':stage,'billing_unknown':True}
         with self.db.transaction() as session:
             row=session.get(MediaOperation,identifier,with_for_update=True);budget=session.get(MediaBudget,row.budget_id,with_for_update=True)
             if row.lease_token!=token or row.lease_until<=now():return True
             row.lease_token=None;row.lease_until=None
-            if error:row.status='unknown';row.receipt={'error_code':error,'billing_unknown':True};return True
             if result and result.get('remote_id'):row.remote_id=result['remote_id']
+            if error:
+                row.status='failed' if error.get('http_status') in {400,401,403,404,422,429} or stage in {'download','asset_validation'} else 'unknown'
+                row.receipt={**error,**({'request_id':safe_identifier(result['request_id'])} if result and safe_identifier(result.get('request_id')) else {})};return True
             if not asset:row.status='running';return True
             try:resource,_=sources(session,budget)
             except DomainError:row.status='cancelled';return True
@@ -295,6 +329,6 @@ class MediaRunner:
             raw,mime,suffix=asset;ROOT.mkdir(parents=True,exist_ok=True);file=ROOT/(row.id+suffix)
             file.write_bytes(raw);digest=hashlib.sha256(raw).hexdigest()
             session.add(MediaAsset(id=row.id,body={'file':file.name,'mime':mime,'bytes':len(raw),'model':request['model'],'region':'cn-beijing',**metadata},sha256=digest))
-            row.status='completed';row.receipt={'request_id':(result or {}).get('request_id'),'sha256':digest,'bytes':len(raw),
+            row.status='completed';row.receipt={'request_id':safe_identifier((result or {}).get('request_id')),'sha256':digest,'bytes':len(raw),
                 'billing_unknown':True,'metadata':metadata,'notice':'金额预占未释放，实际账单尚需对账；语音每段实测不超过30秒。'}
         return True

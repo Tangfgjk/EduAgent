@@ -40,3 +40,12 @@
 @media(max-width:600px){.observation-bar {grid-template-columns:1fr auto}.observation-track {grid-column:1/-1;grid-row:2}.competency-bars button {grid-template-columns:90px 1fr}.competency-bars button>span:last-child {grid-column:1/-1;font-size:12px}.support-timeline {padding-left:12px}}
 
 .support-timeline,.insight-references {overflow-wrap:anywhere}
+
+.growth-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.growth-tabs{position:sticky;top:0;z-index:3;background:var(--bg);padding-top:12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.growth-tabs>button{padding:12px 6px;text-align:center;white-space:normal}
+.growth-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.growth-stats strong{display:block;font:32px Georgia,serif;margin-top:8px;color:var(--green)}
+.growth-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;max-width:680px;margin-top:14px;text-align:center}
+.growth-calendar .button{min-width:0;padding:8px 3px}.growth-calendar button[aria-pressed=true]{outline:2px solid var(--green)}
+@media(max-width:700px){.growth-toolbar{grid-template-columns:1fr}.growth-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.growth-tabs>button{font-size:13px}.growth-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

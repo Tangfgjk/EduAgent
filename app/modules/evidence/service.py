@@ -32,7 +32,7 @@ def category(fact):
 class Evidence:
     spaces = Workspaces()
 
-    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0, include_archived=True,assistance='all'):
+    def report(self, session, actor, wid=None, days=30, source="all", record_kind="all", offset=0, include_archived=True,assistance='all',on_day=None):
         self.spaces._student(actor)
         if wid:
             workspaces = [self.spaces.owned(session, actor, wid)]
@@ -95,6 +95,11 @@ class Evidence:
                                item.note if kind == "human_judgment" else item.text)
         # 来源记录筛选/分页只影响下方列表，不改变上方整个范围的统计。
         filtered = [record for record in records if record_kind == "all" or record["record_kind"] == record_kind]
+        if on_day:
+            from app.modules.errors import DomainError
+            try:datetime.strptime(on_day,'%Y-%m-%d')
+            except ValueError:raise DomainError(422,'invalid_day','日期格式无效') from None
+            filtered=[record for record in filtered if day(record['created_at'])==on_day]
         filtered.sort(key=lambda record: (record["created_at"], record["record_id"]), reverse=True)
         return {"scope": "workspace" if wid else "global", "workspace_count": len(workspaces), "days": days,
             "starts_at": start, "as_of": timestamp,'assistance':assistance,

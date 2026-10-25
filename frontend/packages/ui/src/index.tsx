@@ -113,14 +113,37 @@ export function Shell({ role, navigation, sidebar, context, children, search = '
   const { account, logout, loggingOut } = useAuth();
   const location = useLocation();
   const [menu, setMenu] = useState(false), [error, setError] = useState<unknown>(null);
+  const menuButton=useRef<HTMLButtonElement>(null);
+  function closeMenu(){setMenu(false);menuButton.current?.focus();}
+  useEffect(()=>{
+    if(!menu)return;
+    const rail=document.querySelector<HTMLElement>('.rail');
+    rail?.querySelector<HTMLElement>('nav a')?.focus();
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    const keydown=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){event.preventDefault();closeMenu();}
+      if(event.key==='Tab'){
+        const controls=rail?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled),select:not(:disabled),input:not(:disabled)');
+        if(!controls?.length)return;
+        const first=controls[0],last=controls[controls.length-1];
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+      }
+    };
+    window.addEventListener('keydown',keydown);
+    return()=>{window.removeEventListener('keydown',keydown);document.body.style.overflow=previousOverflow;};
+  },[menu]);
   useLayoutEffect(() => { setMenu(false); document.getElementById('main-content')?.focus(); }, [location.pathname]);
-  const current = navigation.find(item => location.pathname === '/' + item.path) ?? navigation[0];
+  const routeTitles:Record<string,string>={courses:'课程与安排',plan:'学习安排',units:'数学单元',settings:'我的设置'};
+  const current = navigation.find(item => location.pathname === '/' + item.path);
+  const title=current?.label ?? routeTitles[location.pathname.slice(1)] ?? '页面';
   return <div className={`app-shell ${menu ? 'menu-open' : ''}`}><a className="skip-link" href="#main-content">跳到主要内容</a>
-    {menu && <button className="rail-overlay" aria-label="关闭导航" onClick={() => setMenu(false)}/>}
+    {menu && <button className="rail-overlay" aria-label="关闭导航" onClick={closeMenu}/>}
     <aside className="rail" aria-label={role === 'admin' ? '管理导航' : '学习导航'}><Brand admin={role === 'admin'}/><div className="role-mark">{role === 'admin' ? '管理工作台' : '学生学习工作台'}</div>{sidebar}
       <nav>{navigation.map((item, index) => <div key={item.path}>{item.section && <p className="nav-label">{item.section}</p>}<NavLink to={{ pathname: '/' + item.path, search }} end className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}><item.icon size={18}/><span>{item.label}</span>{index === 0 && <ChevronRight className="nav-arrow" size={14}/>}</NavLink></div>)}</nav>
-      <div className="rail-footer"><div className="person"><span className="avatar">{account.display_name.slice(0, 1)}</span><div><strong>{account.display_name}</strong><small>{role === 'admin' ? '管理员' : '学生账号'}</small></div></div><button className="button text" disabled={loggingOut} onClick={() => { void logout().catch(setError); }}><LogOut size={15}/>{loggingOut ? '正在退出…' : '退出登录'}</button><ErrorNotice error={error}/></div>
-    </aside><div className="main-column"><header className="topbar"><div className="inline"><button className="icon-button mobile-menu" aria-label="打开导航" aria-expanded={menu} onClick={() => setMenu(true)}><Menu size={21}/></button><span className="breadcrumb">{role === 'admin' ? '教学支持' : '学习空间'}<ChevronRight size={13}/><strong>{current?.label}</strong></span></div><span className="top-caption"><span className="live-dot"/> {role === 'admin' ? '以证据支持每一次调整' : '先想一想，再向前一步'}</span></header>
+      <div className="rail-footer">{role==='student'&&<NavLink className="nav-link" to={{pathname:'/settings',search}}>我的设置</NavLink>}<div className="person"><span className="avatar">{account.display_name.slice(0, 1)}</span><div><strong>{account.display_name}</strong><small>{role === 'admin' ? '管理员' : '学生账号'}</small></div></div><button className="button text" disabled={loggingOut} onClick={() => { void logout().catch(setError); }}><LogOut size={15}/>{loggingOut ? '正在退出…' : '退出登录'}</button><ErrorNotice error={error}/></div>
+    </aside><div className="main-column"><header className="topbar"><div className="inline"><button ref={menuButton} className="icon-button mobile-menu" aria-label="打开导航" aria-expanded={menu} onClick={() => setMenu(true)}><Menu size={21}/></button><span className="breadcrumb">{role === 'admin' ? '教学支持' : '学习空间'}<ChevronRight size={13}/><strong>{title}</strong></span></div><span className="top-caption"><span className="live-dot"/> {role === 'admin' ? '以证据支持每一次调整' : '先想一想，再向前一步'}</span></header>
       <main id="main-content" className="content" tabIndex={-1}>{context}{children}</main><footer className="page-footer">桂子问津 <span>·</span> {role === 'admin' ? '审慎支持，持续改进' : '以问为津，学有所思'}</footer>
     </div></div>;
 }

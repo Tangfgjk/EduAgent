@@ -73,6 +73,11 @@ def apply(data, decision):
     """Called only at reflection transition, never mutate a diagnosis/checkpoint."""
     if not decision:
         return
+    action=decision.get('action','clarify')
+    decision['execution']={'action':action,'status':{
+        'clarify':'question_presented','practice':'practice_transition','variant':'pending_validation',
+        'resource':'awaiting_student_open','reflect':'reflection_saved'}.get(action,'not_executed'),
+        'executor':'tutor_reflection_transition','effect_status':'not_validated'}
     task = decision.get('variant')
     snapshot = data.get('content_snapshot')
     if task and snapshot:
@@ -90,4 +95,6 @@ def apply(data, decision):
                     data['skill_runtime']['practice_task_order'].append(extra['id'])
                 decision['next_task_id'] = extra['id']
                 decision['variant_status']='added'
+        decision['execution']['status']='variant_added' if decision['variant_status']=='added' else 'fallback_to_existing_practice'
+        decision['execution']['reason']=decision['variant_status']
     data['last_teaching_decision'] = decision

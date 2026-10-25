@@ -40,7 +40,7 @@ for (const kind of ['roundtable', 'teach'] as const) {
     await page.getByLabel('选择互动单元').selectOption('math.g9.probability.activities.dev1');
     await confirmFixtureCourse(page);
     await page.getByRole('button', { name: '开始' + label, exact: true }).click();
-    await expect(page.getByText('P-PRB-02', { exact: true })).toBeVisible();
+    await expect(page.locator('.study-stem[data-task-id="P-PRB-02"]')).toBeVisible();
     await expect(page.getByText('学生原始贡献', { exact: true })).toHaveCount(0);
     await page.getByLabel('我的数值表达', { exact: true }).fill('1/2');
     await page.getByLabel(kind === 'teach' ? '我的讲解' : '我的初步思路', { exact: true }).fill('我先按颜色种类计数，还需要核对是否等可能。');

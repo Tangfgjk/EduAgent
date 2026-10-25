@@ -112,7 +112,8 @@ class Memory:
             raise DomainError(409, "independent_check", "当前空间正在诊断或独立检测，请完成后再复做")
         original = session.get(LearningFact, card.source_fact_ids[0])
         task = original.payload["task_snapshot"]
-        status = verify(payload["answer"], task["answer"])
+        from app.modules.learning.answer_interpretation import interpret
+        status = interpret(payload["answer"]).check(task["answer"])
         conversation = self.spaces.create_conversation(session, actor, wid, "tutor")
         run = AgentRun(workspace_id=wid, conversation_id=conversation.id, creation_key="recall:" + conversation.id,
             creation_hash=signature, version="recall.v1:" + card.content_version[:16], kind="recall", status="completed")

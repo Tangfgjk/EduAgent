@@ -36,7 +36,8 @@ def test_durable_interrupt_revision_confirm_and_sse(env):
     student, wid, path = setup(env)
     assert Worker(env.db).step()
     run = student.get(path).json()
-    assert run["status"] == "awaiting_input" and run["draft"]["source"] == "development_template"
+    assert run["status"] == "awaiting_input" and run["draft"]["source"] == "contextual_schedule"
+    assert run['draft']['schedule']['course']['course_required'] is True
     old = decision(run)
     response = student.post(path + "/resume", headers={"Idempotency-Key": "revision-one"}, json=decision(run, "revise", 25))
     assert response.status_code == 202

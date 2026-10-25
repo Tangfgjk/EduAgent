@@ -43,6 +43,7 @@ def wav(seconds=1):
 
 
 def test_closed_budget_no_calls_then_mock_generation_is_idempotent_and_scoped(env,monkeypatch,tmp_path):
+    monkeypatch.setenv('WENJIN_BAILIAN_API_HOST','https://dashscope.aliyuncs.com')
     monkeypatch.setenv('WENJIN_QWEN_KEY','test-only-media-key');monkeypatch.setattr(media,'ROOT',tmp_path/'assets')
     client,wid,rid,budget=classroom(env);bid=budget['budget_id']
     root=f'/api/v1/student/workspaces/{wid}/media-budgets/{bid}/jobs'

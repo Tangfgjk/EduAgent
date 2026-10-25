@@ -30,4 +30,7 @@ def study_router(admin):
     @router.post('/{sid}/observations',status_code=201)
     def observe(sid:UUID,body:study.ObservationIn,ctx=Depends(admin,scope='function'),key:str=Header(alias='Idempotency-Key',min_length=1,max_length=128)):
         return study.record(ctx.session,ctx.actor,owned(ctx,str(sid)),body,key)
+    @router.post('/{sid}/enrollments',status_code=201)
+    def enroll(sid:UUID,body:study.EnrollmentIn,ctx=Depends(admin,scope='function')):
+        return study.enroll(ctx.session,ctx.actor,owned(ctx,str(sid)),body)
     return router

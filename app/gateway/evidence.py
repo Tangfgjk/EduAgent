@@ -23,12 +23,12 @@ def evidence_router(student):
 
     @router.get("/evidence", response_model=EvidenceOut)
     def global_report(ctx=auth, days: EvidenceDays = EvidenceDays.month, source: Source = "all",
-                      record_kind: Category = "all", offset: int = Query(0, ge=0),include_archived:bool=True,assistance:Assistance='all'):
-        return evidence.report(ctx.session, ctx.actor, days=days, source=source, record_kind=record_kind, offset=offset,include_archived=include_archived,assistance=assistance)
+                      record_kind: Category = "all", offset: int = Query(0, ge=0),include_archived:bool=True,assistance:Assistance='all',on_day:str|None=Query(default=None,pattern=r'^\d{4}-\d{2}-\d{2}$')):
+        return evidence.report(ctx.session, ctx.actor, days=days, source=source, record_kind=record_kind, offset=offset,include_archived=include_archived,assistance=assistance,on_day=on_day)
 
     @router.get("/workspaces/{wid}/evidence", response_model=EvidenceOut)
     def local_report(wid: UUID, ctx=auth, days: EvidenceDays = EvidenceDays.month, source: Source = "all",
-                     record_kind: Category = "all", offset: int = Query(0, ge=0),include_archived:bool=True,assistance:Assistance='all'):
-        return evidence.report(ctx.session, ctx.actor, str(wid), days, source, record_kind, offset,assistance=assistance)
+                     record_kind: Category = "all", offset: int = Query(0, ge=0),include_archived:bool=True,assistance:Assistance='all',on_day:str|None=Query(default=None,pattern=r'^\d{4}-\d{2}-\d{2}$')):
+        return evidence.report(ctx.session, ctx.actor, str(wid), days, source, record_kind, offset,assistance=assistance,on_day=on_day)
 
     return router

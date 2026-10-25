@@ -45,10 +45,12 @@ def freeze_request(bundle, candidate, account, config):
     for index, material in enumerate(bundle['materials'], 1):
         add('material:' + str(index), material['body'][:800], {'kind': 'material', 'material_id': material['material_id'],
             'content_hash': material['content_hash'], 'truncated': len(material['body']) > 800}, 800)
-    facts = [f for f in bundle['evidence']['facts'] if f['source_kind'] == account.source_kind][-6:]
-    allowed_facts = {f['fact_id'] for f in bundle['evidence']['facts'] if f['source_kind'] == account.source_kind}
+    current_version=(bundle.get('learning_goal') or {}).get('content_version')
+    eligible=[f for f in bundle['evidence']['facts'] if f['source_kind']==account.source_kind and (not current_version or f['content_version']==current_version)]
+    facts = eligible[-6:]
+    allowed_facts = {f['fact_id'] for f in eligible}
     for index, fact in enumerate(facts, 1):
-        text = '机器记录状态：' + str(fact['status']) + '。学生原文：' + str(fact['reasoning'] or fact['reflection'] or fact['answer'])[:200]
+        text = ('当前课程记录。' if current_version else '项目历史背景，尚未绑定当前课程。')+'机器记录状态：' + str(fact['status']) + '。学生原文：' + str(fact['reasoning'] or fact['reflection'] or fact['answer'])[:200]
         add('fact:' + str(index), text, {'kind': 'fact', 'fact_id': fact['fact_id']}, 300)
     notes = [n for n in bundle['evidence']['self_reports'] if n['fact_id'] in allowed_facts][-3:]
     for index, note in enumerate(notes, 1):

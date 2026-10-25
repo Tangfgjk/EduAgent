@@ -25,6 +25,7 @@ def govern(goal: str, learner_id: str, finalize=False):
 
 
 class PlanState(TypedDict):
+    plan_context: dict
     run_id: str
     learner_id: str
     goal: str
@@ -38,8 +39,10 @@ class PlanState(TypedDict):
 def propose(state: PlanState):
     govern(state["goal"], state["learner_id"])
     generation = state["generation"] + 1
+    from app.modules.learning.schedule import arrange
+    steps,schedule=arrange(state['goal'],state['daily_minutes'],state.get('plan_context',{}))
     draft = PlanDraft(goal=state["goal"], daily_minutes=state["daily_minutes"], generation=generation,
-        steps=["说说已有的理解，选出一个最想弄懂的问题", "独立尝试一道相关题，记录思路与卡点", "核对依据，用自己的话解释并留下待复习的问题"])
+        steps=steps,source='contextual_schedule',schedule=schedule)
     return {"draft": draft.model_dump(), "generation": generation,
             "gate_id": str(uuid5(NAMESPACE_URL, state["run_id"] + ":" + str(generation)))}
 
@@ -67,5 +70,5 @@ def advance(run_id: str, learner_id: str, payload: dict, image: str | None) -> t
     graph.add_conditional_edges("confirm", lambda state: "done" if state["confirmed"] else "revise",
                                 {"done": END, "revise": "propose"})
     initial = {"run_id": run_id, "learner_id": learner_id, "goal": payload.get("goal", ""),
-               "daily_minutes": payload["daily_minutes"], "generation": 0, "confirmed": False}
+               "daily_minutes": payload["daily_minutes"], "generation": 0, "confirmed": False,'plan_context':payload.get('plan_context',{})}
     return invoke(graph, run_id, initial, payload, image)

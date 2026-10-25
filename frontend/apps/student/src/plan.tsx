@@ -31,7 +31,7 @@ export function PlanPage({ workspace }: { workspace: Workspace }) {
   const current = runs.find(run => run.run_id === selected) ?? runs[0];
   const pending = runs.some(run => run.status === 'queued' || run.status === 'awaiting_input');
   return <><Heading kicker="A PLAN YOU DECIDE" title="学习计划" description="先说清楚想学会什么，再由你决定节奏与计划。"/>
-    <div className="notice"><Clock3 size={18}/><div><strong>流程试运行 · 开发模板</strong><br/>现在可验证目标提交、计划调整、确认与恢复。草案来自固定开发模板，尚未调用真实模型；确认后不会生成题目或素养评分。</div></div>
+    <div className="notice"><Clock3 size={18}/><div><strong>结合当前课程安排任务</strong><br/>根据已确认课程、可用任务、到期复习和本次时长整理安排；你确认后才生效。不另外调用模型，不据此评定学习效果。</div></div>
     {workspace.kind === 'temporary' ? <Empty title="学习计划从正式项目开始">临时探索仍保留独立空间。请在左侧选择或新建一个正式项目，再制定持续学习计划。</Empty> : <>
       {query.isPending ? <Loading text="正在读取这个项目的计划…"/> : query.isError ? <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/> : <div className="grid two section-gap">
         <section className="card"><div className="card-head"><h2>我的学习目标</h2><span className="badge neutral">由你提出</span></div>

@@ -6,6 +6,7 @@ from app.modules.workspaces.service import Workspaces
 
 
 class NextAction(Contract):
+    processing: bool = False
     learning_goal: dict | None = None
     workspace_id: str
     stage: str
@@ -20,9 +21,9 @@ def next_action(session, actor, wid):
     space = Workspaces().owned(session, actor, wid)
     from app.modules.learning.goal_context import handoff
     goal = handoff(session, wid, actor.account)
-    def result(stage, title, reason, path, run_id=None):
+    def result(stage, title, reason, path, run_id=None, processing=False):
         return NextAction(learning_goal=goal, workspace_id=wid, stage=stage, title=title, explanation=reason,
-            destination=path, run_id=run_id, read_only=space.status != 'active')
+            destination=path, run_id=run_id, read_only=space.status != 'active',processing=processing)
     if space.status != 'active':
         return result('archived', '回顾学习记录', '此空间已归档，恢复后可继续学习。', 'evidence')
     pending = session.scalar(select(AgentRun).where(AgentRun.workspace_id == wid,
@@ -30,7 +31,7 @@ def next_action(session, actor, wid):
         .order_by(AgentRun.created_at.desc(), AgentRun.id.desc()).limit(1))
     if pending:
         path = {'tutor': 'study', 'teach': 'teach', 'roundtable': 'roundtable', 'plan': 'plan'}[pending.kind]
-        return result('resume', '继续尚未完成的学习', '已有表达和进度已保存，请接着当前任务继续。', path, pending.id)
+        return result('resume', '继续尚未完成的学习', '已有表达和进度已保存，请接着当前任务继续。', path, pending.id,pending.status=='queued')
     if not session.get(CourseBinding, wid):
         build = session.scalar(select(CourseBuild).where(CourseBuild.workspace_id == wid)
             .order_by(CourseBuild.created_at.desc(), CourseBuild.id.desc()).limit(1))

@@ -15,13 +15,14 @@ test('V15 生成式圆桌三轮、历史恢复与目标入口',async({page})=>{
   const policy=await(await page.request.get('/api/v1/admin/generation-policy',{headers:admin})).json();
   expect((await page.request.post('/api/v1/admin/generation-policy',{headers:admin,data:{expected_revision:policy.revision,courses:true,interaction:true,search:false,private_auto_release:true,acknowledge_development_only:true}})).ok()).toBeTruthy();
   await login(page,'student');
-  await page.getByRole('button',{name:'开启临时会话',exact:false}).click();
+  await page.locator('.workspace-picker').getByRole('button',{name:'临时会话',exact:true}).click();
   await page.getByLabel('空间名称').fill('生成式圆桌'+Date.now());
   await page.getByRole('button',{name:'保存空间',exact:true}).click();
   await page.getByRole('region',{name:'当前空间的下一步'}).getByRole('link',{name:'告诉我你想学什么'}).click();
-  await expect(page.getByRole('region',{name:'共享学习目标与依据'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'课程与安排',exact:true})).toBeVisible();
   await page.getByLabel('我想学什么？').fill('负数乘除和运算顺序');
-  await page.getByRole('checkbox',{name:'启用有理数教学 Agent 设计',exact:false}).uncheck();
+  await page.getByText('具体目标与课程设计选项（可选）',{exact:true}).click();
+  await page.getByRole('checkbox',{name:'使用有理数多概念设计',exact:false}).uncheck();
   await page.getByRole('button',{name:'解析主题并准备诊断'}).click();
   await page.getByLabel('诊断 1 答案').fill('0');await page.getByLabel('诊断 2 答案').fill('0');
   await page.getByRole('button',{name:'保存诊断并查看课程范围'}).click();
@@ -48,7 +49,7 @@ test('V15 生成式圆桌三轮、历史恢复与目标入口',async({page})=>{
   await expect(page.getByText('第 1 轮圆桌',{exact:false})).toBeVisible();
   await expect(page.getByText('第 2 轮圆桌',{exact:false})).toBeVisible();
   await expect(page.locator('nav').getByRole('link',{name:'规划与策略'})).toBeVisible();
-  await expect(page.locator('nav').getByRole('link',{name:'Skill 改进'})).toBeVisible();
+  await expect(page.locator('nav').getByRole('link',{name:'学习方式改进'})).toBeVisible();
 });
 
 test('R14 学生引导、自主课程开放、中文回答与对话恢复',async({page},info)=>{
@@ -59,12 +60,13 @@ test('R14 学生引导、自主课程开放、中文回答与对话恢复',async
   const policy=await(await page.request.get('/api/v1/admin/generation-policy',{headers:admin})).json();
   expect((await page.request.post('/api/v1/admin/generation-policy',{headers:admin,data:{expected_revision:policy.revision,courses:true,interaction:true,search:false,private_auto_release:true,acknowledge_development_only:true}})).ok()).toBeTruthy();
   const student=await login(page,'student');
-  await page.getByRole('button',{name:'开启临时会话',exact:false}).click();
+  await page.locator('.workspace-picker').getByRole('button',{name:'临时会话',exact:true}).click();
   await page.getByLabel('空间名称').fill('R14自主学习'+Date.now());await page.getByRole('button',{name:'保存空间',exact:true}).click();
   const guide=page.getByRole('region',{name:'当前空间的下一步'});
   await expect(guide).toBeVisible();await guide.getByRole('link',{name:'告诉我你想学什么'}).click();
   await page.getByLabel('我想学什么？').fill('负数乘除和运算顺序');
-  await page.getByRole('checkbox',{name:'启用有理数教学 Agent 设计',exact:false}).uncheck();
+  await page.getByText('具体目标与课程设计选项（可选）',{exact:true}).click();
+  await page.getByRole('checkbox',{name:'使用有理数多概念设计',exact:false}).uncheck();
   await page.getByRole('button',{name:'解析主题并准备诊断'}).click();
   await page.getByLabel('诊断 1 答案').fill('0');await page.getByLabel('诊断 2 答案').fill('0');
   await page.getByRole('button',{name:'保存诊断并查看课程范围'}).click();

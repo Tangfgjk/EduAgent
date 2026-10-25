@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from app.infrastructure.db.models import Account, AgentCheckpoint, AgentRun, AnswerReview, LearningFact, LearningInput, OutboxJob, RecallAttempt, Workspace
 from app.modules.learning.tutor_graph import LEGACY_VERSION, advance_tutor, version_for
-from app.modules.learning.content_catalog import PACKS
+from app.modules.learning.content_catalog import PACKS, get_pack
 from app.modules.memory.facts import publish_judgment, publish_turn
 from app.modules.memory.projections import rebuild
 
@@ -39,6 +39,10 @@ def backfill(db, apply=False):
                     counts["incomplete"] += 1
                     continue
                 turn = saved.checkpoint["channel_values"]["turn"]
+                frozen_data=saved.checkpoint['channel_values'].get('data',{})
+                # Replay the original support mode, not today's default. The
+                # static pack version has already been checked above.
+                replay_item=get_pack(run.view['unit_id']) if frozen_data.get('adaptive_support') else None
             entries = list(session.scalars(select(LearningInput).join(OutboxJob, OutboxJob.input_id == LearningInput.id).where(
                 LearningInput.conversation_id == run.conversation_id, OutboxJob.status == "completed")))
             starts = [entry for entry in entries if entry.payload.get("operation") == "tutor_start"]
@@ -47,11 +51,11 @@ def backfill(db, apply=False):
             if len(starts) != 1 or len(inputs) < turn:
                 counts["incomplete"] += 1
                 continue
-            state, image, _ = advance_tutor(rid, account.learner_id, starts[0].payload, None)
+            state, image, _ = advance_tutor(rid, account.learner_id, starts[0].payload, None,item=replay_item)
             turns = []
             for entry in inputs[:turn]:
                 before = state["view"]
-                state, image, _ = advance_tutor(rid, account.learner_id, entry.payload, image)
+                state, image, _ = advance_tutor(rid, account.learner_id, entry.payload, image,item=replay_item)
                 if entry.payload["action"] in {"answer", "hint", "reflect", "skip"}:
                     turns.append((entry, before, state))
             # 对不上已保存视图就整体跳过，不能猜测历史结果。

@@ -98,6 +98,7 @@ class RoundtableVoiceOut(Contract):
 
 
 class CoachingResultOut(Contract):
+    verified_quotes: list[str] = Field(default_factory=list)
     teaching_decision: dict | None = None
     variant: dict | None = None
     answer_understanding: dict | None = None
@@ -163,6 +164,8 @@ class TutorRunOut(Contract):
     coaching_available: bool = False
     coaching_context_limit: Literal[1, 4] = 1
     coaching_remaining_calls: int | None = Field(default=None, ge=0)
+    coaching_activity_remaining: int | None = Field(default=None,ge=0)
+    coaching_unavailable_reason: str | None = None
     queue: TutorQueueOut | None = None
 
 

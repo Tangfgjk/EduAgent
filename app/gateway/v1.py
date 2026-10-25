@@ -169,7 +169,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     def error_response(request, status, code, message):
         return JSONResponse(status_code=status, content={"error": {
             "code": code, "message": message, "request_id": request.state.request_id,
-            "retryable": status in {429, 503}}})
+            "retryable": status in {429, 503} and code not in {"activity_budget_exhausted", "model_budget_exhausted", "media_budget_exhausted"}}})
 
     @app.exception_handler(DomainError)
     async def domain_error(request, error):

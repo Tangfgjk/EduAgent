@@ -13,7 +13,7 @@ export function GoalPanel({ workspace }: { workspace: Workspace }) {
   const goal = query.data?.learning_goal;
   const search = '?workspace=' + workspace.workspace_id;
   const decisions = record(goal) && Array.isArray(goal.decisions) ? goal.decisions.filter(record) : [];
-  return <section className="soft-box section-gap" aria-label="共享学习目标与依据">
+  return <details className="soft-box section-gap" aria-label="共享学习目标与依据"><summary>当前目标与调整依据</summary>
     <strong>围绕同一个学习目标</strong>
     <p>{record(goal) && goal.topic ? String(goal.topic) : '确认课程后，互动、规划、证据和改进会共同使用当前课程目标。'}</p>
     <ErrorNotice error={query.error}/>
@@ -23,5 +23,5 @@ export function GoalPanel({ workspace }: { workspace: Workspace }) {
     <div className="actions section-gap">{[['courses','课程与资源'],['planner','规划与策略'],['evidence','成长证据'],['skill-evolution','Skill 改进']].map(([path,label]) =>
       <Link key={path} className="button small" to={'/'+path+search}>{label}</Link>)}</div>
     <p className="card-note">共用当前项目目标及有界证据；生成资源仍受独立开关与预算控制，不自动开启收费媒体。</p>
-  </section>;
+  </details>;
 }

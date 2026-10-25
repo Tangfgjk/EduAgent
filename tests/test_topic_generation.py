@@ -52,7 +52,8 @@ def test_topic_family_and_independent_math(topic,family):
     for blueprint in sample_blueprints(family,'test'):
         assert str(compile_problem(family,blueprint.parameters)[1])==blueprint.answer
     assert resolve('导数和有理数')['status']=='out_of_scope'
-    assert resolve('函数和概率')['status']=='needs_clarification'
+    assert resolve('函数和概率')['status']=='unsupported'
+    assert resolve('一次函数和概率')['status']=='needs_clarification'
 
 
 def test_generation_diagnostic_review_activation_private_content_and_resources(env):

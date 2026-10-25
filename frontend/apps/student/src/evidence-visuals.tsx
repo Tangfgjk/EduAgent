@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import type { EvidenceReport, LearningInsights, ObservationRef } from '@wenjin/api-client';
 
-export function EvidenceCalendar({ report }: { report: EvidenceReport }) {
-  const [selected,setSelected]=useState('');
+export function EvidenceCalendar({ report, selectedDay='', onSelectDay }: { report: EvidenceReport; selectedDay?: string; onSelectDay: (day:string)=>void }) {
   const days=Array.from({length:report.days},(_,i)=>new Date((report.starts_at+i*86400+8*3600)*1000).toISOString().slice(0,10));
+  const months=[...new Set(days.map(d=>d.slice(0,7)))];
+  const [chosenMonth,setMonth]=useState(selectedDay.slice(0,7)||months.at(-1)||'');
+  const month=months.includes(chosenMonth)?chosenMonth:months.at(-1)!;
+  const visible=days.filter(d=>d.startsWith(month));
+  const pad=visible.length?(new Date(visible[0]+'T00:00:00+08:00').getUTCDay()+1)%7:0;
   const max=Math.max(1,...report.daily.map(d=>d.facts));
-  return <section className="card section-gap"><h2>学习日历 · 活动分布</h2><p className="card-note">北京时间；数字为事实条数，各来源分开。颜色深浅表示记录量，不代表掌握程度。</p>{!days.length?<p>当前范围没有活动记录，不能据此判断能力。</p>:report.groups.map(group=><div key={group.source_kind}><h3>{group.source_kind==='synthetic'?'模拟开发':group.source_kind==='adult_test'?'成人测试':'真实学生'}</h3><div style={{display:'flex',flexWrap:'wrap',gap:6}}>{days.map(day=>{const row=report.daily.find(d=>d.day===day&&d.source_kind===group.source_kind);return <button key={day} className="button small" style={{background:`rgba(47,112,87,${.06+.45*(row?.facts??0)/max})`,minWidth:90}} onClick={()=>setSelected(day)} aria-label={`${day}，${row?.facts??0}条事实`}><span>{day.slice(5)}<br/>{row?.facts??0} 条</span></button>;})}</div></div>)}
-    {selected&&<div className="soft-box section-gap"><strong>{selected} · 当前分页中的原始记录</strong><ul>{report.records.filter(r=>new Date((r.created_at+8*3600)*1000).toISOString().slice(0,10)===selected).map(r=><li key={r.record_id}>{r.workspace_title} · {r.task_id} · {r.excerpt}</li>)}</ul><p className="card-note">日历统计覆盖完整范围；这里仅展示当前来源列表页，其他原文可继续在下方分页核对。</p></div>}
+  return <section className="card section-gap"><div className="card-head"><h2>学习日历 · 活动分布</h2><label>月份<select aria-label="日历月份" value={month} onChange={e=>setMonth(e.target.value)}>{months.map(m=><option key={m}>{m}</option>)}</select></label></div><p className="card-note">北京时间；数字为事实条数，各来源分开。选择日期查看该日全部记录，可在下方分页。</p>{report.groups.map(group=><div key={group.source_kind}><h3>{group.source_kind==='synthetic'?'模拟开发':group.source_kind==='adult_test'?'成人测试':'真实学生'}</h3><div className="growth-calendar">{['日','一','二','三','四','五','六'].map(d=><small key={d}>{d}</small>)}{Array.from({length:pad},(_,i)=><span key={'pad'+i}/>)}{visible.map(day=>{const row=report.daily.find(d=>d.day===day&&d.source_kind===group.source_kind);return <button key={day} className="button small" style={{background:`rgba(47,112,87,${.06+.45*(row?.facts??0)/max})`}} onClick={()=>onSelectDay(day)} aria-pressed={selectedDay===day} aria-label={`${day}，${row?.facts??0}条事实`}><span>{Number(day.slice(-2))}<br/>{row?.facts??0} 条</span></button>;})}</div></div>)}
+    {!report.groups.length&&<p>当前范围没有活动记录，可以先做一次学习尝试。</p>}
   </section>;
 }
 

@@ -45,7 +45,7 @@ def accept(session, op):
         trial = SkillTrial(id=run.id, workspace_id=run.workspace_id, baseline_id=parent.id, candidate_id=version.id,
             body={'effect_status':'not_validated','signature':signature(),'expires_at':now()+7*86400,
                 'source_kind':actor.account.source_kind,'observations':0,'independent_passed':0,'independent_submissions':0,
-                'stop_rules':['evaluation_signature_changed','account_or_project_unavailable','seven_day_expiry','explicit_revert'],
+                'stop_rules':['evaluation_signature_changed','account_or_project_unavailable','seven_day_expiry','explicit_revert','three_fresh_independent_failures'],
                 'notice':'过程观察与自动技术回滚已启用，不构成教学效果证据。'})
         session.add(trial)
         session.add(StrategyActivation(workspace_id=run.workspace_id, from_version=parent.id, to_version=version.id,
@@ -81,10 +81,15 @@ def monitor(session, wid):
             revert(session,trial,reason);continue
         facts=list(session.scalars(select(LearningFact).where(LearningFact.workspace_id==wid,
             LearningFact.source_kind==trial.body['source_kind'],LearningFact.payload['strategy_version_id'].as_string()==trial.candidate_id)))
-        independent=[f for f in facts if f.kind=='answer' and f.payload.get('stage')=='checkpoint']
+        independent=sorted([f for f in facts if f.kind=='answer' and f.payload.get('stage')=='checkpoint'
+            and f.payload.get('assessment_exposure')=='fresh' and f.payload.get('hints_used',0)==0],key=lambda f:(f.created_at,f.id))
         trial.body={**trial.body,'observations':len(facts),'independent_submissions':len(independent),
             'independent_passed':sum(f.payload.get('status')=='passed' for f in independent),
             'effect_status':'not_validated'}
+        # An explicitly recorded conservative safety stop, not a causal efficacy
+        # conclusion. Never retroactively change stopping rules for old trials.
+        if 'three_fresh_independent_failures' in trial.body.get('stop_rules',[]) and len(independent)>=3 and all(f.payload.get('status')=='failed' for f in independent[-3:]):
+            revert(session,trial,'three_fresh_independent_failures')
 
 
 def withdraw(session, actor, wid, rid):

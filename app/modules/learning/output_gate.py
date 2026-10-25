@@ -24,6 +24,13 @@ def render_result(result):
     """Idempotent, also used at history read boundaries; preserves student quotes."""
     if not result:
         return result
+    from app.modules.generation.grounded_response import check_text
+    quoted='\n'.join([result.get('quote',''),*result.get('verified_quotes',[])])
+    try:
+        if result.get('teaching_decision'):
+            check_text(result['teaching_decision']['reason'],quoted,require_question=False)
+        if result.get('decision_reason'):check_text(result['decision_reason'],quoted,require_question=False)
+    except (ValueError,TypeError,KeyError):return None
     if result.get('rendering_mode')=='grounded-dialogue.v1':
         from app.modules.generation.grounded_response import render
         return render(result)

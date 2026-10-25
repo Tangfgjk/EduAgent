@@ -414,6 +414,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/effect-studies/{sid}/enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enroll */
+        post: operations["enroll_api_v1_admin_effect_studies__sid__enrollments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/media-budgets": {
         parameters: {
             query?: never;
@@ -2643,6 +2660,10 @@ export interface components {
             coaching_context_limit: 1 | 4;
             /** Coaching Remaining Calls */
             coaching_remaining_calls?: number | null;
+            /** Coaching Activity Remaining */
+            coaching_activity_remaining?: number | null;
+            /** Coaching Unavailable Reason */
+            coaching_unavailable_reason?: string | null;
             queue?: components["schemas"]["TutorQueueOut"] | null;
             /**
              * Kind
@@ -3001,6 +3022,8 @@ export interface components {
         };
         /** CoachingResultOut */
         CoachingResultOut: {
+            /** Verified Quotes */
+            verified_quotes?: string[];
             /** Teaching Decision */
             teaching_decision?: {
                 [key: string]: unknown;
@@ -3230,6 +3253,15 @@ export interface components {
             unverifiable: number;
             /** Hinted Passed */
             hinted_passed: number;
+        };
+        /** EnrollmentIn */
+        EnrollmentIn: {
+            /** Workspace Id */
+            workspace_id: string;
+            /** Baseline Id */
+            baseline_id: string;
+            /** Candidate Id */
+            candidate_id: string;
         };
         /** ErasureIn */
         ErasureIn: {
@@ -4295,6 +4327,11 @@ export interface components {
         };
         /** NextAction */
         NextAction: {
+            /**
+             * Processing
+             * @default false
+             */
+            processing: boolean;
             /** Learning Goal */
             learning_goal?: {
                 [key: string]: unknown;
@@ -4480,9 +4517,13 @@ export interface components {
             /**
              * Source
              * @default development_template
-             * @constant
+             * @enum {string}
              */
-            source: "development_template";
+            source: "development_template" | "contextual_schedule";
+            /** Schedule */
+            schedule?: {
+                [key: string]: unknown;
+            };
         };
         /** PlanIn */
         PlanIn: {
@@ -5393,6 +5434,20 @@ export interface components {
              * @default 24
              */
             delayed_hours: number;
+            /**
+             * Mode
+             * @default rehearsal
+             * @enum {string}
+             */
+            mode: "rehearsal" | "exposure_checked";
+            /** Policy Hashes */
+            policy_hashes?: {
+                [key: string]: string;
+            };
+            /** Item Versions */
+            item_versions?: {
+                [key: string]: string;
+            };
         };
         /** SupportEvent */
         SupportEvent: {
@@ -5623,6 +5678,10 @@ export interface components {
             coaching_context_limit: 1 | 4;
             /** Coaching Remaining Calls */
             coaching_remaining_calls?: number | null;
+            /** Coaching Activity Remaining */
+            coaching_activity_remaining?: number | null;
+            /** Coaching Unavailable Reason */
+            coaching_unavailable_reason?: string | null;
             queue?: components["schemas"]["TutorQueueOut"] | null;
         };
         /** TutorRunsOut */
@@ -8091,6 +8150,86 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ObservationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    enroll_api_v1_admin_effect_studies__sid__enrollments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnrollmentIn"];
             };
         };
         responses: {
@@ -12934,6 +13073,7 @@ export interface operations {
                 offset?: number;
                 include_archived?: boolean;
                 assistance?: "all" | "unassisted_practice" | "assisted" | "independent";
+                on_day?: string | null;
             };
             header?: never;
             path?: never;
@@ -13015,6 +13155,7 @@ export interface operations {
                 offset?: number;
                 include_archived?: boolean;
                 assistance?: "all" | "unassisted_practice" | "assisted" | "independent";
+                on_day?: string | null;
             };
             header?: never;
             path: {

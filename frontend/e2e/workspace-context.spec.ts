@@ -65,6 +65,9 @@ test('空间按实际陪学匹配互动：名称不作推断、缺包明确、�
     await expect(page.getByRole('button', { name: route === 'teach' ? '开始我教 AI' : '开始圆桌讨论', exact: true })).toBeDisabled();
   }
   const probability = await create('有理数标题但实际学概率', 'math.g9.probability.dev1');
+  await page.goto(`/student/study?workspace=${probability}`);
+  await page.getByRole('button',{name:'结束这次陪学',exact:true}).click();
+  await expect(page.getByText('已取消',{exact:true})).toBeVisible();
   await page.goto(`/student/roundtable?workspace=${probability}`);
   await expect(page.getByText('当前学习单元：等可能事件概率 · 开发单元', { exact: true })).toBeVisible();
   await expect(page.getByLabel('选择互动单元')).not.toHaveValue('');

@@ -1,3 +1,4 @@
+import { SessionGuard } from './session-guard';
 import { InteractiveClassroomPage } from './interactive-classroom';
 import {PrivacyControls} from '@wenjin/ui';
 import { EvolutionWorkbench } from '@wenjin/ui';
@@ -8,7 +9,7 @@ import { GenerationPage } from './generation';
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
-import { Archive, ArrowRight, ChartNoAxesCombined, ChevronRight, Compass, FolderOpen, GraduationCap, History, MessageCircle, MessageCirclePlus, MessagesSquare, Pencil, Plus, Settings, Undo2 } from 'lucide-react';
+import { Archive, ArrowRight, ChartNoAxesCombined, ChevronRight, Compass, FolderOpen, GraduationCap, History, MessageCircle, MessageCirclePlus, MessagesSquare, Pencil, Plus, Undo2 } from 'lucide-react';
 import { api, ApiError, type Account, type Workspace } from '@wenjin/api-client';
 import { Empty, ErrorNotice, Heading, Loading, MathGarden, Modal, Shell, Soon, Success, type NavItem } from '@wenjin/ui';
 import { LearningCycle } from '@wenjin/math';
@@ -20,18 +21,19 @@ import { EvidencePage } from './evidence';
 import { PlannerPage } from './planner';
 
 const navigation: NavItem[] = [
-  { path: 'home', label: '学习工作台', icon: Compass },
+  { path: 'home', label: '今日学习', icon: Compass, section: '开始' },
   { path: 'spaces', label: '学习空间', icon: FolderOpen },
-  { path: 'classroom', label: '互动课堂', icon: GraduationCap },
-  { path: 'study', label: '津津陪学', icon: MessageCircle },
+  { path: 'courses', label: '课程与安排', icon: GraduationCap },
+  { path: 'study', label: '津津陪学', icon: MessageCircle, section: '一起学习' },
   { path: 'roundtable', label: '圆桌讨论', icon: MessagesSquare },
   { path: 'teach', label: '我教 AI', icon: GraduationCap },
-  { path: 'review', label: '复习', icon: History },
+  { path: 'classroom', label: '互动课堂', icon: GraduationCap },
+  { path: 'review', label: '错题与复习', icon: History, section: '回顾与调整' },
   { path: 'evidence', label: '成长', icon: ChartNoAxesCombined },
   { path: 'planner', label: '规划与策略', icon: Compass },
-  { path: 'skill-evolution', label: 'Skill 改进', icon: GraduationCap },
-  { path: 'settings', label: '我的', icon: Settings },
+  { path: 'skill-evolution', label: '学习方式改进', icon: GraduationCap },
 ];
+
 type Action = { mode: 'create'; kind: Workspace['kind'] } | { mode: 'rename' | 'archive' | 'restore'; id: string };
 
 export function StudentApp({ account }: { account: Account }) {
@@ -55,10 +57,11 @@ export function StudentApp({ account }: { account: Account }) {
   }
   function enter(workspace: Workspace) { choose(workspace); navigate({ pathname: '/home', search: '?workspace=' + workspace.workspace_id }); }
   const sidebar = <div className="workspace-picker"><label htmlFor="workspace-picker">当前工作空间</label><select id="workspace-picker" value={current?.workspace_id ?? ''} disabled={spaces.isPending || spaces.isError} onChange={event => choose(items.find(item => item.workspace_id === event.target.value))}><option value="" disabled>选择一个项目或临时会话</option>{items.map(item => <option key={item.workspace_id} value={item.workspace_id}>{item.kind === 'temporary' ? '临时 · ' : ''}{item.title}{item.status === 'archived' ? '（已归档）' : ''}</option>)}</select><div className="picker-actions"><button className="button small" onClick={() => setAction({ mode: 'create', kind: 'project' })}><Plus size={13}/>项目</button><button className="button small" onClick={() => setAction({ mode: 'create', kind: 'temporary' })}><MessageCirclePlus size={13}/>临时会话</button></div></div>;
-  const context = current ? <div className={`context-bar ${current.kind === 'temporary' ? 'temporary' : ''}`}><div className="inline"><span className="context-icon">{current.kind === 'project' ? <FolderOpen size={20}/> : <MessageCircle size={20}/>}</span><div><strong>{current.title}</strong><small>{current.kind === 'temporary' ? '临时空间 · 不自动进入正式项目的长期学习画像' : '正式项目 · 陪学、复习与讨论将围绕此项目展开'}</small></div></div><span className={`badge ${current.status === 'archived' ? 'gold' : ''}`}>{current.status === 'archived' ? '已归档 · 只读' : current.kind === 'project' ? '项目空间' : '临时会话'}</span></div> : undefined;
+  const context = current ? <div className={`context-bar compact-context ${current.kind === 'temporary' ? 'temporary' : ''}`}><div className="inline"><span className="context-icon">{current.kind === 'project' ? <FolderOpen size={20}/> : <MessageCircle size={20}/>}</span><div><strong>{current.title}</strong><small>{current.kind === 'temporary' ? '临时空间 · 不自动进入正式项目的长期学习画像' : '项目内课程、活动与证据分别保存'}</small></div></div><span className={`badge ${current.status === 'archived' ? 'gold' : ''}`}>{current.status === 'archived' ? '已归档 · 只读' : current.kind === 'project' ? '项目空间' : '临时会话'}</span></div> : undefined;
   const target = action && action.mode !== 'create' ? items.find(item => item.workspace_id === action.id) : undefined;
   return <Shell role="student" navigation={navigation} sidebar={sidebar} context={<>{context}{current && <CourseBar key={current.workspace_id} workspace={current}/>}</>} search={search}>
     {notice && <Success>{notice}</Success>}
+    {params.get('growth_return')?.startsWith('/evidence?')&&<Link className="button small" to={params.get('growth_return')!}>返回刚才的成长视图</Link>}
     {spaces.isPending ? <Loading text="正在读取你的工作空间…"/> : spaces.isError ? <ErrorNotice error={spaces.error} retry={() => { void spaces.refetch(); }}/> : unavailable ? <Empty title="这个工作空间暂不可访问" action={<button className="button" onClick={() => { choose(); navigate('/spaces'); }}>返回项目列表</button>}>它可能不属于当前账号。请从自己的项目列表重新选择。</Empty> : <Routes>
       <Route path="home" element={<Home account={account} items={items} current={current} search={search} create={kind => setAction({ mode: 'create', kind })} enter={enter}/>}/>
       <Route path="spaces" element={<Spaces items={items} current={current} enter={enter} action={setAction}/>}/>
@@ -68,14 +71,15 @@ export function StudentApp({ account }: { account: Account }) {
       <Route path="settings" element={<SettingsView account={account}/>}/>
       <Route path="skill-evolution" element={current?<EvolutionWorkbench key={current.workspace_id} workspace={current}/>:<Empty title="先选择正式项目">请先选择自己的项目。</Empty>}/>
       <Route path="evidence" element={<EvidencePage key={current?.workspace_id ?? 'global'} workspace={current}/>}/>
-      {['plan', 'study', 'review', 'roundtable', 'teach', 'planner'].map(page => <Route key={page} path={page} element={current ? page === 'plan' ? <PlanPage key={current.workspace_id} workspace={current}/> : page === 'study' ? <StudyPage key={current.workspace_id} workspace={current}/> : page === 'review' ? <ReviewPage key={current.workspace_id} workspace={current}/> : page === 'roundtable' || page === 'teach' ? <ActivityPage key={current.workspace_id + page} workspace={current} kind={page}/> : <PlannerPage key={current.workspace_id} workspace={current}/> : <Empty title="先选择一个学习空间" action={<button className="button primary" onClick={() => setAction({ mode: 'create', kind: 'project' })}><Plus size={16}/>新建学习项目</button>}>正式项目帮助你持续推进目标；临时会话适合一次探索。</Empty>}/>)}
+      {['plan', 'study', 'review', 'roundtable', 'teach', 'planner'].map(page => <Route key={page} path={page} element={current ? <SessionGuard workspace={current} destination={page}>{page === 'plan' ? <PlanPage key={current.workspace_id} workspace={current}/> : page === 'study' ? <StudyPage key={current.workspace_id} workspace={current}/> : page === 'review' ? <ReviewPage key={current.workspace_id} workspace={current}/> : page === 'roundtable' || page === 'teach' ? <ActivityPage key={current.workspace_id + page} workspace={current} kind={page}/> : <PlannerPage key={current.workspace_id} workspace={current}/>}</SessionGuard> : <Empty title="先选择一个学习空间" action={<button className="button primary" onClick={() => setAction({ mode: 'create', kind: 'project' })}><Plus size={16}/>新建学习项目</button>}>正式项目帮助你持续推进目标；临时会话适合一次探索。</Empty>}/>)}
       <Route path="*" element={<Navigate to={{ pathname: '/home', search }} replace/>}/>
     </Routes>}
     {action && (action.mode === 'create' || target) && <WorkspaceDialog key={action.mode + (target?.workspace_id ?? '')} action={action} target={target} onClose={() => setAction(null)} onSaved={workspace => {
       queryClient.setQueryData<Workspace[]>(queryKey, old => { const rest = old?.filter(item => item.workspace_id !== workspace.workspace_id) ?? []; return [workspace, ...rest]; });
       void queryClient.invalidateQueries({ queryKey });
+      void queryClient.invalidateQueries({predicate:q=>['evidence','learning-insights','next-action','growth-due','active-strategy','course','strategies'].includes(String(q.queryKey[0]))});
       if (action.mode === 'create') { choose(workspace); navigate({ pathname: '/home', search: '?workspace=' + workspace.workspace_id }); }
-      setNotice(action.mode === 'create' ? '工作空间已创建，请从工作台的下一步开始。' : action.mode === 'rename' ? '名称已更新。' : action.mode === 'archive' ? '已归档，记录保留，可随时恢复。' : '工作空间已恢复。');
+      setNotice(action.mode === 'create' ? '空间已创建，接下来说明想学的主题，再完成诊断并确认课程。' : action.mode === 'rename' ? '名称已更新。' : action.mode === 'archive' ? '已归档，记录保留，可随时恢复。' : '工作空间已恢复。');
       setAction(null);
     }} onConflict={() => { void queryClient.invalidateQueries({ queryKey }); }}/>}
   </Shell>;
@@ -85,10 +89,10 @@ function Home({ account, items, current, search, create, enter }: { account: Acc
   const active = items.filter(item => item.kind === 'project' && item.status === 'active');
   return <><Heading kicker="A LITTLE THINKING, EVERY DAY" title={`${account.display_name}，今天从哪里开始？`} description="给自己一个清晰的小目标，留下一次认真的尝试。"/>
     {current && <WorkspaceGuide workspace={current}/>}
-    <section className="hero card"><div><span className="kicker">以问为津 · 学有所思</span><h2 className="serif">让问题，成为理解的起点。</h2><p>围绕一个项目积累思考，也可以随时开启一次临时探索。每个空间各有自己的学习上下文。</p><div className="actions"><button className="button primary" onClick={() => create('project')}><Plus size={16}/>新建学习项目</button><button className="button translucent" onClick={() => create('temporary')}>开启临时会话<ArrowRight size={16}/></button></div></div><MathGarden/></section>
+    {!current && <section className="hero card"><div><span className="kicker">以问为津 · 学有所思</span><h2 className="serif">让问题，成为理解的起点。</h2><p>围绕一个项目积累思考，也可以随时开启一次临时探索。每个空间各有自己的学习上下文。</p><div className="actions"><button className="button primary" onClick={() => create('project')}><Plus size={16}/>新建学习项目</button><button className="button translucent" onClick={() => create('temporary')}>开启临时会话<ArrowRight size={16}/></button></div></div><MathGarden/></section>}
     <div className="section-heading"><h2>我的学习空间</h2><Link className="text-link" to={{ pathname: '/spaces', search }}>查看全部<ChevronRight size={15}/></Link></div>
     {active.length ? <div className="grid three">{active.slice(0, 3).map(item => <section className="card project-card" key={item.workspace_id}><div className="card-head"><span className="tile-icon"><FolderOpen size={21}/></span><span className="badge">正式项目</span></div><h3>{item.title}</h3><p>准备好目标与计划后，在这里逐步积累自己的学习过程。</p><button className="button" onClick={() => enter(item)}>进入项目<ArrowRight size={15}/></button></section>)}</div> : <section className="card"><Empty title="第一个项目，从一个想学会的问题开始" action={<button className="button" onClick={() => create('project')}>创建我的第一个项目</button>}>比如「弄懂一元一次方程」或「梳理三角形证明」。项目会保存，刷新后也能继续。</Empty></section>}
-    <div className="grid two section-gap"><section className="card"><div className="card-head"><h2>你的学习路线</h2><span className="badge neutral">先看方向</span></div><LearningCycle/><p className="card-note">明确目标，确认课程与节奏，逐步练习，再用独立检测检验理解。</p></section><section className="card"><div className="card-head"><h2>不止于解出一道题</h2><span className="badge neutral">一起思考</span></div><Link className="feature-link" to={{ pathname: '/roundtable', search }}><MessagesSquare size={19}/><div><strong>圆桌讨论</strong><small>让不同思路相遇，学会追问依据。</small></div><ChevronRight size={17}/></Link><Link className="feature-link" to={{ pathname: '/teach', search }}><GraduationCap size={19}/><div><strong>我教 AI</strong><small>把你理解的方法，讲给虚拟学伴听。</small></div><ChevronRight size={17}/></Link><p className="card-note">{current ? `当前上下文：${current.title}` : '选定项目后，每条学习路线都将有明确归属。'}</p></section></div>
+    <div className="grid two section-gap"><section className="card"><div className="card-head"><h2>你的学习路线</h2><span className="badge neutral">先看方向</span></div><LearningCycle/><p className="card-note">明确目标，确认课程与节奏，逐步练习，再用独立检测检验理解。</p></section><section className="card"><div className="card-head"><h2>不止于解出一道题</h2><span className="badge neutral">一起思考</span></div><Link className="feature-link" to={{pathname:'/study',search}}><MessageCircle size={19}/><div><strong>津津陪学</strong><small>尝试、追问、反思，再独立检查。</small></div><ChevronRight size={17}/></Link><Link className="feature-link" to={{ pathname: '/roundtable', search }}><MessagesSquare size={19}/><div><strong>圆桌讨论</strong><small>让不同思路相遇，学会追问依据。</small></div><ChevronRight size={17}/></Link><Link className="feature-link" to={{ pathname: '/teach', search }}><GraduationCap size={19}/><div><strong>我教 AI</strong><small>把你理解的方法，讲给虚拟学伴听。</small></div><ChevronRight size={17}/></Link><p className="card-note">{current ? `当前上下文：${current.title}` : '选定项目后，每条学习路线都将有明确归属。'}</p></section></div>
   </>;
 }
 
@@ -97,7 +101,7 @@ function Spaces({ items, current, enter, action }: { items: Workspace[]; current
   const shown = items.filter(item => filter === 'archived' ? item.status === 'archived' : item.status === 'active' && item.kind === filter);
   return <><Heading kicker="YOUR OWN WORKSPACES" title="项目与会话" description="长期目标放进项目，零散好奇留给临时探索。" actions={<><button className="button" onClick={() => action({ mode: 'create', kind: 'temporary' })}><MessageCirclePlus size={16}/>新建临时会话</button><button className="button primary" onClick={() => action({ mode: 'create', kind: 'project' })}><Plus size={16}/>新建学习项目</button></>}/>
     <div className="tabs" role="tablist" aria-label="空间分类">{([['project', '学习项目'], ['temporary', '临时会话'], ['archived', '已归档']] as const).map(([key, label]) => <button key={key} role="tab" aria-selected={filter === key} onClick={() => setFilter(key)}>{label}<span>{items.filter(item => key === 'archived' ? item.status === 'archived' : item.kind === key && item.status === 'active').length}</span></button>)}</div>
-    {shown.length ? <div className="grid three" role="tabpanel">{shown.map(item => <section className={`card project-card ${current?.workspace_id === item.workspace_id ? 'selected' : ''}`} key={item.workspace_id}><div className="card-head"><span className="tile-icon">{item.kind === 'project' ? <FolderOpen size={21}/> : <MessageCircle size={21}/>}</span><span className={`badge ${item.status === 'archived' ? 'gold' : ''}`}>{item.status === 'archived' ? '已归档' : item.kind === 'project' ? '正式项目' : '临时探索'}</span></div><h3>{item.title}</h3><p>{item.kind === 'temporary' ? '只在此空间中探索，不自动纳入正式项目的长期画像。' : '计划、陪学、复习与讨论将在这个项目中逐步连起来。'}</p><div className="project-footer"><button className="button small" onClick={() => enter(item)}>{item.status === 'archived' ? '查看空间' : '进入空间'}<ArrowRight size={14}/></button><div className="inline">{item.status === 'active' ? <><button className="icon-button workspace-action" title="重命名" data-tooltip="重命名" aria-label={`重命名 ${item.title}`} onClick={() => action({ mode: 'rename', id: item.workspace_id })}><Pencil size={16}/></button><button className="icon-button workspace-action" title="归档（保留记录，可恢复）" data-tooltip="归档（保留记录，可恢复）" aria-label={`归档 ${item.title}`} onClick={() => action({ mode: 'archive', id: item.workspace_id })}><Archive size={16}/></button></> : <button className="button text" onClick={() => action({ mode: 'restore', id: item.workspace_id })}><Undo2 size={15}/>恢复</button>}</div></div></section>)}</div> : <section className="card"><Empty title={filter === 'archived' ? '还没有归档空间' : filter === 'temporary' ? '给好奇心留一个临时空间' : '还没有学习项目'} action={filter !== 'archived' ? <button className="button" onClick={() => action({ mode: 'create', kind: filter })}><Plus size={15}/>立即创建</button> : undefined}>{filter === 'archived' ? '暂时告一段落的项目可以归档，之后仍可恢复。' : '创建后，空间会保存在当前账号中。学习对话将在陪学开放后接入。'}</Empty></section>}
+    {shown.length ? <div className="grid three" role="tabpanel">{shown.map(item => <section className={`card project-card ${current?.workspace_id === item.workspace_id ? 'selected' : ''}`} key={item.workspace_id}><div className="card-head"><span className="tile-icon">{item.kind === 'project' ? <FolderOpen size={21}/> : <MessageCircle size={21}/>}</span><span className={`badge ${item.status === 'archived' ? 'gold' : ''}`}>{item.status === 'archived' ? '已归档' : item.kind === 'project' ? '正式项目' : '临时探索'}</span></div><h3>{item.title}</h3><p>{item.kind === 'temporary' ? '只在此空间中探索，不自动纳入正式项目的长期画像。' : '计划、陪学、复习与讨论将在这个项目中逐步连起来。'}</p><div className="project-footer"><button className="button small" onClick={() => enter(item)}>{item.status === 'archived' ? '查看空间' : '进入空间'}<ArrowRight size={14}/></button><div className="inline">{item.status === 'active' ? <><button className="icon-button workspace-action" title="重命名" data-tooltip="重命名" aria-label={`重命名 ${item.title}`} onClick={() => action({ mode: 'rename', id: item.workspace_id })}><Pencil size={16}/></button><button className="icon-button workspace-action" title="归档（保留记录，可恢复）" data-tooltip="归档（保留记录，可恢复）" aria-label={`归档 ${item.title}`} onClick={() => action({ mode: 'archive', id: item.workspace_id })}><Archive size={16}/></button></> : <button className="button text" onClick={() => action({ mode: 'restore', id: item.workspace_id })}><Undo2 size={15}/>恢复</button>}</div></div></section>)}</div> : <section className="card"><Empty title={filter === 'archived' ? '还没有归档空间' : filter === 'temporary' ? '给好奇心留一个临时空间' : '还没有学习项目'} action={filter !== 'archived' ? <button className="button" onClick={() => action({ mode: 'create', kind: filter })}><Plus size={15}/>立即创建</button> : undefined}>{filter === 'archived' ? '暂时告一段落的项目可以归档，之后仍可恢复。' : '创建后，空间会保存在当前账号中。创建后先明确主题，再确认课程，随后可选择陪学、圆桌或我教AI。'}</Empty></section>}
     <p className="page-note">归档保留已有记录。临时空间和正式项目分开管理，切换空间不会混用学习上下文。</p>
   </>;
 }

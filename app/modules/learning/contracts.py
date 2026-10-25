@@ -36,7 +36,8 @@ class PlanDraft(Contract):
     daily_minutes: int = Field(ge=5, le=60)
     generation: int = Field(ge=1)
     steps: list[str]
-    source: Literal["development_template"] = "development_template"
+    source: Literal["development_template", "contextual_schedule"] = "development_template"
+    schedule: dict = Field(default_factory=dict)
 
 
 class RunOut(Contract):

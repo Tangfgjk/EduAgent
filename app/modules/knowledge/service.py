@@ -35,11 +35,13 @@ def resolve(topic):
     if any(word in topic for word in ('数轴','相反数','绝对值','有理数大小')) and 'MATH.G7.RATIONAL' not in matches:
         matches.append('MATH.G7.RATIONAL')
     if ('函数' in topic and 'MATH.G8.LINEAR' not in matches) or any(word in topic for word in ('二次函数', '几何证明', '二元方程', '三角函数', '中位数', '众数')):
-        return {'status':'needs_clarification','nodes':matches,'message':'该主题尚需知识点与核验范围确认，不能直接用另一种题型替代。'}
+        return {'status':'unsupported','nodes':matches,'message':'该主题目前尚未支持完整课程。可先选择有理数、一次方程、一次函数求值、勾股计算、概率或平均数。'}
     if len(matches)>1 and any(word in topic for word in ('和','与','、','以及')):
         return {'status':'needs_clarification','nodes':matches,'message':'识别到多个学习单元，请先确认本次优先学习哪一个。'}
     # Prerequisite mentions must not turn one focused topic into a false ambiguity.
     specific = [key for key in matches if not any(key in NODES[other]['prerequisites'] for other in matches if other != key)]
+    if not specific:
+        return {'status':'unsupported','nodes':[],'message':'该主题目前尚未支持；不是你描述不清。请先从已支持单元选择。','supported_topics':[n['title'] for n in NODES.values()]}
     if len(specific) != 1:
         return {'status': 'needs_clarification', 'nodes': matches, 'message': '请聚焦一个单元，并明确希望练习计算、说明依据还是证明；未知知识点不会自动冒充已支持。'}
     key = specific[0]
