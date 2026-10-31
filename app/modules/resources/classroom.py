@@ -77,6 +77,8 @@ def project(document,assets=None):
                 'rotation':number(e.get('rotate'),0,-360,360),'color':color(e.get('defaultColor'))}
             if kind=='text':
                 text,font=plain(e.get('content',''));item.update(text=text,font_size=font)
+                from app.modules.resources.rich_text import runs
+                item['runs']=runs(e.get('content',''))
             elif kind=='latex':item.update(text=str(e.get('latex',''))[:2000],font_size=number(e.get('fontSize'),24,10,72))
             elif kind=='shape':
                 item['fill']=color(e.get('fill'),'#e9f1ec')
@@ -105,6 +107,8 @@ def project(document,assets=None):
         output.append({'id':str(scene.get('id',i))[:100],'title':plain(scene.get('title',''))[0][:160],
             'width':width,'height':width*ratio,'background':color((canvas.get('background') or {}).get('color') if isinstance(canvas.get('background'),dict) else '', '#ffffff'),
             'elements':elements,'actions':actions})
+    from app.modules.resources.rich_text import layout_issues
+    for s in output:s['layout_issues']=layout_issues(s)
     return {'schema_version':VERSION,'title':plain(document.get('stage',{}).get('name','课堂'))[0][:160],
         'scenes':output,'unsupported':sorted(unsupported),'executable_scripts':False,'external_network':False}
 

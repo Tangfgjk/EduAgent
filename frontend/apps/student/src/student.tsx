@@ -1,3 +1,4 @@
+import { LibraryPage } from './library';
 import { SessionGuard } from './session-guard';
 import { InteractiveClassroomPage } from './interactive-classroom';
 import {PrivacyControls} from '@wenjin/ui';
@@ -23,6 +24,7 @@ import { PlannerPage } from './planner';
 const navigation: NavItem[] = [
   { path: 'home', label: '今日学习', icon: Compass, section: '开始' },
   { path: 'spaces', label: '学习空间', icon: FolderOpen },
+  { path: 'library', label: '本地知识库', icon: FolderOpen },
   { path: 'courses', label: '课程与安排', icon: GraduationCap },
   { path: 'study', label: '津津陪学', icon: MessageCircle, section: '一起学习' },
   { path: 'roundtable', label: '圆桌讨论', icon: MessagesSquare },
@@ -66,6 +68,7 @@ export function StudentApp({ account }: { account: Account }) {
       <Route path="home" element={<Home account={account} items={items} current={current} search={search} create={kind => setAction({ mode: 'create', kind })} enter={enter}/>}/>
       <Route path="spaces" element={<Spaces items={items} current={current} enter={enter} action={setAction}/>}/>
       <Route path="courses" element={current ? <GenerationPage key={current.workspace_id} workspace={current}/> : <Empty title="先创建或选择学习空间">主题准备和生成课程归属于自己的项目或临时会话。</Empty>}/>
+      <Route path="library" element={current?<LibraryPage key={current.workspace_id} workspace={current}/>:<Empty title="先选择学习空间">知识库按项目隔离保存。</Empty>}/>
       <Route path="classroom" element={current ? <InteractiveClassroomPage key={current.workspace_id} workspace={current}/> : <Empty title="先选择学习空间">课堂将围绕当前项目的已确认课程展开。</Empty>}/>
       <Route path="units" element={<Units search={search}/>}/>
       <Route path="settings" element={<SettingsView account={account}/>}/>

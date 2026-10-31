@@ -205,13 +205,25 @@ def inspect_asset(raw,kind,mime):
 def classroom_overlay(session,resource):
     """Assets are separate immutable results; never rewrite an approved resource."""
     value=deepcopy(resource.body['classroom'])
+    # Enrich text styling from retained source while preserving imported ZIP assets.
+    if resource.body.get('source_document'):
+        from app.modules.resources.classroom import project
+        projected=project(resource.body['source_document'])
+        for original, fresh in zip(value['scenes'],projected['scenes']):
+            by_id={e['id']:e for e in fresh['elements'] if e['kind']=='text'}
+            for element in original['elements']:
+                if element['id'] in by_id:element['runs']=by_id[element['id']].get('runs',[])
+            original['layout_issues']=fresh.get('layout_issues',[])
     for budget in session.scalars(select(MediaBudget).where(MediaBudget.resource_id==resource.id)):
         if budget.body['resource_hash']!=resource.sha256:continue
         for op in session.scalars(select(MediaOperation).where(MediaOperation.budget_id==budget.id,MediaOperation.status=='completed')):
             if not session.get(MediaAsset,op.id):continue
+            if op.request['kind'] in {'image','video'} and not visual_approved(session,op.id):
+                value['quarantined_media']=value.get('quarantined_media',0)+1
+                continue
             value['scenes'][op.request['scene']].setdefault('media',[]).append({'id':op.id,'kind':op.request['kind'],
                 'src':f'/api/v1/student/workspaces/{budget.workspace_id}/media-assets/{op.id}',
-                'alt':'模型生成教学补充素材，未作为数学真值','captions':op.request['prompt'] if op.request['kind']=='audio' else '生成素材，不是数学核验结论'})
+                'alt':'模型生成教学补充素材，未作为数学真值','captions':op.request['prompt'] if op.request['kind']=='audio' else '观察提示：'+(op.receipt or {}).get('visual_review',{}).get('teaching_purpose','')})
     return value
 
 
@@ -332,3 +344,9 @@ class MediaRunner:
             row.status='completed';row.receipt={'request_id':safe_identifier((result or {}).get('request_id')),'sha256':digest,'bytes':len(raw),
                 'billing_unknown':True,'metadata':metadata,'notice':'金额预占未释放，实际账单尚需对账；语音每段实测不超过30秒。'}
         return True
+
+
+def visual_approved(session, operation_id):
+    op=session.get(MediaOperation,operation_id);asset=session.get(MediaAsset,operation_id)
+    review=(op.receipt or {}).get('visual_review',{}) if op else {}
+    return bool(asset and review.get('approved') and review.get('sha256')==asset.sha256)

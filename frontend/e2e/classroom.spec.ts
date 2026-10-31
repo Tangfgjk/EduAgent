@@ -62,9 +62,9 @@ test('课堂布局、KaTeX、真实本机音视频、互动及断点恢复，无
  await player.getByRole('button',{name:'下一步',exact:true}).click();await expect(player.locator('svg image')).toHaveCount(0);
  await player.getByRole('button',{name:'下一步',exact:true}).click();await expect(player.locator('svg image')).toHaveCount(1);
  await player.getByRole('button',{name:'下一步',exact:true}).click();await player.getByLabel('课堂互动回答').fill('这个答案是3');await player.getByRole('button',{name:'检查本次回答'}).click();
- await expect(player.getByText('课堂数值核验：passed',{exact:false})).toBeVisible();
+ await expect(player.getByText('课堂数值核验：数值符合参考',{exact:false})).toBeVisible();
  await player.getByRole('button',{name:'2. 运算顺序',exact:true}).click();await player.getByRole('button',{name:'保存进度',exact:true}).click();await expect(player.getByText('进度已保存',{exact:true})).toBeVisible();
- await page.reload();await expect(player.getByText('场景 2/3',{exact:true})).toBeVisible();
+ await page.reload();await expect(player.getByLabel('当前课堂页')).toContainText('第 2 / 3 页');
  await page.screenshot({path:info.outputPath('classroom-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBeTruthy();await page.screenshot({path:info.outputPath('classroom-mobile.png'),fullPage:true});
  expect(network).toEqual([]);expect(errors).toEqual([]);await expect(player.locator('iframe')).toHaveCount(0);
 });

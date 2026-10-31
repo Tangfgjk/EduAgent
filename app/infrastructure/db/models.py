@@ -745,3 +745,14 @@ class PlaybackReceipt(Base):
     request_hash: Mapped[str]=mapped_column(String(64))
     response: Mapped[dict]=mapped_column(JSON)
     created_at: Mapped[int]=mapped_column(BigInteger,default=now)
+
+
+class StudentDocument(Base):
+    """Private local reference; never an approved mathematical truth."""
+    __tablename__ = 'student_documents'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('workspaces.id'), index=True)
+    title: Mapped[str] = mapped_column(String(120))
+    body: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(BigInteger, default=now)

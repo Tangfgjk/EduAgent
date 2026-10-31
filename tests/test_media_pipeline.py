@@ -71,6 +71,12 @@ def test_closed_budget_no_calls_then_mock_generation_is_idempotent_and_scoped(en
     assert state['body']['reserved_microyuan']==200000 and state['operations'][0]['status']=='completed'
     resource=next(r for r in client.get(f'/api/v1/student/workspaces/{wid}/resources').json()['items'] if r['resource_id']==rid)
     assert resource['sha256']==before['sha256']  # approved immutable lesson is unchanged
+    assert resource['classroom']['quarantined_media']==1
+    aid=state['operations'][0]['operation_id']
+    assert client.get(f'/api/v1/student/workspaces/{wid}/media-assets/{aid}').status_code==409
+    review=env.admin.put('/api/v1/admin/media-assets/'+aid+'/visual-review',json={'approved':True,'text_correct':True,'math_consistent':True,'teaching_purpose':'自编夹具配图，无文字错误；用于课堂场景示意。'})
+    assert review.status_code==200,review.text
+    resource=next(r for r in client.get(f'/api/v1/student/workspaces/{wid}/resources').json()['items'] if r['resource_id']==rid)
     src=resource['classroom']['scenes'][0]['media'][0]['src']
     assert client.get(src).content==png()
     # Native img/audio/video requests carry the role cookie but no custom header.

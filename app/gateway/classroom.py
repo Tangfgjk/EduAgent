@@ -72,4 +72,23 @@ def classroom_router(student):
         response={'revision':row.revision,'resource_hash':resource.sha256,'body':saved}
         ctx.session.add(PlaybackReceipt(account_id=ctx.actor.account.id,resource_id=str(rid),creation_key=key,request_hash=content_hash(data),response=response))
         return response
+    @router.post('/student/workspaces/{wid}/classrooms/prepare',status_code=201)
+    def prepare(wid:UUID,ctx=Depends(student,scope='function')):
+        Workspaces().owned(ctx.session,ctx.actor,str(wid),active=True)
+        from app.modules.generation.service import independent_active
+        from app.modules.knowledge.service import check_snapshot
+        from app.modules.resources.storyboard import compile_lesson
+        from app.modules.learning.content_repository import content_hash
+        if independent_active(ctx.session,str(wid)):raise DomainError(409,'independent_check','独立检测期间不准备辅助课堂')
+        binding=ctx.session.get(CourseBinding,str(wid))
+        build=ctx.session.scalar(select(CourseBuild).where(CourseBuild.workspace_id==str(wid),CourseBuild.unit_id==(binding.active_unit_id if binding else ''),CourseBuild.status=='ready'))
+        if not build:raise DomainError(409,'course_required','请先确认本项目的动态生成课程')
+        check_snapshot(ctx.session,build.sources)
+        body=compile_lesson(build);digest=content_hash(body)
+        row=ctx.session.scalar(select(ResourceArtifact).where(ResourceArtifact.workspace_id==str(wid),ResourceArtifact.build_id==build.id,ResourceArtifact.sha256==digest))
+        if not row:
+            row=ResourceArtifact(workspace_id=str(wid),build_id=build.id,body=body,sha256=digest,status='approved')
+            ctx.session.add(row);ctx.session.flush()
+            ctx.session.add(AuditEvent(actor_id=ctx.actor.account.id,action='classroom.verified_compile',target_id=row.id))
+        return {'resource_id':row.id,'math_verified':True,'external_calls':0}
     return router

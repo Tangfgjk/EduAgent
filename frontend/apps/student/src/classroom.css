@@ -10,3 +10,27 @@
 .classroom-caption{min-height:60px;padding:14px;margin-top:10px;line-height:1.7;background:#f0f5f1;border-radius:8px}
 .classroom-formula{white-space:normal;overflow-wrap:normal}
 @media(max-width:700px){.classroom-layout{grid-template-columns:1fr}.classroom-layout nav{flex-direction:row;max-height:100px;overflow:auto}.classroom-controls strong{width:100%}}
+
+.classroom-player{background:#f0f3ed;padding:20px;color:#254338}
+.classroom-player:fullscreen{overflow:auto;background:#f0f3ed;padding:24px}
+.classroom-stage{min-width:0}.classroom-layout{grid-template-columns:180px minmax(0,1fr);gap:24px}
+.classroom-stage>svg{display:block;aspect-ratio:16/9;border:0;box-shadow:0 8px 28px #183c241a;border-radius:8px;background:white}
+.slide-thumbnail{display:flex;aspect-ratio:16/9;background:#fff;border:1px solid #cbdaca;border-radius:6px;flex-direction:column;justify-content:center;align-items:center;padding:8px;font-size:12px;overflow:hidden}
+.slide-thumbnail b{font-size:24px;color:#26725d}.slide-thumbnail small{font-size:11px}
+.classroom-layout nav .button{display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:6px;white-space:normal}
+.classroom-element{font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;overflow:auto}
+.classroom-media-stage:empty{display:none}.classroom-media-stage{border-radius:10px;background:white;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;padding:12px}
+.classroom-media-stage figure{margin:0}.classroom-caption{font-size:18px;border-left:4px solid #26725d}
+@media(max-width:700px){.classroom-player{padding:10px}.classroom-layout{grid-template-columns:1fr;gap:10px}.classroom-layout nav .button{min-width:125px;max-width:150px}.slide-thumbnail{display:none}.classroom-caption{font-size:15px}.classroom-controls{gap:6px}}
+
+@keyframes classroom-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.classroom-element{animation:classroom-reveal .3s ease-out}
+@media(prefers-reduced-motion:reduce){.classroom-element{animation:none}}
+
+.classroom-slide-frame{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 8px 28px #183c241a}
+.classroom-slide-frame.with-media{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr);align-items:center}
+.classroom-slide-frame>svg{display:block;aspect-ratio:16/9;border:0;box-shadow:none}
+.classroom-slide-frame .classroom-media-stage{display:block;margin:0;padding:12px;box-shadow:none}
+@media(max-width:700px){.classroom-slide-frame.with-media{grid-template-columns:1fr}}
+
+.mobile-slide-reading{display:none}@media(max-width:700px){.mobile-slide-reading{display:block;font-size:24px;padding:16px;background:white;overflow:auto}.mobile-slide-reading:empty{display:none}}

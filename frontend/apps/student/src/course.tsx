@@ -28,7 +28,7 @@ export function CourseBar({ workspace, standalone=false }: { workspace: Workspac
   if (query.isError) return <ErrorNotice error={query.error} retry={() => { void query.refetch(); }}/>;
   const course = query.data, locked = workspace.status !== 'active' || save.isPending || select.isPending;
   const missing = [topic.trim().length < 2 ? '学习主题至少填写2个字' : '', title.trim().length < 2 ? '课程名称至少填写2个字' : '', !units.length ? '请选择至少一个课程单元' : '', !active ? '请选择起始单元' : ''].filter(Boolean);
-  if (!standalone && ['/spaces','/evidence','/settings','/home','/courses'].includes(location.pathname)) return null;
+  if (!standalone && ['/spaces','/evidence','/settings','/home','/courses','/classroom','/library'].includes(location.pathname)) return null;
   return <section className="card course-context" aria-label="课程上下文" style={{ marginBottom: 20 }}>
     {course.active_unit_id ? <><div className="card-head"><div><strong>主题：{course.topic}</strong><p className="card-note">课程：{course.title}</p></div><button className="button small" disabled={locked} onClick={() => {
       setTopic(course.topic ?? ''); setTitle(course.title ?? ''); setUnits((course.units ?? []).map(u => String(u.unit_id))); setActive(course.active_unit_id ?? ''); setEditing(!editing);

@@ -73,6 +73,10 @@ def _enqueue(session,resource,index):
     count=session.scalar(select(func.count()).select_from(ModelOperation).where(ModelOperation.request['build_id'].as_string()==build.id))
     if count+3-index>6:return  # reserve room for both checks before starting
     if not resource.body.get('classroom'):return
+    from app.modules.resources.rich_text import layout_issues
+    scenes=resource.body['classroom']['scenes']
+    if any(layout_issues(scene) for scene in scenes):return
+    if any(e['kind'] in {'image','video'} for scene in scenes for e in scene['elements']):return  # text-only semantic review cannot certify pixels
     # Imported questions may only auto-open if their truth came from approved practice.
     approved={(t['stem'],t['answer']) for t in build.candidate['spec']['tasks'] if t['stage']=='practice'}
     if any((a.get('text'),a.get('answer')) not in approved for s in resource.body['classroom']['scenes'] for a in s['actions'] if a['kind']=='question'):return

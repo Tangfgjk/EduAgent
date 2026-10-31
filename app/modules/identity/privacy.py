@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from sqlalchemy import select,delete,tuple_,text
 from app.infrastructure.db.models import (Base,Account,Workspace,LearningInput,LearningFact,MemoryNote,
-    ReviewCard,ResourceProgress,AuditEvent,AuthSession,new_id,now)
+    StudentDocument,ReviewCard,ResourceProgress,AuditEvent,AuthSession,new_id,now)
 from app.modules.errors import DomainError
 from app.modules.learning.content_repository import content_hash
 
@@ -28,6 +28,7 @@ def export_data(session,actor):
             'created_at':r.created_at,'source_kind':r.source_kind,'observation':{k:v for k,v in r.payload.items()
                 if k in {'stage','status','hints_used','attempt','assessment_exposure','support_decision','answer_interpretation','strategy_version_id'}},
             'task_stem':r.payload.get('task_snapshot',{}).get('stem')} for r in facts],
+        'local_knowledge':[{'id':r.id,'title':r.title,'body':r.body,'sha256':r.sha256,'workspace_id':r.workspace_id} for r in rows(StudentDocument)],
         'notes':[{'fact_id':r.fact_id,'text':r.text,'created_at':r.created_at} for r in rows(MemoryNote)],
         'notice':'仅本人资料与提交；不导出登录凭据、后台提示词、参考答案、保留测验或其他用户数据。备份和外部服务记录单独治理。'}
     return {'data':data,'sha256':content_hash(data)}

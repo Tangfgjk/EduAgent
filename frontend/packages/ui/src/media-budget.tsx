@@ -34,6 +34,7 @@ function Budget({row,wid,ack,refresh}:{row:MediaBudgetRecord;wid?:string;ack:boo
   const op=row.operations.find(o=>o.slot===kind+':'+index);
   return <button className="button small" key={kind+index} disabled={!row.enabled||generate.isPending||!!op} onClick={()=>generate.mutate({kind,index})}>{kind==='image'?'生成配图':kind==='audio'?'生成本场景配音':'生成5秒视频'} {index+1}{op?' · '+op.status:''}</button>;
  }))}</div>}
+ {!wid&&row.operations.filter(op=>op.status==='completed'&&op.kind!=='audio').map(op=><VisualReview key={op.operation_id} id={op.operation_id} kind={op.kind} refresh={refresh}/>)}
  <ul>{row.operations.map(op=><li key={op.operation_id}>{op.slot} · {op.status} · 预占 ¥{(op.reserved_microyuan/1_000_000).toFixed(4)}{op.receipt?.billing_unknown?' · 账单待核对':''}</li>)}</ul><ErrorNotice error={change.error??generate.error}/>
  <p className="card-note">只发送此课已审核的去标识课稿/媒体提示，不发送学生学习记录，不上传参考肖像或录音。生成结果供补充学习，不作为数学核验真值。</p></div>;
 }
@@ -42,4 +43,11 @@ function StudentMedia({row,wid,refresh}:{row:MediaBudgetRecord;wid:string;refres
  const generate=useMutation({mutationFn:({kind,index}:{kind:'image'|'audio'|'video';index:number})=>api.startMedia(wid,row.budget_id,kind,index),onSuccess:refresh});
  const waiting=row.operations.some(op=>['pending','running','submitting'].includes(op.status));
  return <div className="soft-box section-gap">{waiting&&<p role="status">正在准备课堂素材，完成后会自动显示。你可以继续学习。</p>}<div className="actions">{(['image','audio','video'] as const).flatMap(kind=>Array.from({length:kind==='image'?2:kind==='audio'?3:1},(_,index)=>!row.enabled||row.operations.some(op=>op.slot===kind+':'+index)?null:<button className="button small" key={kind+index} disabled={generate.isPending} onClick={()=>generate.mutate({kind,index})}>{kind==='image'?'准备配图':kind==='audio'?'准备配音':'准备视频'} {index+1}</button>))}</div><ErrorNotice error={generate.error}/></div>;
+}
+
+
+function VisualReview({id,kind,refresh}:{id:string;kind:string;refresh:()=>void}){
+ const [purpose,setPurpose]=useState(''),[checked,setChecked]=useState(false);
+ const review=useMutation({mutationFn:(approved:boolean)=>api.reviewMedia(id,approved,purpose),onSuccess:refresh});
+ return <details><summary>素材文字与教学含义检查 · {id.slice(0,8)}</summary>{kind==='image'?<img src={'/api/v1/admin/media-assets/'+id} alt="待检查的生成图片" style={{maxWidth:'100%',maxHeight:360}}/>:<video controls src={'/api/v1/admin/media-assets/'+id} style={{maxWidth:'100%',maxHeight:360}}/>}<label className="field">此素材具体帮助学生理解什么？<textarea minLength={10} maxLength={300} value={purpose} onChange={e=>setPurpose(e.target.value)}/></label><label><input type="checkbox" checked={checked} onChange={e=>setChecked(e.target.checked)}/>已逐字检查文字、数字、公式，并检查全过程的数学关系和教学对应</label><div className="actions"><button className="button" disabled={!checked||purpose.trim().length<10||review.isPending} onClick={()=>review.mutate(true)}>检查通过，开放素材</button><button className="button" disabled={purpose.trim().length<10||review.isPending} onClick={()=>review.mutate(false)}>不合格，保持隔离</button></div><ErrorNotice error={review.error}/>{review.isSuccess&&<p role="status">检查结果已保存</p>}</details>;
 }

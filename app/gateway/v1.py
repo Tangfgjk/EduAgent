@@ -27,6 +27,7 @@ from app.gateway.development import development_router
 from app.gateway.courses import course_router
 from app.gateway.generation import generation_router
 from app.gateway.agenda import agenda_router
+from app.gateway.library import library_router
 from app.gateway.classroom import classroom_router
 from app.gateway.effect_studies import study_router
 from app.gateway.media import media_router
@@ -154,7 +155,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             if database is None:
                 db.close()
 
-    app = FastAPI(title="桂子问津", version="0.20.0", lifespan=lifespan,
+    app = FastAPI(title="桂子问津", version="0.21.0", lifespan=lifespan,
                   responses={status: {"model": ErrorOut} for status in (401, 403, 409, 422, 429, 503)})
 
     @app.middleware("http")
@@ -307,6 +308,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app.include_router(learning_router(student))
     app.include_router(agenda_router(student))
     app.include_router(classroom_router(student))
+    app.include_router(library_router(student))
     app.include_router(study_router(admin))
     app.include_router(media_router(student,admin))
     app.include_router(privacy_router(student,admin))
