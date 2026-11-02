@@ -406,7 +406,8 @@ export interface paths {
         };
         /** Read */
         get: operations["read_api_v1_student_workspaces__wid__library__did__get"];
-        put?: never;
+        /** Edit */
+        put: operations["edit_api_v1_student_workspaces__wid__library__did__put"];
         post?: never;
         /** Remove */
         delete: operations["remove_api_v1_student_workspaces__wid__library__did__delete"];
@@ -1550,6 +1551,23 @@ export interface paths {
         };
         /** Local Report */
         get: operations["local_report_api_v1_student_workspaces__wid__evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/student/planning-model-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model Status */
+        get: operations["model_status_api_v1_student_planning_model_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3357,6 +3375,17 @@ export interface components {
             unverifiable: number;
             /** Hinted Passed */
             hinted_passed: number;
+        };
+        /** DocumentEdit */
+        DocumentEdit: {
+            /** Title */
+            title: string;
+            /** Text */
+            text: string;
+            /** Expected Sha256 */
+            expected_sha256: string;
+            /** Expected Title */
+            expected_title: string;
         };
         /** DocumentIn */
         DocumentIn: {
@@ -5632,6 +5661,12 @@ export interface components {
              * @default
              */
             reflection: string;
+            /**
+             * Reasoning Status
+             * @default not_assessed
+             * @enum {string}
+             */
+            reasoning_status: "not_assessed" | "arithmetic_checked" | "contradiction_found";
         };
         /** TaskSpec */
         TaskSpec: {
@@ -5660,6 +5695,51 @@ export interface components {
             misconception: string;
             pedagogy?: components["schemas"]["Pedagogy"] | null;
         };
+        /** TeachingExecution */
+        TeachingExecution: {
+            /** Action */
+            action: string;
+            /** Status */
+            status: string;
+            /** Executor */
+            executor: string;
+            /**
+             * Effect Status
+             * @constant
+             */
+            effect_status: "not_validated";
+            /** Reason */
+            reason?: string | null;
+            /** Next Task Id */
+            next_task_id?: string | null;
+            /** Next Stage */
+            next_stage: string;
+            /** Support Applied */
+            support_applied: boolean;
+        };
+        /** TeachingTrace */
+        TeachingTrace: {
+            /** Sequence */
+            sequence: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "model" | "local";
+            /** Source Task Id */
+            source_task_id: string;
+            /** Action */
+            action: string;
+            /** Reason */
+            reason: string;
+            /** Support */
+            support?: string | null;
+            /** Support Reason */
+            support_reason?: string | null;
+            observation: components["schemas"]["TaskRecord"];
+            execution: components["schemas"]["TeachingExecution"];
+            outcome?: components["schemas"]["TaskRecord"] | null;
+        };
         /** TopicIn */
         TopicIn: {
             /** Topic */
@@ -5680,6 +5760,12 @@ export interface components {
         };
         /** TutorHistoryItem */
         TutorHistoryItem: {
+            /**
+             * Reasoning Status
+             * @default not_assessed
+             * @enum {string}
+             */
+            reasoning_status: "not_assessed" | "arithmetic_checked" | "contradiction_found";
             /** Sequence */
             sequence: number;
             /** Created At */
@@ -5802,6 +5888,8 @@ export interface components {
         };
         /** TutorView */
         TutorView: {
+            /** Teaching History */
+            teaching_history?: components["schemas"]["TeachingTrace"][];
             /** Support Decision */
             support_decision?: {
                 [key: string]: unknown;
@@ -8271,6 +8359,87 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    edit_api_v1_student_workspaces__wid__library__did__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+                did: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentEdit"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -13914,6 +14083,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    model_status_api_v1_student_planning_model_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Unauthorized */

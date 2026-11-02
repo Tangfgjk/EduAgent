@@ -66,9 +66,35 @@ class TaskRecord(Contract):
     attempts: int
     hints_used: int
     reflection: str = ""
+    reasoning_status: Literal['not_assessed', 'arithmetic_checked', 'contradiction_found'] = 'not_assessed'
+
+
+class TeachingExecution(Contract):
+    action: str
+    status: str
+    executor: str
+    effect_status: Literal['not_validated']
+    reason: str | None = None
+    next_task_id: str | None = None
+    next_stage: str
+    support_applied: bool
+
+
+class TeachingTrace(Contract):
+    sequence: int
+    source: Literal['model', 'local']
+    source_task_id: str
+    action: str
+    reason: str
+    support: str | None = None
+    support_reason: str | None = None
+    observation: TaskRecord
+    execution: TeachingExecution
+    outcome: TaskRecord | None = None
 
 
 class TutorView(Contract):
+    teaching_history: list[TeachingTrace] = Field(default_factory=list)
     support_decision: dict = Field(default_factory=dict)
     strategy_version_id: str | None = None
     reflection_prompt: str = "这一步用到了什么依据？下次准备怎么检查？"
@@ -180,6 +206,7 @@ class HistoryModelOut(Contract):
 
 
 class TutorHistoryItem(Contract):
+    reasoning_status: Literal['not_assessed', 'arithmetic_checked', 'contradiction_found'] = 'not_assessed'
     sequence: int
     created_at: int
     source_kind: str

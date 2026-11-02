@@ -130,6 +130,7 @@ class Tutoring(Learning):
         if payload['action']=='reflect':
             from app.infrastructure.db.models import ModelOperation
             suggestion=session.scalar(select(ModelOperation).where(ModelOperation.run_id==run.id,
+                ModelOperation.workspace_id==wid,ModelOperation.account_id==actor.account.id,
                 ModelOperation.task_id==run.view['task']['task_id'],ModelOperation.status=='succeeded')
                 .order_by(ModelOperation.created_at.desc(),ModelOperation.id.desc()).limit(1))
             policy = session.get(ModelPolicy, 1)
@@ -139,9 +140,13 @@ class Tutoring(Learning):
                 completed={r['task_id'] for r in run.view['records']}
                 target=result.get('next_task_id')
                 from app.modules.learning.goal_context import snapshot as goal_snapshot
+                from app.modules.learning.content_repository import content_hash
                 frozen=suggestion.request.get('learning_goal')
-                fresh=not frozen or (frozen['course_revision']==goal_snapshot(session,wid,actor.account)['course_revision'])
-                if fresh:
+                current=goal_snapshot(session,wid,actor.account)
+                fresh=(suggestion.request_hash==content_hash(suggestion.request)
+                    and suggestion.request.get('content_version')==item.version
+                    and (not frozen or all(frozen.get(k)==current.get(k) for k in ('course_revision','unit_id','content_version'))))
+                if fresh and (result.get('teaching_decision') or result.get('next_task_id')):
                     operation['teaching_decision']={**result.get('teaching_decision',{}),'operation_id':suggestion.id,
                         'reason':result.get('teaching_decision',{}).get('reason') or result.get('decision_reason','基于当前表达调整，效果待观察')}
                     if any(t['id']==target and t['stage']=='practice' and target not in completed for t in item.tasks):

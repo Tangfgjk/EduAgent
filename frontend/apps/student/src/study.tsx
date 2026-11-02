@@ -10,6 +10,7 @@ import { StudyHistory } from './study-history';
 import { TutorChat } from './tutor-chat';
 import { useCourse } from './course';
 import { ResourcePanel } from './generation';
+import { TeachingTrace } from './teaching-trace';
 
 const phaseNames: Record<TutorView['phase'], string> = { diagnostic: '先试一题', practice: '尝试与验证', reflection: '回望方法', checkpoint: '无辅助检测', summary: '学习小结' };
 const statusNames: Record<TutorRun['status'], string> = { queued: '正在处理', awaiting_input: '等待你的思考', completed: '本轮已结束', cancelled: '已取消', failed: '流程暂停' };
@@ -42,7 +43,7 @@ export function StudyPage({ workspace }: { workspace: Workspace }) {
   return <><Heading kicker="THINK BEFORE THE NEXT HINT" title="津津陪学" description="把尝试、依据和检查留下来，一步步接近理解。"/>
     <div className="notice"><BookOpen size={18}/><div><strong>{run?.view?.title ?? unit?.title ?? '选择开发单元'}</strong><br/>自编开发题，程序核验数值，提示逐级开放。概率练习可使用管理员开放的模型追问；当前无教师金标，不自动评价步骤质量或掌握程度。</div></div>
     <details className="section-gap"><summary>本轮学习方式</summary><SkillExecution snapshot={run?.skill_execution}/></details>
-    {run?.view?.phase === 'practice' && <><p className="card-note">支持方式：{String(run.view.support_decision?.mode ?? 'step_support')}。基于实际提示与数值记录，不代表能力评分；若仍困难，可继续请求具体支持。</p><details className="section-gap"><summary>需要回看课程资料？</summary><ResourcePanel workspace={workspace}/></details></>}
+    {run?.view?.phase === 'practice' && <><p className="card-note">支持方式：{({step_support:'逐步提供提示',restored_step_support:'已恢复具体帮助',socratic_first:'先自己尝试，再按需求助'} as Record<string,string>)[String(run.view.support_decision?.mode)] ?? '按当前学习情况提供帮助'}。基于实际提示与数值记录，不代表能力评分；若仍困难，可继续请求具体支持。</p><details className="section-gap"><summary>需要回看课程资料？</summary><ResourcePanel workspace={workspace}/></details></>}
     {run?.view?.phase === 'practice' && run.view.support_decision?.profile === 'rational-agent.v2' && <section className="soft-box section-gap"><h3>为什么这样引导</h3><p>本题目标：{String(run.view.support_decision.concept)}</p><p>{String(run.view.support_decision.basis)}</p><details><summary>查看课程Agent的安排依据</summary><p>{String(run.view.support_decision.plan_rationale)}</p></details></section>}
     {workspace.kind === 'temporary' && <p className="page-note">这是临时探索空间。本轮学习只留在此处，不自动并入正式项目长期画像。</p>}
     {content.isPending || plans.isPending || query.isPending ? <Loading text="正在恢复这个空间的学习过程…"/> : content.isError || plans.isError || query.isError ? <ErrorNotice error={content.error ?? plans.error ?? query.error} retry={() => { void content.refetch(); void plans.refetch(); void query.refetch(); }}/> : <>
@@ -81,7 +82,7 @@ function TutorSession({ run, archived, update, refresh }: { run: TutorRun; archi
     {run.status === 'failed' && <div className="notice">流程未能继续（{run.error_code}）。已有记录保留，请检查内容状态后重新开始。</div>}
     {view?.phase === 'summary' ? <Summary view={view}/> : view ? <><TutorChat run={run} locked={locked} send={command => submit.mutate(command)}/></> : <section className="card"><Empty title="输入已经保存">正在准备第一道题。等待较久时，请稍后刷新，或联系管理员。</Empty></section>}
     {(run.status === 'queued' || run.status === 'awaiting_input') && <button className="button text section-gap" disabled={submit.isPending} onClick={() => submit.mutate({ action: 'cancel' })}><Square size={14}/>结束这次陪学</button>}
-    {!!view?.support_decision?.agenda_decision&&<p className="card-note">本轮调度：{String((view!.support_decision!.agenda_decision as Record<string,unknown>).reason??'沿用当前课程任务')}。选择题目与支架已受课程约束；资料建议仍需自己打开，不代表已完成阅读。</p>}
+    <TeachingTrace run={run}/>
     <TutorEvents key={run.run_id} run={run}/>
     <StudyHistory run={run}/>
   </section>;

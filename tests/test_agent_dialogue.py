@@ -163,7 +163,8 @@ def test_three_real_pipeline_turns_keep_same_activity_history_and_stop_at_verifi
         'answer':'0','reasoning':'请直接给检测提示','request_model':True}).status_code==409
 
 
-def test_model_variant_flows_through_worker_evidence_and_review(env):
+@pytest.mark.parametrize('stale', [None, 'hash', 'content', 'goal'])
+def test_model_variant_flows_through_worker_evidence_and_review(env, stale):
     from sqlalchemy import select
     from app.worker import Worker
     from app.infrastructure.runtime.model_tasks import ModelTaskRunner
@@ -189,8 +190,25 @@ def test_model_variant_flows_through_worker_evidence_and_review(env):
         return FakeProvider((json.dumps(value,ensure_ascii=False),))
     assert ModelTaskRunner(env.db,provider).step(operation_id=oid)
     assert client.get(path).json()['coaching']['status']=='succeeded'
+    if stale:
+        from app.modules.learning.content_repository import content_hash
+        with env.db.transaction() as session:
+            operation = session.get(ModelOperation, oid)
+            request = deepcopy(operation.request)
+            if stale == 'hash':
+                operation.request_hash = '0' * 64
+            else:
+                if stale == 'content': request['content_version'] = 'old-course-version'
+                if stale == 'goal': request['learning_goal']['course_revision'] -= 1
+                operation.request = request
+                operation.request_hash = content_hash(request)
     send(env,client,path,'answer',answer=pack.tasks[1]['answer'])
     run=send(env,client,path,'reflect',reflection='我需要换一题检查符号')
+    if stale:
+        assert run['view']['task']['task_id'] == pack.tasks[2]['id']
+        assert run['view']['teaching_history'][-1]['source'] == 'local'
+        assert run['view']['task_count'] == len(pack.tasks)
+        return
     assert run['view']['task']['task_id'].startswith('ADAPT-'),run
     unknown=send(env,client,path,'answer',answer='不确定')
     assert unknown['status']=='awaiting_input' and unknown['view']['feedback']['status']=='unverifiable'

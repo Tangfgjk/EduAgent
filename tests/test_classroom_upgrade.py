@@ -66,6 +66,42 @@ def test_library_archive_is_readonly(env):
     assert client.post(f'/api/v1/student/workspaces/{wid}/library',json={'title':'资料','text':'资料正文'}).status_code==409
 
 
+def test_library_title_search_edit_conflict_and_scope(env,monkeypatch):
+    client,_=env.student();space=env.workspace(client);wid=space['workspace_id']
+    path=f'/api/v1/student/workspaces/{wid}/library'
+    created=client.post(path,json={'title':'专题甲乙丙丁','text':'计算笔记。' * 300}).json()
+    did=created['id'];original=client.get(path+'/'+did).json()
+    hits=client.get(path+'/search',params={'q':'专题甲乙丙丁'}).json()['items']
+    assert len(hits)==1 and hits[0]['document_id']==did
+    body={'title':'更新的标题','text':'新正文 $3+4$','expected_sha256':original['sha256'],'expected_title':original['title']}
+    other,_=env.student('library.editor.other')
+    assert other.put(path+'/'+did,json=body).status_code==404
+    assert client.put(path+'/'+did,json=body).status_code==200
+    assert client.put(path+'/'+did,json={**body,'text':'旧页面的覆盖'}).status_code==409
+    assert client.get(path+'/'+did).json()['text']=='新正文 $3+4$'
+    assert client.get(path+'/search',params={'q':'更新的标题'}).json()['items'][0]['document_id']==did
+    assert client.get(path+'/search',params={'q':'专题甲乙丙丁'}).json()['items']==[]
+    latest=client.get(path+'/'+did).json()
+    current={**body,'expected_sha256':latest['sha256'],'expected_title':latest['title']}
+    with monkeypatch.context() as patch:
+        patch.setattr('app.modules.generation.service.independent_active',lambda *args:True)
+        assert client.put(path+'/'+did,json=current).status_code==409
+        assert client.get(path+'/'+did).status_code==409
+    other_doc=client.post(path,json={'title':'另一份','text':'已存在正文'}).json()
+    assert client.put(path+'/'+did,json={**current,'text':'已存在正文'}).status_code==409
+    assert client.get(path+'/'+other_doc['id']).json()['text']=='已存在正文'
+    assert client.post(f'/api/v1/student/workspaces/{wid}/archive',json={'expected_revision':space['revision']}).status_code==200
+    latest=client.get(path+'/'+did).json()
+    assert client.put(path+'/'+did,json={**body,'expected_sha256':latest['sha256'],'expected_title':latest['title']}).status_code==409
+
+
+def test_planning_model_status_is_student_scoped(env):
+    client,_=env.student()
+    status=client.get('/api/v1/student/planning-model-status')
+    assert status.status_code==200 and status.json()['enabled'] is False
+    assert '手动配置' in status.json()['notice']
+
+
 def test_prepare_course_classroom_is_idempotent_and_scoped(env):
     from tests.test_generation_boundaries import course
     client,wid,_,row=course(env)

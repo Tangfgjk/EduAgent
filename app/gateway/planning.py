@@ -14,6 +14,13 @@ def planning_router(student, admin):
     key_header = Header(alias="Idempotency-Key", min_length=1, max_length=128)
     prefix = "/student/workspaces/{wid}/strategies"
 
+    @router.get('/student/planning-model-status')
+    def model_status(ctx=student_auth):
+        from app.infrastructure.db.models import ModelPolicy
+        policy=ctx.session.get(ModelPolicy,1)
+        enabled=bool(policy and policy.active_id and ctx.actor.account.source_kind in {'synthetic','adult_test'})
+        return {'enabled':enabled,'notice': '模型已开放，提交时仍会检查额度与用途。' if enabled else '当前未开放模型规划。你可以使用手动配置生成提案。'}
+
     @router.get("/admin/planning-materials", response_model=MaterialsOut)
     def admin_materials(ctx=admin_auth, offset: int = Query(0, ge=0)):
         return materials.list(ctx.session, True, offset)

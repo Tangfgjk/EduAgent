@@ -66,9 +66,10 @@ def freeze(run,item,text,answer,account,config,session):
     from app.modules.learning.goal_context import snapshot as goal_snapshot, external
     goal=goal_snapshot(session,run.workspace_id,account)
     records=(run.view or {}).get('records',[])
-    signals={'can_fade':bool(run.view.get('support_decision',{}).get('adaptive_enabled')) and (not runtime or runtime['execution']['support_mode']=='adaptive') and any(r.get('stage')=='practice' and r.get('status')=='passed' and r.get('hints_used')==0 for r in records),
-        'needs_support':(run.view.get('feedback') or {}).get('status') in {'failed','unverifiable'},
-        'hints_used':len(run.view.get('hints',[]))}
+    from app.modules.learning.teaching_loop import signals as teaching_signals
+    signals=teaching_signals(records, run.view.get('feedback'),
+        adaptive=bool(run.view.get('support_decision',{}).get('adaptive_enabled')),
+        runtime=runtime, hints=len(run.view.get('hints',[])))
     from app.modules.learning.adaptive import family_for
     from app.infrastructure.db.models import ResourceArtifact,CourseBuild
     parent_id=item.unit_id if run.kind=='tutor' else item.parent_unit_id

@@ -5,14 +5,29 @@ async function login(page:Page,role:'student'|'admin'){
  const cookies=await page.context().cookies();return {'X-Wenjin-Client':role,'X-CSRF-Token':cookies.find(c=>c.name===`wenjin_${role}_csrf`)!.value};
 }
 
-test('本地知识库：真实保存、中文检索、来源查看和手机布局',async({page})=>{
+test('本地知识库：真实保存、中文检索、来源查看和手机布局',async({page},info)=>{
  const headers=await login(page,'student');const space=await(await page.request.post('/api/v1/student/workspaces',{headers:{...headers,'Idempotency-Key':crypto.randomUUID()},data:{kind:'project',title:'知识库验收'}})).json();
  await page.goto('/student/library?workspace='+space.workspace_id);
- await page.getByLabel('资料标题',{exact:true}).fill('混合运算笔记');await page.getByLabel('资料正文',{exact:true}).fill('先乘除后加减。资料里包含 $3+4$，只是原文，不执行脚本。');await page.getByRole('button',{name:'保存到当前项目'}).click();
+ await page.getByRole('button',{name:'添加资料',exact:true}).click();
+ await page.getByLabel('资料标题',{exact:true}).fill('混合运算笔记');await page.getByLabel('资料正文',{exact:true}).fill('📘先乘除后加减。资料里包含 $3+4$，只是原文，不执行脚本。');await page.getByRole('button',{name:'保存到当前项目'}).click();
  await expect(page.getByRole('status')).toHaveText('资料已保存到本机知识库。');
  await page.getByLabel('检索关键词').fill('乘除');await page.getByRole('button',{name:'本地检索',exact:true}).click();await page.getByRole('button',{name:'查看来源全文'}).click();await expect(page.locator('pre')).toContainText('先乘除后加减');
+ await expect(page.getByRole('dialog').locator('mark')).toHaveText('📘先乘除后加减。资料里包含 $3+4$，只是原文，不执行脚本。');
  await page.reload();await expect(page.getByRole('button',{name:/混合运算笔记/})).toBeVisible();
+ await page.getByRole('button',{name:/混合运算笔记/}).click();
+ await expect(page.getByRole('dialog').locator('.katex')).toBeVisible();
+ await page.getByRole('button',{name:'编辑资料',exact:true}).click();
+ await page.getByLabel('资料标题',{exact:true}).fill('专题甲乙丙丁');
+ await page.getByLabel('资料正文',{exact:true}).fill('只保留这段修改后的原文。');
+ await page.getByRole('button',{name:'保存修改',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('只保留这段修改后的原文');
+ await page.getByRole('button',{name:'关闭弹窗',exact:true}).click();
+ await page.getByLabel('检索关键词').fill('专题甲乙丙丁');await page.getByRole('button',{name:'本地检索',exact:true}).click();
+ await page.getByRole('button',{name:'查看来源全文'}).click();await expect(page.getByRole('dialog').locator('mark')).toContainText('修改后的原文');
+ await page.getByRole('button',{name:'关闭弹窗',exact:true}).click();
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBeTruthy();
+ await page.screenshot({path:info.outputPath('library-mobile.png'),fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:info.outputPath('library-desktop.png'),fullPage:true});
 });
 
 test('三页分步课堂：从当前生成课程编排、公式渐显、互动核验与恢复',async({page},info)=>{
@@ -34,4 +49,18 @@ test('三页分步课堂：从当前生成课程编排、公式渐显、互动�
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBeTruthy();await page.screenshot({path:info.outputPath('classroom-mobile.png'),fullPage:true});
  const latestPolicy=await(await page.request.get('/api/v1/admin/generation-policy',{headers:admin})).json();
  expect((await page.request.post('/api/v1/admin/generation-policy',{headers:admin,data:{expected_revision:latestPolicy.revision,courses:true,interaction:true,search:false,private_auto_release:false,acknowledge_development_only:true}})).ok()).toBeTruthy();
+});
+
+test('模型未开放时规划说明替代路线，保留学生输入',async({page})=>{
+ const admin=await login(page,'admin');
+ const model=await(await page.request.get('/api/v1/admin/model-runtime',{headers:admin})).json();
+ await page.request.post('/api/v1/admin/model-runtime/pause',{headers:admin,data:{expected_revision:model.revision}});
+ const student=await login(page,'student');
+ const space=await(await page.request.post('/api/v1/student/workspaces',{headers:{...student,'Idempotency-Key':crypto.randomUUID()},data:{kind:'project',title:'规划替代路线'}})).json();
+ await page.goto('/student/planner?workspace='+space.workspace_id);
+ await page.getByLabel('我的学习体验').fill('我希望先尝试自己检查，再使用提示。');
+ await expect(page.getByRole('button',{name:'生成开发策略提案'})).toBeDisabled();
+ await page.getByRole('button',{name:'改用手动配置'}).click();
+ await expect(page.getByLabel('我的学习体验')).toHaveValue('我希望先尝试自己检查，再使用提示。');
+ await expect(page.getByRole('button',{name:'生成开发策略提案'})).toBeEnabled();
 });

@@ -45,6 +45,7 @@ def history(session, account, run, after=0, limit=30):
             'answer': payload.get('answer'), 'reasoning': payload.get('reasoning'),
             'reflection': payload.get('reflection'), 'thinking': payload.get('coaching_text') or None,
             'preset_hint': observation.get('revealed_hint'), 'numeric_status': observation.get('status') if fact and fact.kind == 'answer' else None,
+            'reasoning_status': ((observation.get('answer_interpretation') or {}).get('reasoning_check') or {}).get('status', 'not_assessed'),
             'processed': fact is not None or job_status == 'completed',
             'model': {'operation_id': operation.id, 'status': operation.status, 'vendor': config.vendor,
                 'model': config.model, 'prompt_version': config.prompt_version,

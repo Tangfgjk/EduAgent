@@ -60,9 +60,15 @@ test('真实项目学习闭环：内容启用、诊断、提示、反思、检�
     await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toHaveCount(1);
     await page.reload();
     await expect(page.locator('.chat-message.assistant').filter({has:page.getByText('学习支持',{exact:true})})).toHaveCount(1);
-    await answer(page, '6');
+    await answer(page, '答案是6，因为1+1=3');
     await reflect(page);
     await expect(page.locator('.chat-current[data-task-id=\"P-APP-01\"]')).toBeVisible();
+    const adjustments = page.getByRole('region', { name: '教学调整与反馈' });
+    await expect(adjustments).toContainText('理由中发现算术等式矛盾');
+    await expect(adjustments).toContainText('尚未获得完成记录');
+    await page.reload();
+    await expect(adjustments).toContainText('理由中发现算术等式矛盾');
+    await expect(page.getByRole('log')).toContainText('数值通过不代表理由正确');
     await expect(page.locator('#chat-answer')).toHaveCount(1);
     await expect(page.getByLabel('我的回答')).toBeEnabled();
     await answer(page, '暂时不知道如何表达');
@@ -77,6 +83,9 @@ test('真实项目学习闭环：内容启用、诊断、提示、反思、检�
     await answer(page, '7');
     await reflect(page);
     await expect(page.getByRole('heading', { name: '无辅助检测', exact: true })).toBeVisible();
+    await adjustments.getByText('查看本轮调整记录（2）', { exact: true }).click();
+    await expect(adjustments).toContainText('后续记录：数值通过，尝试 2 次，使用提示 0 次');
+    await expect(adjustments).toContainText('已进入无辅助检测，保持独立作答');
     await expect(page.getByRole('button', { name: '给我一点提示', exact: true })).toBeDisabled();
     mkdirSync('test-results/screens', { recursive: true });
     await page.evaluate(() => window.scrollTo(0, 0));

@@ -17,6 +17,7 @@ from app.modules.learning.numeric_verifier import VERIFIER_VERSION, verify
 from app.modules.learning.answer_interpretation import interpret,check_explicit_equalities
 from app.modules.learning.tutor_contracts import TutorView
 from app.modules.planning.service import PROMPTS
+from app.modules.learning import teaching_loop
 
 LEGACY_VERSION = "tutor.v1:" + CONTENT_VERSION[:12] + ":" + registry_hash() + ":" + VERIFIER_VERSION
 VERSION = "tutor.v2:" + CONTENT_VERSION[:12] + ":" + registry_hash() + ":" + VERIFIER_VERSION
@@ -42,27 +43,34 @@ def public_view(data):
     item = content_for(data)
     phase, index = data["phase"], data["index"]
     practice = phase == "practice"
-    unassisted = sum(r["stage"] == "practice" and r["status"] == "passed" and r["hints_used"] == 0 for r in data["records"])
-    if not data.get("adaptive_support") or (data.get("skill_runtime") or {}).get("execution",{}).get("support_mode")=="step_first":
-        unassisted = 0
-    support = {"adaptive_enabled": bool(data.get("adaptive_support")), "mode": "socratic_first" if unassisted else "step_support", "basis": "已有未用提示的练习数值记录" if unassisted else "尚无未用提示的练习数值记录", "restorable": True, "ability_judgment": False}
-    if practice and (data.get('feedback') or {}).get('status') in {'failed','unverifiable'}:
-        support.update(mode='restored_step_support',basis='本题未通过或表达未确定，恢复具体支持；不沿用之前的成功推断当前掌握。')
+    signals = teaching_loop.signals(data['records'], data.get('feedback'), adaptive=data.get('adaptive_support', False),
+        runtime=data.get('skill_runtime'), hints=len(data['hints']))
+    unassisted = signals['can_fade']
+    support = {"adaptive_enabled": bool(data.get("adaptive_support")), "mode": "socratic_first" if unassisted else "step_support", "basis": "最近练习首次数值通过且未使用提示，未发现已核验的算术矛盾" if unassisted else "当前记录或学习策略不满足减少支持的条件", "restorable": True, "ability_judgment": False}
     if data.get('last_teaching_decision'):
         decision=data['last_teaching_decision']
         support['agenda_decision']={k:v for k,v in decision.items() if k!='variant'}
-        if decision.get('support')=='restore':support.update(mode='restored_step_support',basis=decision.get('reason','学生需要恢复支持'))
-        elif decision.get('support')=='fade' and unassisted:support.update(mode='socratic_first',basis=decision.get('reason','依据独立练习记录渐撤'))
-    if practice and (data.get('feedback') or {}).get('status') in {'failed','unverifiable'}:
-        support.update(mode='restored_step_support',basis='本题出现困难，恢复具体支持，模型旧建议不能覆盖当前失败记录。')
+        if practice and (decision.get('execution') or {}).get('next_task_id') == item.tasks[index]['id']:
+            if decision.get('support')=='restore':support.update(mode='restored_step_support',basis=decision.get('support_reason') or decision.get('reason','学生需要恢复支持'))
+            elif decision.get('support')=='fade' and unassisted:support.update(mode='socratic_first',basis=decision.get('reason','依据独立练习记录渐撤'))
+    if practice and signals['needs_support']:
+        support.update(mode='restored_step_support',basis='本题数值未通过、表达未确定或理由存在算术矛盾，恢复具体支持。')
     pedagogy=item.tasks[index].get('pedagogy') if index<len(item.tasks) else None
     if practice and pedagogy and pedagogy.get('profile')=='rational-agent.v2':
         status=(data.get('feedback') or {}).get('status')
         focus='representation' if status in {'failed','unverifiable'} else 'basis' if len(data['hints'])>=2 else 'verification' if unassisted else 'basis'
+        last = data.get('last_teaching_decision') or {}
+        if (last.get('execution') or {}).get('next_task_id') == item.tasks[index]['id'] and not data.get('feedback'):
+            focus = last.get('question_focus', focus)
+        if signals['reasoning_status'] == 'contradiction_found':
+            focus = 'verification'
         support.update(profile='rational-agent.v2',concept=pedagogy['concept_label'],concept_id=pedagogy['concept'],action=focus,
             question=pedagogy['questions'][focus],plan_rationale=pedagogy['rationale'],
             basis='本题数值未通过或不可验证，先换表示核对；未判定具体语义误区。' if status in {'failed','unverifiable'} else '依据本轮实际提示和数值记录选择已审核的概念支持，允许继续求助。')
-    return TutorView(support_decision=support, strategy_version_id=data.get("strategy_version_id"), reflection_prompt=PROMPTS[data.get("reflection_focus", "basis")], unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
+    reflection_prompt = PROMPTS[data.get('reflection_focus', 'basis')]
+    if teaching_loop.reasoning_status(data.get('feedback')) == 'contradiction_found':
+        reflection_prompt = '最终数值与理由分别核验。请重新检查理由中的算术等式，说明如何修正；尚不确定也可以如实记录。'
+    return TutorView(support_decision=support, teaching_history=data.get('teaching_history', []), strategy_version_id=data.get("strategy_version_id"), reflection_prompt=reflection_prompt, unit_id=item.unit_id, title=item.title, content_version=item.version, phase=phase,
         task=None if phase == "summary" else item.task_public(index), task_index=min(index + 1, len(item.tasks)),
         task_count=len(item.tasks), attempts=data["attempts"], hints=data["hints"], feedback=data["feedback"],
         can_answer=phase in {"diagnostic", "practice", "checkpoint"} and not data["answered"],
@@ -101,12 +109,16 @@ class TutorState(TypedDict):
 def record(data, status):
     task = content_for(data).tasks[data["index"]]
     data["records"].append({"task_id": task["id"], "stage": task["stage"], "status": status,
-        "attempts": data["attempts"], "hints_used": len(data["hints"]), "reflection": ""})
+        "attempts": data["attempts"], "hints_used": len(data["hints"]), "reflection": "",
+        "reasoning_status": teaching_loop.reasoning_status(data.get('feedback'))})
+    teaching_loop.observe(data, data['records'][-1])
 
 
 def next_task(data,decision=None):
     from app.modules.learning.adaptive import apply
-    if data['phase']=='reflection':apply(data,decision)
+    if data['phase']=='reflection':
+        decision = teaching_loop.decide(data, decision)
+        apply(data,decision)
     tasks = content_for(data).tasks
     if data['phase']=='reflection':
         completed={r['task_id'] for r in data['records'] if r['stage']=='practice'}
@@ -118,6 +130,7 @@ def next_task(data,decision=None):
             decision['execution']['next_task_id']=tasks[data['index']]['id'] if data['index']<len(tasks) else None
             if decision.get('action')=='practice':decision['execution']['status']='practice_selected' if remaining else 'no_practice_remaining'
         if chosen is not None:data['last_teaching_decision']=decision
+        teaching_loop.track(data, decision, tasks[data['index']] if data['index'] < len(tasks) else None)
     else:data['index'] += 1
     data["phase"] = tasks[data["index"]]["stage"] if data["index"] < len(tasks) else "summary"
     data.update(attempts=0, hints=[], feedback=None, answered=False)
@@ -169,6 +182,7 @@ def interaction(state: TutorState):
         data["answered"], data["phase"] = True, "reflection"
     elif action == "reflect":
         data["records"][-1]["reflection"] = decision["reflection"]
+        teaching_loop.observe(data, data['records'][-1])
         next_task(data,decision.get('teaching_decision'))
     elif action == "next":
         if not data["answered"] and (data.get("feedback") or {}).get("status") == "unverifiable":
