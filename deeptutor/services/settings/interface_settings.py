@@ -24,7 +24,7 @@ UiLanguage = Literal["en", "zh", "fr", "de", "uk", "pl", "pt", "vi", "ja", "tr"]
 DEFAULT_UI_SETTINGS: dict[str, Any] = {
     # "system" follows the OS. "snow" is the pure-white Default palette.
     "theme": "system",
-    "language": "en",
+    "language": "zh",
     "response_language": "en",
     "content_font_scale": 100,
     "content_line_spacing": "normal",

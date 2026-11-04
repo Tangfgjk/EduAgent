@@ -196,7 +196,7 @@ class DisplaySettings(BaseModel):
 
 class UISettings(DisplaySettings):
     theme: Literal["system", "light", "dark", "glass", "snow"] = "system"
-    language: UiLanguage = "en"
+    language: UiLanguage = "zh"
     response_language: ResponseLanguage = "en"
     sidebar_description: Optional[str] = None
     sidebar_nav_order: Optional[SidebarNavOrder] = None
