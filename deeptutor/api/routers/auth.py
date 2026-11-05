@@ -1,5 +1,6 @@
 """Auth router — login, logout, status, registration, profile, and user-management endpoints."""
 
+import asyncio
 from contextvars import Token as _CtxToken
 import csv
 from datetime import datetime, timedelta, timezone
@@ -1218,13 +1219,10 @@ async def logout(response: Response) -> dict:
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, request: Request, response: Response) -> dict:
     """
-    Bootstrap-only registration.
+    Create a student account without administrative approval.
 
-    Public endpoint that creates the *first* admin account when the user store
-    is empty. Once an admin exists, this endpoint is closed; further accounts
-    must be created by an admin via ``POST /api/auth/users``.
-
-    Only available when AUTH_ENABLED=true.
+    The first local account bootstraps administration. Later registrations
+    receive ordinary user permissions. Duplicate names cannot update accounts.
     """
     if not AUTH_ENABLED:
         raise HTTPException(
@@ -1259,36 +1257,30 @@ async def register(body: RegisterRequest, request: Request, response: Response) 
             "is_admin": False,
         }
 
-    # Standard mode — only allowed before the first admin exists.
-    if not is_first_user():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Self-registration is closed. Ask an administrator to create your account.",
+    from deeptutor.multi_user.identity import save_user
+    from deeptutor.services.auth import hash_password
+
+    first = is_first_user()
+    def create_account():
+        return save_user(
+            body.username,
+            hash_password(body.password),
+            role="user",
+            preset="standard",
+            create_only=True,
         )
 
-    existing = {u["username"] for u in list_users()}
-    if body.username in existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username already taken",
-        )
-
-    add_user(body.username, body.password)
-    user_id = ""
-    role = "user"
-    for item in list_users():
-        if item.get("username") == body.username:
-            user_id = str(item.get("id") or "")
-            role = str(item.get("role") or "user")
-            break
-    logger.info(f"First user (admin) registered: '{body.username}'")
+    try:
+        record = await asyncio.to_thread(create_account)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Username already taken") from exc
     return {
         "ok": True,
-        "user_id": user_id,
+        "user_id": record["id"],
         "username": body.username,
-        "role": role,
-        "is_first_user": True,
-        "is_admin": role == "admin",
+        "role": record["role"],
+        "is_first_user": first and record["role"] == "admin",
+        "is_admin": record["role"] == "admin",
     }
 
 

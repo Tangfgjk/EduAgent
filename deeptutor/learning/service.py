@@ -112,7 +112,9 @@ def _apply_source_assistance(progress: LearningProgress, question: PendingQuesti
 
 
 def _question_independent(question: PendingQuestion) -> bool:
-    return not (question.assistance_used or question.visual_context.get("hints_used"))
+    return not (
+        question.assistance_used or question.scaffold_level or question.visual_context.get("hints_used")
+    )
 
 
 def _objective_fingerprint(kp: KnowledgePoint) -> tuple[str, str]:
@@ -587,6 +589,7 @@ class LearningService:
         turn_id: str = "",
         visual_context: dict[str, Any] | None = None,
         assistance_used: bool = False,
+        scaffold_level: int = 0,
         verdict: dict[str, Any] | None = None,
     ) -> bool:
         """Mutate one aggregate with a grade without performing I/O."""
@@ -617,7 +620,9 @@ class LearningService:
                 error_type=None
                 if is_correct or verdict and verdict["result"] == "partial"
                 else classify_error(user_answer),
-                independent=not assistance_used and not (visual_context or {}).get("hints_used"),
+                independent=not (
+                    assistance_used or scaffold_level or (visual_context or {}).get("hints_used")
+                ),
                 visual_context=visual_context or {},
             ),
         )
@@ -636,7 +641,9 @@ class LearningService:
             )
             evidence.visual_context = visual_context or {}
             evidence.hints_used = max(
-                int((visual_context or {}).get("hints_used") or 0), int(assistance_used)
+                int((visual_context or {}).get("hints_used") or 0),
+                int(assistance_used),
+                scaffold_level,
             )
             if evidence.hints_used and is_correct:
                 evidence.quality = min(evidence.quality or 1.0, 0.6)
@@ -1034,6 +1041,53 @@ class LearningService:
 
         _, interaction = self._store.mutate(book_id, mark)
         return interaction
+
+    def record_delivered_hint(
+        self, book_id: str, *, question_id: str, level: int, delivery: dict
+    ) -> int:
+        """Attach verified public help to an unanswered question atomically."""
+        session_id = delivery["session_id"]
+
+        def record(tx):
+            interaction = tx.active_interaction()
+            if (
+                interaction is None
+                or interaction.session_id != session_id
+                or interaction.status != InteractionStatus.AWAITING_INPUT
+            ):
+                raise MasteryInteractionError("No unanswered question in this session.")
+            questions = interaction.question.questions or [interaction.question]
+            question = next((item for item in questions if item.question_id == question_id), None)
+            if question is None or question_id in interaction.answers:
+                raise MasteryInteractionError("The question is no longer awaiting an answer.")
+            if level not in (1, 2) or level > question.scaffold_level + 1:
+                raise MasteryInteractionError("Offer a direction cue before a step hint.")
+            if level <= question.scaffold_level:
+                return question.scaffold_level
+
+            if question.scaffold_turn_id == delivery["turn_id"]:
+                raise MasteryInteractionError("Wait for the learner before increasing the hint level.")
+
+            question.scaffold_level = level
+            question.scaffold_turn_id = delivery["turn_id"]
+            tx.progress.pending_question = interaction.question
+            tx.put_interaction(interaction)
+            tx.emit(
+                "interaction.hint_delivered",
+                {
+                    "interaction_id": interaction.interaction_id,
+                    "question_id": question_id,
+                    "knowledge_point_id": question.knowledge_point_id,
+                    "level": level,
+                    "event_seq_range": delivery["event_seq_range"],
+                },
+                session_id=session_id,
+                turn_id=delivery["turn_id"],
+            )
+            return level
+
+        _, recorded = self._store.mutate(book_id, record)
+        return recorded
 
     def record_question_answer(
         self,
@@ -1673,6 +1727,7 @@ class LearningService:
                 turn_id=turn_id,
                 visual_context=pending.visual_context,
                 assistance_used=pending.assistance_used,
+                scaffold_level=pending.scaffold_level,
                 verdict=verdict,
             )
         )

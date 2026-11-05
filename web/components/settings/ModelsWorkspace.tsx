@@ -51,6 +51,7 @@ import {
   workspaceCardClass,
 } from "./WorkspaceShell";
 
+import type { ProviderProbeInput } from "./ProviderModelDiscovery";
 import { randomUuid } from "@/lib/random-uuid";
 type ModelPage = "llm" | "embedding" | "search" | "voice" | "multimodal";
 const PAGE_SERVICES: Record<ModelPage, ServiceName[]> = {
@@ -507,6 +508,11 @@ export function ModelsWorkspace({
                   setNewModelId(value);
                   syncQuery({ model: value });
                 }}
+                probeInput={addSource ? providerProbeInput(
+                  addSource,
+                  providers[addSource.service || "llm"]?.find(p => p.value === addSource.provider)?.base_url
+                    || providers[newService]?.find(p => p.value === addSource.provider)?.base_url,
+                ) : undefined}
                 modelOptions={addModelOptions}
                 sources={selectable}
                 declared={(source) => declared(source, newService)}
@@ -586,6 +592,7 @@ function AddModelPanel({
   modelId,
   onModelId,
   modelOptions,
+  probeInput,
   sources,
   declared,
   onCreate,
@@ -599,6 +606,7 @@ function AddModelPanel({
   modelId: string;
   onModelId: (value: string) => void;
   modelOptions: string[];
+  probeInput?: ProviderProbeInput;
   sources: ProviderSource[];
   declared: (source: ProviderSource) => boolean;
   onCreate: () => void;
@@ -606,6 +614,11 @@ function AddModelPanel({
 }) {
   const { t } = useTranslation();
   const [custom, setCustom] = useState(false);
+  const [listed, setListed] = useState<{ provider: string; models: string[] } | null>(null);
+  const options = [...new Set([
+    ...modelOptions,
+    ...(listed?.provider === provider ? listed.models : []),
+  ])];
   const visible = sources.filter(source => declared(source) || (service !== "search" && custom && source.source.service_overrides?.[service === "task" ? "llm" : service]?.enabled !== false));
   const title = t(
     page === "search" ? "Add search configuration" : "Add model",
@@ -658,12 +671,28 @@ function AddModelPanel({
       {/* A model row cannot be created without an ID, so the field lives here
           rather than only in the editor: the empty row used to reach the draft
           and blocked Apply from a page that could not show it. */}
+      {probeInput && (service === "llm" || service === "task" || service === "embedding") && (
+        <div className="mt-4">
+          <RegistryProbe
+            input={probeInput}
+            listing
+            automatic
+            showCapabilities={false}
+            onResult={result => setListed({
+              provider,
+              models: result.models
+                .filter(item => !item.services?.length || item.services.includes(service === "task" ? "llm" : service))
+                .map(item => item.id),
+            })}
+          />
+        </div>
+      )}
       {service !== "search" && (
         <div className="mt-4 max-w-md">
           <RegistryModelIdField
             label={t("Model ID")}
             value={modelId}
-            options={modelOptions}
+            options={options}
             onChange={onModelId}
             placeholder={t("Choose a listed model or enter a model ID")}
             required

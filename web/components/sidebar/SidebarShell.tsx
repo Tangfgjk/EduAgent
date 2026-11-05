@@ -33,6 +33,7 @@ import { useSidebarResize } from "@/hooks/useSidebarResize";
 import { CategoryBody, CategoryTabs, useCategoryNavigation } from "@/components/sidebar/CategoryNavigation";
 import { isLearningSession } from "@/lib/navigation";
 import Tooltip from "@/shared/ui/Tooltip";
+import { AccountMenu } from "@/components/sidebar/AccountMenu";
 import { WorkspaceMenu } from "@/components/sidebar/WorkspaceMenu";
 import { SHORTCUTS, matchesShortcut } from "@/lib/shortcuts";
 import { RecordHeader, useRecordView } from "@/components/sidebar/RecordList";
@@ -181,7 +182,7 @@ export function SidebarShell({
       event.preventDefault();
       const target = categoryNav.categories[index];
       categoryNav.select(target.id);
-      if (collapsed) navigateTask(target.href, router.push);
+      navigateTask(target.href, router.push);
     }
   };
   useLayoutEffect(() => {
@@ -304,11 +305,11 @@ export function SidebarShell({
         {/* The open sidebar's header, stood on end: the workspace (with its
             menu of settings and account), the way back out, then search. */}
         {bodySlot ? (
-          <Link href={brandHref} prefetch={false} aria-label="DeepTutor" className="dt-rail-brand">
-            <Image src="/brand/color-logo.png" alt="DeepTutor" width={22} height={22} className="h-[22px] w-[22px] rounded-md" />
+          <Link href={brandHref} prefetch={false} aria-label="桂子问津" className="dt-rail-brand">
+            <Image src="/brand/wenjin-mark.svg" alt="桂子问津" width={22} height={22} className="h-[22px] w-[22px] rounded-md" />
           </Link>
         ) : (
-          <WorkspaceMenu compact accountSlot={renderedFooter} onNavigate={() => drawer?.close()} />
+          <WorkspaceMenu compact hideSettings onNavigate={() => drawer?.close()} />
         )}
         <Tooltip label={t("Expand sidebar")} side="right">
           <button
@@ -342,6 +343,7 @@ export function SidebarShell({
 
         {footerOverride ? footerOverride(true) : (
           <div className="dt-rail-foot">
+            <AccountMenu compact accountSlot={renderedFooter} onNavigate={drawer?.close} />
             <Tooltip label={t("navigation.newChat")} side="right" shortcut={SHORTCUTS.newChat}>
               <Link prefetch={false} href="/chat" onClick={handleHomeClick} aria-label={t("navigation.newChat")} className="dt-nav-icon">
                 <SquarePen size={17} strokeWidth={1.6} />
@@ -364,15 +366,15 @@ export function SidebarShell({
         <div className="flex h-[52px] shrink-0 items-center justify-between px-4">
           <Link href={brandHref} prefetch={false} className="group flex items-center gap-1.5">
             <Image
-              src="/brand/color-logo.png"
-              alt="DeepTutor"
+              src="/brand/wenjin-mark.svg"
+              alt="桂子问津"
               width={22}
               height={22}
               className="h-[22px] w-[22px] transition-transform duration-200 group-hover:scale-105"
             />
             <Image
-              src="/brand/color-word.png"
-              alt="DeepTutor"
+              src="/brand/wenjin-word.svg"
+              alt="桂子问津"
               width={1200}
               height={310}
               priority
@@ -390,8 +392,13 @@ export function SidebarShell({
           </button>
         </div>
       ) : (
-        <div className="dt-sidebar-header">
-          <WorkspaceMenu accountSlot={renderedFooter} onNavigate={() => drawer?.close()} />
+        <>
+          <Link href={brandHref} prefetch={false} className="wenjin-sidebar-brand" onClick={() => drawer?.close()}>
+            <Image src="/brand/wenjin-mark.svg" alt="" width={36} height={36} />
+            <span><strong>桂子问津</strong><small>{t("workbench.brandSubtitle")}</small></span>
+          </Link>
+          <div className="dt-sidebar-header">
+          <WorkspaceMenu hideSettings onNavigate={() => drawer?.close()} />
           <Tooltip label={t("navigation.search")} side="bottom" shortcut={SHORTCUTS.search}>
             <button
               type="button"
@@ -415,7 +422,8 @@ export function SidebarShell({
               <ChevronsLeft size={17} strokeWidth={1.6} />
             </button>
           </Tooltip>
-        </div>
+          </div>
+        </>
       )}
 
       {homeSlot ? homeSlot(false) : <CategoryTabs nav={categoryNav} collapsed={false} />}
@@ -439,6 +447,7 @@ export function SidebarShell({
               <span>{t("navigation.newChat")}</span>
             </Link>
           </Tooltip>
+          <AccountMenu accountSlot={renderedFooter} onNavigate={drawer?.close} />
         </div>
       )}
       {!isMobile && (

@@ -97,25 +97,25 @@
      keep bg essentially white, save the visible warmth for accents. */
   :root {
     color-scheme: light;
-    --background: #fdfcf9;
-    --foreground: #1c1816;
-    --card: #ffffff;
-    --card-foreground: #1c1816;
-    --popover: #ffffff;
-    --popover-foreground: #1c1816;
-    --primary: #b0501e;
+    --background: #f8f7ef;
+    --foreground: #1c392f;
+    --card: #fffdf7;
+    --card-foreground: #1c392f;
+    --popover: #fffdf7;
+    --popover-foreground: #1c392f;
+    --primary: #255c49;
     --primary-foreground: #ffffff;
-    --secondary: #f5f2ea;
-    --secondary-foreground: #1c1816;
-    --muted: #f1ede2;
-    --muted-foreground: #6d645a;
-    --accent: #ece7d8;
-    --accent-foreground: #1c1816;
+    --secondary: #edf1e7;
+    --secondary-foreground: #1c392f;
+    --muted: #eef0e5;
+    --muted-foreground: #54665c;
+    --accent: #e2ece0;
+    --accent-foreground: #1c392f;
     --destructive: #c53a2c;
     --destructive-foreground: #ffffff;
-    --border: #e6decc;
-    --input: #e6decc;
-    --ring: #b0501e;
+    --border: #dce4d6;
+    --input: #d3ddcf;
+    --ring: #367257;
     --overlay: rgba(28, 24, 22, 0.42);
     --success: #237a4b;
     --success-foreground: #14532d;
@@ -126,32 +126,35 @@
     --info: #2563eb;
     --info-foreground: #1e3a8a;
     --info-surface: #eff6ff;
-    --surface-raised: #ffffff;
+    --surface-raised: #fffdf7;
     --shadow-raised: 0 16px 40px rgba(69, 49, 31, 0.12);
+    --wenjin-gold: #c09a54;
+    --wenjin-gold-surface: #f8efdb;
+    --wenjin-gold-ink: #624918;
   }
 
   /* Dark — warm near-black, same terracotta family as Cream. */
   .dark {
     color-scheme: dark;
-    --background: #1a1918;
-    --foreground: #e8e4de;
-    --card: #242220;
-    --card-foreground: #e8e4de;
-    --popover: #242220;
-    --popover-foreground: #e8e4de;
-    --primary: #d4734b;
-    --primary-foreground: #1a1918;
-    --secondary: #2a2725;
-    --secondary-foreground: #e8e4de;
-    --muted: #2a2725;
-    --muted-foreground: #9b9590;
-    --accent: #302d2a;
-    --accent-foreground: #e8e4de;
+    --background: #17221e;
+    --foreground: #e6eee7;
+    --card: #202e27;
+    --card-foreground: #e6eee7;
+    --popover: #202e27;
+    --popover-foreground: #e6eee7;
+    --primary: #9ac9a9;
+    --primary-foreground: #14271c;
+    --secondary: #1e2c25;
+    --secondary-foreground: #e6eee7;
+    --muted: #2c3b32;
+    --muted-foreground: #abbdb0;
+    --accent: #304537;
+    --accent-foreground: #e6eee7;
     --destructive: #d44a3c;
     --destructive-foreground: #ffffff;
-    --border: #3a3634;
-    --input: #3a3634;
-    --ring: #d4734b;
+    --border: #3a4c40;
+    --input: #46594c;
+    --ring: #9ac9a9;
     --overlay: rgba(0, 0, 0, 0.6);
     --success: #5fd08a;
     --success-foreground: #bbf7d0;
@@ -162,8 +165,11 @@
     --info: #7ba7ff;
     --info-foreground: #bfdbfe;
     --info-surface: #172641;
-    --surface-raised: #2a2826;
+    --surface-raised: #202e27;
     --shadow-raised: 0 16px 44px rgba(0, 0, 0, 0.32);
+    --wenjin-gold: #d9b876;
+    --wenjin-gold-surface: #3d3423;
+    --wenjin-gold-ink: #f2dba8;
   }
 
   /* Default — pure-white neutral canvas (theme id "snow" kept for stored
@@ -172,25 +178,25 @@
      in the spirit of Codex/ChatGPT chrome. */
   .theme-snow {
     color-scheme: light;
-    --background: #ffffff;
-    --foreground: #0d0d0d;
+    --background: #fcfdf9;
+    --foreground: #20382f;
     --card: #ffffff;
-    --card-foreground: #0d0d0d;
+    --card-foreground: #20382f;
     --popover: #ffffff;
-    --popover-foreground: #0d0d0d;
-    --primary: #2563eb;
+    --popover-foreground: #20382f;
+    --primary: #28634e;
     --primary-foreground: #ffffff;
-    --secondary: #f7f7f7;
-    --secondary-foreground: #0d0d0d;
-    --muted: #f2f2f2;
-    --muted-foreground: #6e6e6e;
-    --accent: #ececec;
-    --accent-foreground: #0d0d0d;
+    --secondary: #f1f5ee;
+    --secondary-foreground: #20382f;
+    --muted: #eef2eb;
+    --muted-foreground: #50665a;
+    --accent: #e3eee4;
+    --accent-foreground: #20382f;
     --destructive: #d92d20;
     --destructive-foreground: #ffffff;
-    --border: #e5e5e5;
-    --input: #e5e5e5;
-    --ring: #2563eb;
+    --border: #e0e8dd;
+    --input: #d3dfd4;
+    --ring: #367257;
     --overlay: rgba(0, 0, 0, 0.4);
     --success: #16794b;
     --success-foreground: #14532d;
@@ -203,31 +209,34 @@
     --info-surface: #eff6ff;
     --surface-raised: #ffffff;
     --shadow-raised: 0 16px 40px rgba(13, 13, 13, 0.12);
+    --wenjin-gold: #c09a54;
+    --wenjin-gold-surface: #fbf2de;
+    --wenjin-gold-ink: #614919;
   }
 
   /* Glass — translucent purple panels on near-black. Slightly brighter
      primary so the accent reads against the radial gradient. */
   .theme-glass {
     color-scheme: dark;
-    --background: #0e0d1a;
-    --foreground: #ffffff;
-    --card: rgba(255, 255, 255, 0.06);
-    --card-foreground: #ffffff;
-    --popover: rgba(24, 22, 36, 0.92);
-    --popover-foreground: #ffffff;
-    --primary: #a855f7;
-    --primary-foreground: #ffffff;
-    --secondary: rgba(255, 255, 255, 0.04);
-    --secondary-foreground: #eeeeee;
-    --muted: rgba(255, 255, 255, 0.06);
-    --muted-foreground: #b5b5c7;
-    --accent: rgba(255, 255, 255, 0.12);
-    --accent-foreground: #ffffff;
+    --background: #10251e;
+    --foreground: #eff6ed;
+    --card: rgba(234,250,232,.07);
+    --card-foreground: #eff6ed;
+    --popover: #21342a;
+    --popover-foreground: #eff6ed;
+    --primary: #a7d4b3;
+    --primary-foreground: #14271c;
+    --secondary: rgba(224,246,223,.07);
+    --secondary-foreground: #eff6ed;
+    --muted: rgba(224,246,223,.09);
+    --muted-foreground: #b3c8ba;
+    --accent: rgba(216,244,217,.16);
+    --accent-foreground: #eff6ed;
     --destructive: #f07178;
     --destructive-foreground: #ffffff;
-    --border: rgba(255, 255, 255, 0.12);
-    --input: rgba(255, 255, 255, 0.06);
-    --ring: #a855f7;
+    --border: rgba(224,246,223,.19);
+    --input: rgba(224,246,223,.15);
+    --ring: #a7d4b3;
     --overlay: rgba(0, 0, 0, 0.55);
     --success: #68dfa0;
     --success-foreground: #bbf7d0;
@@ -238,8 +247,11 @@
     --info: #9ab7ff;
     --info-foreground: #dbeafe;
     --info-surface: rgba(59, 130, 246, 0.16);
-    --surface-raised: rgba(35, 32, 51, 0.96);
+    --surface-raised: #21342a;
     --shadow-raised: 0 18px 48px rgba(0, 0, 0, 0.42);
+    --wenjin-gold: #e0c083;
+    --wenjin-gold-surface: #393624;
+    --wenjin-gold-ink: #f2dba8;
   }
 
   .theme-glass body {

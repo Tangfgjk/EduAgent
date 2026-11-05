@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useId, useState, type ReactNode } from 'react'
 import { Check, ChevronDown, Settings, Settings2 } from 'lucide-react'
@@ -17,8 +16,8 @@ const GLYPH_TINTS = ['#e3655b', '#d9822b', '#c9a227', '#4f9d69', '#3d8fb8', '#6c
 export function WorkspaceGlyph({ name, general, size = 22 }: { name: string; general: boolean; size?: number }) {
   if (general)
     return (
-      <span aria-hidden className="dt-workspace-glyph is-general" style={{ width: size, height: size }}>
-        <Image src="/brand/color-logo.png" alt="" width={size} height={size} className="h-full w-full object-contain" />
+      <span aria-hidden className="dt-workspace-glyph" style={{ width: size, height: size, background: "#255c49", fontSize: size * 0.66 }}>
+        津
       </span>
     )
   let hash = 0
@@ -74,7 +73,9 @@ export function WorkspaceMenu({
   accountSlot,
   onNavigate,
   compact = false,
+  hideSettings = false,
 }: {
+  hideSettings?: boolean
   accountSlot?: ReactNode
   onNavigate?: () => void
   /** The collapsed rail's form: the workspace's mark alone, opening beside the rail. */
@@ -122,12 +123,15 @@ export function WorkspaceMenu({
       {open && (
         <div id={menuId} role="menu" aria-label={t('Manage workspaces')} className="dt-popover dt-workspace-panel">
           <WorkspaceChoiceList onChoose={close} />
-          <div className="dt-menu-divider" />
-          <Link role="menuitem" href="/settings" prefetch={false} onClick={close} className="dt-menu-item">
-            <Settings size={16} strokeWidth={1.6} />
-            <span className="flex-1">{t('Settings')}</span>
-          </Link>
+          {!hideSettings && <>
+            <div className="dt-menu-divider" />
+            <Link role="menuitem" href="/settings" prefetch={false} onClick={close} className="dt-menu-item">
+              <Settings size={16} strokeWidth={1.6} />
+              <span className="flex-1">{t('Settings')}</span>
+            </Link>
+          </>}
           {accountSlot ? <div className="dt-menu-slot">{accountSlot}</div> : null}
+          <div className="dt-menu-divider" />
           <div className="dt-menu-divider" />
           <div className="dt-menu-footer">
             <span

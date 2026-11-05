@@ -1,17 +1,13 @@
 'use client'
 
-import { CalendarDays } from 'lucide-react'
-
 import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Columns3, CornerDownLeft, MessageCircle, PenLine, Search, Settings, Users, type LucideIcon } from 'lucide-react'
+import { CornerDownLeft, MessageCircle, PenLine, Search, Settings, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import PartnerAvatar from '@/components/partners/PartnerAvatar'
-import { DASHBOARD_GROUPS, PERSONALIZATION_GROUPS, visibleGroups } from '@/components/space/dashboard-groups'
+import { DASHBOARD_GROUPS, visibleGroups } from '@/components/space/dashboard-groups'
 import { useCapabilityFilter } from '@/features/capabilities/useCapabilityCatalog'
 import { useLearningIndex } from '@/hooks/useLearningIndex'
-import { usePartnerNavigation } from '@/hooks/usePartnerNavigation'
 import { allLearningActivity } from '@/lib/learning-dashboard'
 import { navigateTask } from '@/lib/workspace-scope'
 import type { SessionSummary } from '@/lib/session-api'
@@ -61,7 +57,6 @@ export function CommandPalette({
   const zh = i18n.language.startsWith('zh')
   const available = useCapabilityFilter()
   const { sources } = useLearningIndex(open)
-  const { data: partnerData } = usePartnerNavigation(open)
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -83,15 +78,12 @@ export function CommandPalette({
       { id: 'new-chat', label: t('navigation.newChat'), icon: glyph(PenLine), run: onNewChat },
       ...categories.map(item => ({ id: `category:${item.id}`, label: t(item.label), icon: glyph(item.icon), run: go(item.href) })),
       ...[
-        { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-              { href: '/kanban', label: 'Task Board', icon: Columns3 },
         { href: '/co-writer', label: 'Co-Writer', icon: PenLine },
       ]
         .filter(item => navVisibleUnderPolicy(item.href, allowedSurfaces))
         .map(item => ({ id: item.href, label: t(item.label), icon: glyph(item.icon), run: go(item.href) })),
       ...[
         { groups: DASHBOARD_GROUPS, detail: t('navigation.resources') },
-        { groups: PERSONALIZATION_GROUPS, detail: t('navigation.personalization') },
       ].flatMap(({ groups, detail }) =>
         visibleGroups(groups, available).flatMap(group =>
           group.items
@@ -130,30 +122,14 @@ export function CommandPalette({
         run: go(item.href),
       }
     })
-    const partners: PaletteItem[] = [
-      ...partnerData.partners.map(partner => ({
-        id: `partner:${partner.partner_id}`,
-        label: partner.name,
-        icon: <PartnerAvatar name={partner.name} emoji={partner.emoji} image={partner.avatar} color={partner.color} size={18} />,
-        run: go(`/partners/${encodeURIComponent(partner.partner_id)}`),
-      })),
-      ...partnerData.groups.map(group => ({
-        id: `group:${group.group_id}`,
-        label: group.name,
-        detail: t('Groups'),
-        icon: glyph(Users),
-        run: go(`/partners/groups/${encodeURIComponent(group.group_id)}`),
-      })),
-    ]
     const pick = (items: PaletteItem[], idle: number) =>
       q ? items.filter(item => includes(`${item.label} ${item.detail ?? ''}`, q)).slice(0, 6) : items.slice(0, idle)
     return [
       { title: t('navigation.jumpTo'), items: pick(places, 1 + categories.length + 2) },
       { title: t('Conversations'), items: pick(conversations, 5) },
       { title: t('navigation.learning'), items: pick(learning, q ? 6 : 0) },
-      { title: t('navigation.partners'), items: pick(partners, q ? 6 : 0) },
     ].filter(group => group.items.length > 0)
-  }, [query, categories, allowedSurfaces, available, zh, sessions, sources, partnerData, onSelectSession, onNewChat, router.push, t])
+  }, [query, categories, allowedSurfaces, available, zh, sessions, sources, onSelectSession, onNewChat, router.push, t])
 
   const flat = groups.flatMap(group => group.items)
   const current = Math.min(activeIndex, Math.max(0, flat.length - 1))

@@ -1,0 +1,161 @@
+.wenjin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 21px 15px 15px;
+  color: var(--foreground);
+}
+.wenjin-sidebar-brand strong { display: block; font-size: 17px; line-height: 1.3; letter-spacing: .12em; }
+.wenjin-sidebar-brand small { display: block; margin-top: 3px; color: var(--muted-foreground); font-size: 11px; }
+.dt-product-sidebar { --dt-nav-row: 36px; --dt-nav-radius: 9px; }
+.dt-product-sidebar:not(.dt-rail) .dt-sidebar-header {
+  margin: 0 9px 10px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.dt-product-sidebar .dt-category-bar { margin-bottom: 7px; }
+.dt-category-bar:not(.is-collapsed) [role="tablist"] {
+  gap: 3px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--muted);
+}
+.dt-category-bar [role="tab"].is-active { color: var(--primary-foreground); }
+.dt-category-bar .dt-category-pill { background: var(--primary); }
+.wenjin-today { --wenjin-desk-radius: 16px; }
+.wenjin-today-heading {
+  margin: 20px 0 24px;
+}
+.wenjin-today-heading h2 {
+  font-family: "Noto Serif SC", "Songti SC", SimSun, serif;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+.wenjin-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+.wenjin-eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--wenjin-gold);
+  transform: rotate(45deg);
+}
+.wenjin-today-grid { display: grid; gap: 20px; }
+@media (min-width: 1200px) {
+  .wenjin-today-grid { grid-template-columns: minmax(0, 1fr) 248px; }
+}
+.wenjin-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--wenjin-desk-radius);
+  background: linear-gradient(110deg, var(--accent), var(--secondary));
+}
+.wenjin-hero h2, .wenjin-hero p, .wenjin-hero a, .wenjin-hero button { position: relative; }
+.wenjin-hero-illustration {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: clamp(88px, 22%, 160px);
+  color: var(--primary);
+  opacity: .48;
+  pointer-events: none;
+}
+.wenjin-quick-link {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 600;
+}
+.wenjin-quick-link:hover { border-color: var(--primary); }
+.wenjin-quick-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.wenjin-quick-icon {
+  display: inline-grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--primary);
+  background: var(--accent);
+}
+.wenjin-planned {
+  color: var(--wenjin-gold-ink);
+  background: var(--wenjin-gold-surface);
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .wenjin-today-heading { margin-top: 12px; margin-bottom: 18px; }
+  .wenjin-hero-illustration { display: none; }
+}
+
+/* The existing mobile page header already provides the title and action. */
+@media (max-width: 767px) {
+  .wenjin-today-heading { display: none; }
+  .wenjin-today .dt-page-header h1 {
+    font-family: "Noto Serif SC", "Songti SC", SimSun, serif;
+  }
+}
+@media (max-width: 560px) {
+  .wenjin-hero :is(h2, p) { max-width: 100%; }
+}
+
+.wenjin-account-menu { position: relative; width: 100%; margin-top: 8px; }
+.wenjin-account-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 8px; border-radius: 10px; }
+.wenjin-account-trigger:hover { background: var(--accent); }
+.wenjin-account-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.wenjin-account-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; background: var(--primary); color: var(--primary-foreground); }
+/* Override the shared downward popover's top anchor for this upward menu. */
+.dt-popover.wenjin-account-panel {
+  top: auto;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: max(100%, 252px);
+  max-width: calc(100vw - 24px);
+  max-height: min(520px, calc(100dvh - 100px));
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 36px rgb(0 0 0 / .14), 0 2px 8px rgb(0 0 0 / .05);
+  transform-origin: bottom left;
+  z-index: 70;
+}
+.wenjin-account-summary { display: flex; align-items: center; gap: 10px; padding: 10px 10px 12px; }
+.wenjin-account-panel .dt-menu-divider { margin: 4px 6px 7px; }
+.wenjin-account-panel :is(.dt-menu-item, .dt-menu-slot a, .dt-menu-slot button) {
+  min-height: 40px;
+  padding: 9px 10px;
+  gap: 11px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+.wenjin-account-panel :is(a, button):focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.wenjin-account-panel .dt-menu-slot button:last-child { margin-top: 6px; border-top: 1px solid var(--border); border-radius: 0 0 9px 9px; }
+.wenjin-account-trigger[aria-expanded="true"] { background: var(--accent); }
+.wenjin-account-menu.is-compact .wenjin-account-panel { left: calc(100% + 12px); bottom: 0; }

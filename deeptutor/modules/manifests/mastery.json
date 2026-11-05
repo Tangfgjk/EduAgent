@@ -34,6 +34,7 @@
           "mastery_status",
           "mastery_quiz",
           "mastery_note_explained",
+          "mastery_record_hint",
           "mastery_grade",
           "mastery_skip_question",
           "mastery_repair_question",
@@ -94,6 +95,10 @@
     "mastery_note_explained": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryNoteExplainedTool",
       "order": 47
+    },
+    "mastery_record_hint": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryRecordHintTool",
+      "order": 60
     },
     "mastery_grade": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryGradeTool",

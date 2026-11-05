@@ -452,3 +452,35 @@ def test_map_summary_carries_the_display_name():
     progress = _progress(_kp("kp1", KnowledgeType.MEMORY))
     progress.name = "Quadratics"
     assert policy.map_summary(progress)["name"] == "Quadratics"
+
+def test_scaffold_adapts_to_distinct_valid_attempts_on_the_current_objective():
+    progress = _progress(_kp("kp1", KnowledgeType.PROCEDURE))
+
+    def add(question_id, *, correct=False, independent=True, kp_id="kp1", voided=False):
+        progress.quiz_attempts.append(
+            QuizAttempt(
+                question_id=question_id,
+                knowledge_point_id=kp_id,
+                is_correct=correct,
+                independent=independent,
+                voided=voided,
+            )
+        )
+
+    def recommendation():
+        return policy.next_objective(progress).to_dict()["scaffold"]
+
+    assert recommendation() == "observe"
+    add("a")
+    add("a")
+    add("other", kp_id="kp2")
+    add("invalid", voided=True)
+    assert recommendation() == "check_reason"
+    add("b")
+    assert recommendation() == "offer_minimal_hint"
+    add("c", correct=True, independent=False)
+    assert recommendation() == "fade_one_step"
+    add("d", correct=True)
+    assert recommendation() == "independent_variant"
+    add("e")
+    assert recommendation() == "check_reason"

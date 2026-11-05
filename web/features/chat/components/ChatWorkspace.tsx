@@ -277,10 +277,15 @@ export default function ChatWorkspace() {
   const { t } = useTranslation();
   const {
     capabilities,
-    visibleCapabilities,
+    visibleCapabilities: catalogChoices,
     isLoading: isCapabilityCatalogLoading,
     error: capabilityCatalogError,
   } = useCapabilityCatalog();
+  // Keep these capabilities resolvable for old conversations and book blocks.
+  const visibleCapabilities = useMemo(
+    () => catalogChoices.filter(({ value }) => !["deep_research", "video_lesson", "audio_overview", "math_animator"].includes(value)),
+    [catalogChoices],
+  );
   const { setActiveSessionId, language: appLanguage } = useAppShell();
 
   const {
@@ -2720,11 +2725,11 @@ export default function ChatWorkspace() {
                 <div className="flex w-full flex-1 min-h-0 items-end justify-center overflow-hidden pb-14 animate-fade-in px-6">
                   <div className="w-full max-w-[960px] flex items-center justify-center gap-4">
                     <img
-                      src="/brand/black-logo.png"
-                      alt="DeepTutor"
+                      src="/brand/wenjin-mark.svg"
+                      alt="桂子问津"
                       width={40}
                       height={40}
-                      className="h-10 w-10 select-none dark:invert"
+                      className="h-10 w-10 select-none"
                       draggable={false}
                     />
                     <h1 className="font-serif text-[40px] font-medium leading-[1.1] tracking-[-0.015em] text-[var(--foreground)]">

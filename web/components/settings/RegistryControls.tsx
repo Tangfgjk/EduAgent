@@ -117,6 +117,7 @@ export function RegistryProbe({
   listing = false,
   hints = [],
   showCapabilities = true,
+  automatic = false,
 }: {
   input: ProviderProbeInput;
   discovery?: Discovery;
@@ -124,6 +125,7 @@ export function RegistryProbe({
   listing?: boolean;
   hints?: string[];
   showCapabilities?: boolean;
+  automatic?: boolean;
 }) {
   // Credentials are only an in-memory request signature, never rendered or persisted.
   return (
@@ -133,6 +135,7 @@ export function RegistryProbe({
       discovery={discovery}
       onResult={onResult}
       listing={listing}
+      automatic={automatic}
       hints={hints}
       showCapabilities={showCapabilities}
     />
@@ -145,6 +148,7 @@ function ProbeForm({
   listing,
   hints,
   showCapabilities,
+  automatic,
 }: {
   input: ProviderProbeInput;
   discovery?: Discovery;
@@ -152,6 +156,7 @@ function ProbeForm({
   listing: boolean;
   hints: string[];
   showCapabilities: boolean;
+  automatic: boolean;
 }) {
   const { t } = useTranslation();
   const [result, setResult] = useState(discovery);
@@ -189,6 +194,13 @@ function ProbeForm({
       if (controller.current === request) setPending(false);
     }
   };
+  const runProbe = useRef(probe);
+  runProbe.current = probe;
+  useEffect(() => {
+    if (!automatic || !input.base_url.trim()) return;
+    void runProbe.current();
+    return () => controller.current?.abort();
+  }, [automatic, input.base_url]);
   return (
     <section className={`space-y-3 p-4 ${subPanelClass}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -8,7 +8,7 @@
    heavy drop. */
 :root[data-ui-layout="modern"] {
   --dt-page-title-font: theme("fontFamily.sans");
-  --dt-ink: 55 53 47;
+  --dt-ink: 30 58 47;
   --dt-shadow-xs: 0 0 0 1px rgb(15 15 15 / 0.04), 0 1px 2px rgb(15 15 15 / 0.06);
   --dt-shadow-sm: 0 0 0 1px rgb(15 15 15 / 0.05), 0 2px 4px rgb(15 15 15 / 0.06), 0 6px 16px -6px rgb(15 15 15 / 0.1);
   --dt-shadow-md: 0 0 0 1px rgb(15 15 15 / 0.05), 0 3px 6px rgb(15 15 15 / 0.08), 0 9px 24px rgb(15 15 15 / 0.14);
@@ -23,23 +23,6 @@
   --dt-shadow-xs: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.3);
   --dt-shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.07), 0 2px 4px rgb(0 0 0 / 0.3), 0 6px 16px -6px rgb(0 0 0 / 0.4);
   --dt-shadow-md: 0 0 0 1px rgb(255 255 255 / 0.08), 0 3px 6px rgb(0 0 0 / 0.3), 0 9px 24px rgb(0 0 0 / 0.45);
-}
-
-/* The default light theme turns warm: Notion-like warm grey canvas and ink.
-   The brand blue stays, kept for actions and links. */
-:root[data-ui-layout="modern"].theme-snow {
-  --foreground: #37352f;
-  --card-foreground: #37352f;
-  --popover-foreground: #37352f;
-  --secondary-foreground: #37352f;
-  --accent-foreground: #37352f;
-  --muted-foreground: #787774;
-  --secondary: #f8f8f7;
-  --muted: #f1f1ef;
-  --accent: rgb(55 53 47 / 0.06);
-  --border: rgb(55 53 47 / 0.09);
-  --input: rgb(55 53 47 / 0.16);
-  --shadow-raised: var(--dt-shadow-md);
 }
 
 /* ---- Pages -----------------------------------------------------------
@@ -85,8 +68,8 @@
 .dt-category-bar [role="tab"] { position: relative; display: flex; align-items: center; justify-content: center; flex: 1; min-width: 34px; height: 34px; gap: 6px; padding: 0 clamp(5px, (100cqi - 180px) / 10, 10px); color: var(--muted-foreground); border-radius: var(--dt-nav-radius); transition: color 140ms, background-color 140ms; }
 .dt-category-bar [role="tab"] > svg, .dt-category-bar [role="tab"] > span:not(.dt-category-pill) { position: relative; z-index: 1; flex-shrink: 0; }
 .dt-category-bar [role="tab"] > span:not(.dt-category-pill) { display: none; font-size: 13.5px; font-weight: 500; white-space: nowrap; }
-.dt-category-bar [role="tab"].is-active { flex: 1.9; color: var(--foreground); }
-.dt-category-bar [role="tab"].is-active > span:not(.dt-category-pill) { display: inline; }
+.dt-category-bar [role="tab"].is-active { color: var(--foreground); }
+.dt-category-bar:not(.is-collapsed) [role="tab"] > span:not(.dt-category-pill) { display: inline; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* A label longer than the room left (an English account shelf, a narrow
    sidebar) truncates instead of pushing the row past the sidebar's edge. */
 .dt-category-bar:not(.is-collapsed) :has(> [role="tab"].is-active) { min-width: 0; }

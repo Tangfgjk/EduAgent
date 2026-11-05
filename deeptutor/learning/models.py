@@ -403,6 +403,8 @@ class PendingQuestion(BaseModel):
     # Server-owned exposure evidence, independent of visual-task metadata.
     # Never included in the learner's question/answer-key projection.
     assistance_used: bool = False
+    scaffold_level: int = Field(default=0, ge=0, le=2)
+    scaffold_turn_id: str = ""
     # Native registration identity; later teaching must not contaminate an
     # unrelated question merely because it cites the same physical page.
     assistance_context: dict[str, str] = Field(default_factory=dict)

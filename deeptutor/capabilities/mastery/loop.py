@@ -198,7 +198,7 @@ class MasteryLoopCapability:
 
                 updated["_profile_recorded"] = profile_recorded
 
-            if tool_name == "mastery_note_explained":
+            if tool_name in {"mastery_note_explained", "mastery_record_hint"}:
                 session_id = str(context.session_id or "").strip()
                 turn_id = str(context.metadata.get("turn_id") or "").strip()
 

@@ -31,6 +31,7 @@ import {
   LANGUAGE_STORAGE_KEY,
   hasStoredLanguage,
   hasStoredResponseLanguage,
+  migrateLegacyInterfaceLanguage,
   SIDEBAR_COLLAPSED_EVENT,
   SIDEBAR_COLLAPSED_STORAGE_KEY,
   normalizeCodeBlockShowLineNumbers,
@@ -206,6 +207,7 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       // split has `deeptutor-language` and no `deeptutor-response-language` —
       // and returning here on the first alone locked it out of ever adopting
       // the account's model output language.
+      migrateLegacyInterfaceLanguage();
       const hadLanguageAtStart = hasStoredLanguage();
       if (hadLanguageAtStart && !cancelled) {
         setLanguageState(readStoredLanguage());

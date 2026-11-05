@@ -10,7 +10,12 @@ from deeptutor.capabilities.mastery import tools
 from deeptutor.capabilities.mastery.loop import MasteryLoopCapability
 from deeptutor.core.context import UnifiedContext
 from deeptutor.core.stream import StreamEvent, StreamEventType
-from deeptutor.learning.models import KnowledgePoint, LearningModule, LearningProgress
+from deeptutor.learning.models import (
+    KnowledgePoint,
+    LearningModule,
+    LearningProgress,
+    PendingQuestion,
+)
 from deeptutor.learning.policy import learning_stage
 from deeptutor.learning.service import LearningService
 from deeptutor.learning.storage import LearningStore
@@ -311,3 +316,60 @@ async def test_legacy_visibility_marker_cannot_retract_public_content():
     )
     snapshot = bus.public_content_snapshot(source="mastery_path", stage="responding")
     assert [part[2] for part in snapshot] == ["discarded", "accepted", "callless"]
+
+
+@pytest.mark.asyncio
+async def test_delivered_hint_survives_reload_and_marks_answer_assisted(lesson):
+    lesson.register_question(
+        "p",
+        PendingQuestion(
+            question_id="q",
+            knowledge_point_id="kp",
+            module_id="m",
+            prompt="What separates the interior of a cell from its surroundings?",
+            expected_answer="membrane",
+        ),
+        session_id="s",
+        turn_id="registration",
+    )
+    lesson.mark_question_awaiting("p", interaction_id="q")
+    bus = StreamBus(assign_seq=True)
+    cue = "Think about the boundary around the cell."
+
+    async def record(level=1, *, turn_id="t", **kwargs):
+        return await tools.MasteryRecordHintTool().execute(
+            _mastery_path_id="p",
+            _mastery_session_mode="study",
+            _session_id="s",
+            _turn_id=turn_id,
+            question_id="q",
+            hint_quote=cue,
+            level=level,
+            _teaching_delivery=delivery(bus, turn_id=turn_id, **kwargs),
+        )
+
+    assert not (await record()).success
+    await bus.content(cue, source="mastery_path", stage="responding")
+    assert not (await record(session_id="other")).success
+    assert not (await record(level=2)).success
+    assert (await record()).success
+    assert (await record()).success
+    assert not (await record(level=2)).success
+    bus = StreamBus(assign_seq=True)
+    cue = "Locate the line that separates the cell interior from the outside."
+    await bus.content(cue, source="mastery_path", stage="responding")
+    assert (await record(level=2, turn_id="followup")).success
+    fresh = LearningService(LearningStore(lesson.store._root))
+    events = [
+        event for event in fresh.store.list_events("p")
+        if event.event_type == "interaction.hint_delivered"
+    ]
+    assert [event.payload["level"] for event in events] == [1, 2]
+    progress, interaction, _ = fresh.grade_interaction(
+        "p", question_id="q", answer="membrane", session_id="s", turn_id="answer"
+    )
+    assert interaction.result["is_correct"]
+    assert not interaction.result["independent"]
+    assert not progress.quiz_attempts[-1].independent
+    assert progress.learning_evidence[-1].hints_used == 2
+    assert not (await record(level=2)).success

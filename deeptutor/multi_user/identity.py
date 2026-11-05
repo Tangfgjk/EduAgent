@@ -227,6 +227,8 @@ def save_user(
     hashed_password: str,
     role: Role = "user",
     preset: AccountPreset = "standard",
+    *,
+    create_only: bool = False,
 ) -> dict[str, Any]:
     USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
     # Read-modify-write must be atomic so concurrent first-time registrations
@@ -236,6 +238,8 @@ def save_user(
         # to disk below, and the bootstrap admin must stay an in-memory overlay.
         users = load_users()
         env_username, _ = _env_bootstrap_admin()
+        if create_only and (username in users or username == env_username):
+            raise ValueError("Username already taken")
         # A configured bootstrap admin counts as an existing account, so the
         # first account an operator creates from /admin/users is not silently
         # promoted — that endpoint documents role="user" (#849). Re-saving the

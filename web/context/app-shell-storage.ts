@@ -188,6 +188,18 @@ export function writeStoredLanguage(language: AppLanguage): void {
   }
 }
 
+// Older DeepTutor builds saved the English default as a browser preference.
+const WENJIN_LANGUAGE_MIGRATION_KEY = "wenjin-ui-locale-v1";
+
+export function migrateLegacyInterfaceLanguage(): void {
+  if (typeof window === "undefined") return;
+  if (browserStorage.readRaw("local", WENJIN_LANGUAGE_MIGRATION_KEY)) return;
+  if (browserStorage.readRaw("local", LANGUAGE_STORAGE_KEY) === "en") {
+    writeStoredLanguage("zh");
+  }
+  browserStorage.writeRaw("local", WENJIN_LANGUAGE_MIGRATION_KEY, "1");
+}
+
 /** Whether this browser has ever recorded a model-output-language choice.
  *
  * The mirror of {@link hasStoredLanguage}, and needed for the same reason but

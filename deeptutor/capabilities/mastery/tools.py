@@ -97,6 +97,7 @@ MASTERY_TOOL_NAMES: tuple[str, ...] = (
     "mastery_status",
     "mastery_quiz",
     "mastery_note_explained",
+    "mastery_record_hint",
     "mastery_grade",
     "mastery_skip_question",
     "mastery_repair_question",
@@ -525,12 +526,13 @@ def _profile_status(
             "learner_profile": None,
             "intake_needed": True,
             "intake_instruction": (
-                "This learner has not been asked about themselves yet. Before "
-                "designing the outline, ask what they can already do, what "
-                "'done' looks like for them, how much time they have, and how "
-                "they want it taught — then record the answers with "
-                "mastery_profile. Ask only what you cannot read off the "
-                "materials yourself."
+                "Ask what the learner wants to be able to do after learning this topic "
+                "and what they have already tried. A topic alone is not a confirmed "
+                "outcome; ask for confirmation or offer a provisional outcome they "
+                "can change. If relevant, also ask how much time they have. Keep the "
+                "questions optional. Record only what they actually "
+                "say with mastery_profile; self-report is not mastery evidence. Offer "
+                "a short starting check in study mode, or teach first if they prefer."
             ),
         }
     from deeptutor.learning.teaching import teaching_guidance
@@ -874,6 +876,13 @@ class MasteryStatusTool(BaseTool):
                 "question_id": interaction.interaction_id,
                 "status": interaction.status.value,
             }
+            scaffold_levels = {
+                q.question_id: q.scaffold_level
+                for q in interaction.question.questions or [interaction.question]
+                if q.scaffold_level
+            }
+            if scaffold_levels:
+                pending_interaction["scaffold_levels"] = scaffold_levels
             if interaction.question.questions:
                 graded_ids = {
                     result["question_id"] for result in interaction.result.get("results", [])
@@ -915,6 +924,100 @@ class MasteryStatusTool(BaseTool):
         if kwargs.get("_working_brief"):
             payload = self._working_brief(payload, progress)
         return _json_result(payload, meta_key="mastery_status")
+
+
+def _public_delivery(kwargs: dict[str, Any], path_id: str, quote: str) -> dict | ToolResult:
+    read_delivery = kwargs.get("_teaching_delivery")
+    delivery = read_delivery() if callable(read_delivery) else None
+    expected_scope = {
+        "path_id": path_id,
+        "session_id": _resolve_session_id(kwargs),
+        "turn_id": _resolve_turn_id(kwargs),
+    }
+    if (
+        not isinstance(delivery, dict)
+        or not all(expected_scope.values())
+        or any(delivery.get(key) != value for key, value in expected_scope.items())
+    ):
+        return ToolResult(
+            content="Teaching must be bound to the active runtime path, session and turn; no explanation was recorded.",
+            success=False,
+        )
+    segments = delivery.get("segments")
+    if not isinstance(segments, tuple) or any(
+        not isinstance(segment, tuple)
+        or len(segment) != 3
+        or not isinstance(segment[0], int)
+        or not isinstance(segment[1], (int, float))
+        or not isinstance(segment[2], str)
+        for segment in segments
+    ):
+        return ToolResult(
+            content="Published explanation evidence is unavailable; no explanation was recorded.",
+            success=False,
+        )
+    published = "".join(segment[2] for segment in segments)
+    start = published.rfind(quote)
+    if start < 0:
+        return ToolResult(
+            content="That excerpt has not been publicly delivered in this turn. Publish it before recording it.",
+            success=False,
+        )
+    offset = 0
+    matched = []
+    for segment in segments:
+        end = offset + len(segment[2])
+        if offset < start + len(quote) and end > start:
+            matched.append(segment)
+        offset = end
+    return {
+        **expected_scope,
+        "event_seq_range": [matched[0][0], matched[-1][0]],
+        "event_timestamp_range": [matched[0][1], matched[-1][1]],
+    }
+
+
+class MasteryRecordHintTool(BaseTool):
+    def get_definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name="mastery_record_hint",
+            description="After publicly delivering a hint for an unanswered question, record it before grading. Never record a planned hint or reveal the answer.",
+            parameters=[
+                ToolParameter(name="question_id", type="string", description="Exact pending question or group leaf ID."),
+                ToolParameter(name="level", type="integer", description="1 for a direction cue, 2 for a concrete next step."),
+                ToolParameter(name="hint_quote", type="string", description="Exact text of the hint already delivered publicly this turn."),
+            ],
+        )
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        refusal = _wrong_mode_result("mastery_record_hint", kwargs)
+        if refusal is not None:
+            return refusal
+        path_id = _resolve_path_id(kwargs)
+        if not path_id:
+            return _no_path_result()
+        question_id = str(kwargs.get("question_id") or "").strip()
+        quote = str(kwargs.get("hint_quote") or "").strip()
+        level = kwargs.get("level")
+        if not question_id or not 6 <= len(quote) <= 1000 or type(level) is not int:
+            return ToolResult(content="Provide the question ID, hint level and exact public hint.", success=False)
+        delivery = _public_delivery(kwargs, path_id, quote)
+        if isinstance(delivery, ToolResult):
+            return delivery
+
+        from deeptutor.learning.service import MasteryInteractionError
+
+        try:
+            recorded = await asyncio.to_thread(
+                _new_service().record_delivered_hint,
+                path_id,
+                question_id=question_id,
+                level=level,
+                delivery=delivery,
+            )
+        except (MasteryInteractionError, FileNotFoundError) as exc:
+            return ToolResult(content=str(exc), success=False)
+        return _json_result({"question_id": question_id, "level": recorded}, meta_key="mastery_record_hint")
 
 
 class MasteryNoteExplainedTool(BaseTool):
@@ -961,54 +1064,9 @@ class MasteryNoteExplainedTool(BaseTool):
                 success=False,
             )
         quote = quote.strip()
-        read_delivery = kwargs.get("_teaching_delivery")
-        delivery = read_delivery() if callable(read_delivery) else None
-        expected_scope = {
-            "path_id": path_id,
-            "session_id": _resolve_session_id(kwargs),
-            "turn_id": _resolve_turn_id(kwargs),
-        }
-        if (
-            not isinstance(delivery, dict)
-            or not all(expected_scope.values())
-            or any(delivery.get(key) != value for key, value in expected_scope.items())
-        ):
-            return ToolResult(
-                content="Teaching must be bound to the active runtime path, session and turn; no explanation was recorded.",
-                success=False,
-            )
-        segments = delivery.get("segments")
-        if not isinstance(segments, tuple) or any(
-            not isinstance(segment, tuple)
-            or len(segment) != 3
-            or not isinstance(segment[0], int)
-            or not isinstance(segment[1], (int, float))
-            or not isinstance(segment[2], str)
-            for segment in segments
-        ):
-            return ToolResult(
-                content="Published explanation evidence is unavailable; no explanation was recorded.",
-                success=False,
-            )
-        published = "".join(segment[2] for segment in segments)
-        start = published.rfind(quote)
-        if start < 0:
-            return ToolResult(
-                content="That excerpt has not been publicly delivered in this turn. Explain first, then record only what was taught; do not record a future plan.",
-                success=False,
-            )
-        offset = 0
-        matched = []
-        for segment in segments:
-            end = offset + len(segment[2])
-            if offset < start + len(quote) and end > start:
-                matched.append(segment)
-            offset = end
-        provenance = {
-            **expected_scope,
-            "event_seq_range": [matched[0][0], matched[-1][0]],
-            "event_timestamp_range": [matched[0][1], matched[-1][1]],
-        }
+        provenance = _public_delivery(kwargs, path_id, quote)
+        if isinstance(provenance, ToolResult):
+            return provenance
         service = _new_service()
         if _load_path(service, path_id) is None:
             return _no_built_path_result("mastery_note_explained")
@@ -3756,6 +3814,7 @@ def _parse_modules(
 MASTERY_TOOL_TYPES: tuple[type[BaseTool], ...] = (
     MasteryStatusTool,
     MasteryNoteExplainedTool,
+    MasteryRecordHintTool,
     MasteryQuizTool,
     MasteryGradeTool,
     MasterySkipQuestionTool,
@@ -3785,6 +3844,7 @@ __all__ = [
     "MasteryNoteExplainedTool",
     "MasteryProfileTool",
     "MasteryQuizTool",
+    "MasteryRecordHintTool",
     "MasteryRepairQuestionTool",
     "MasteryReviseTool",
     "MasterySkipQuestionTool",

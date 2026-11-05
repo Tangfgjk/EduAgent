@@ -106,7 +106,7 @@ ${FENCE}
 
 ### Images
 
-![](/brand/color-logo.png)
+![](/brand/wenjin-mark.svg)
 
 > DeepTutor brand mark used inside the co-writer template.
 

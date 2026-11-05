@@ -202,6 +202,28 @@ def due_reviews(progress: LearningProgress, *, now: float | None = None) -> list
     return due
 
 
+def scaffold_recommendation(progress: LearningProgress, objective_id: str) -> str:
+    """Recommend support from distinct, valid attempts on this objective."""
+    attempts = {}
+    for attempt in reversed(progress.quiz_attempts):
+        if attempt.knowledge_point_id == objective_id and not attempt.voided:
+            attempts.setdefault(attempt.question_id, attempt)
+            if len(attempts) == 2:
+                break
+
+    recent = list(attempts.values())
+    if not recent:
+        return "observe"
+    latest = recent[0]
+    if latest.result == "correct":
+        return "independent_variant" if latest.independent else "fade_one_step"
+    if len(recent) == 2 and all(
+        attempt.result == "incorrect" and attempt.independent for attempt in recent
+    ):
+        return "offer_minimal_hint"
+    return "check_reason"
+
+
 @dataclass(frozen=True)
 class NextStep:
     """What the tutor should do next, decided by the gate — not a stage cursor.
@@ -233,6 +255,7 @@ class NextStep:
     pending_prompt: str = ""
     pending_question: PublicPendingQuestion | None = None
     session_id: str = ""
+    scaffold: str = "observe"
 
     def to_dict(self) -> dict:
         return {
@@ -253,6 +276,7 @@ class NextStep:
                 self.pending_question.to_dict() if self.pending_question is not None else None
             ),
             "session_id": self.session_id,
+            "scaffold": self.scaffold,
         }
 
 
@@ -357,6 +381,7 @@ def next_objective(
                 action = "practice"
             step = NextStep(
                 action=action,
+                scaffold=scaffold_recommendation(progress, kp.id),
                 module_id=module.id,
                 module_name=module.name,
                 knowledge_point_id=kp.id,

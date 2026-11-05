@@ -17,7 +17,7 @@ export function normalizeVersionTag(
 
 /** Client names, matching ``edition()`` in apps/desktop/src/platform.mjs.
  *
- * ``full`` (start screen, Settings): ``Open DeepTutor for MacOS with Apple Silicon``.
+ * ``full`` (start screen, Settings): ``桂子问津 for MacOS with Apple Silicon``.
  * ``short`` where space is tight: ``MacOS (Apple Silicon)``.
  */
 export interface ClientEdition {
@@ -25,20 +25,20 @@ export interface ClientEdition {
   short: string;
 }
 
-const WEB: ClientEdition = { full: "Open DeepTutor Web", short: "Web" };
+const WEB: ClientEdition = { full: "桂子问津 Web", short: "Web" };
 const EDITIONS: Record<string, ClientEdition> = {
   "macOS; arm64": {
-    full: "Open DeepTutor for MacOS with Apple Silicon",
+    full: "桂子问津 for MacOS with Apple Silicon",
     short: "MacOS (Apple Silicon)",
   },
   "macOS; x64": {
-    full: "Open DeepTutor for MacOS with Intel Silicon",
+    full: "桂子问津 for MacOS with Intel Silicon",
     short: "MacOS (Intel)",
   },
-  "Windows; x64": { full: "Open DeepTutor for Windows", short: "Windows" },
+  "Windows; x64": { full: "桂子问津 for Windows", short: "Windows" },
   // Shells from 1.7.0 sent no architecture.
-  macOS: { full: "Open DeepTutor for MacOS", short: "MacOS" },
-  Windows: { full: "Open DeepTutor for Windows", short: "Windows" },
+  macOS: { full: "桂子问津 for MacOS", short: "MacOS" },
+  Windows: { full: "桂子问津 for Windows", short: "Windows" },
 };
 
 /** The desktop shell appends ``OpenDeepTutor/<version> (macOS; arm64)`` to its user agent. */
@@ -52,7 +52,7 @@ export function clientEdition(userAgent?: string | null): ClientEdition {
   return (platform && EDITIONS[platform]) || WEB;
 }
 
-/** ``Open DeepTutor for MacOS with Apple Silicon v1.7.1`` / ``Open DeepTutor Web v1.7.1``. */
+/** ``桂子问津 for MacOS with Apple Silicon v1.7.1`` / ``桂子问津 Web v1.7.1``. */
 export function clientEditionLabel(
   version: string | null | undefined,
   userAgent?: string | null,

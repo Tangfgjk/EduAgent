@@ -3,6 +3,7 @@ import { Geist, Lora } from "next/font/google";
 import "./globals.css";
 import "@/features/ui-layout/classic/classic.css";
 import "@/features/ui-layout/modern/modern.css";
+import "./wenjin.css";
 import ThemeScript from "@/components/ThemeScript";
 import ToastViewport from "@/components/common/ToastViewport";
 import MotionProvider from "@/components/common/MotionProvider";
@@ -28,14 +29,11 @@ const fontSerif = Lora({
 export const viewport: Viewport = { interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
-  title: "DeepTutor",
-  description: "Agent-native intelligent learning companion",
+  title: "桂子问津",
+  description: "桂子问津自主学习工作台",
   icons: {
-    icon: [
-      { url: "/brand/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/brand/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-    ],
-    apple: "/brand/apple-touch-icon.png",
+    icon: { url: "/brand/wenjin-mark.svg", type: "image/svg+xml" },
+    apple: "/brand/wenjin-apple.png",
   },
 };
 
