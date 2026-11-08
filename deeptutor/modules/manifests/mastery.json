@@ -35,6 +35,8 @@
           "mastery_quiz",
           "mastery_note_explained",
           "mastery_record_hint",
+          "mastery_research",
+          "mastery_reflection",
           "mastery_grade",
           "mastery_skip_question",
           "mastery_repair_question",
@@ -95,6 +97,14 @@
     "mastery_note_explained": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryNoteExplainedTool",
       "order": 47
+    },
+    "mastery_research": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryResearchTool",
+      "order": 61
+    },
+    "mastery_reflection": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryReflectionTool",
+      "order": 62
     },
     "mastery_record_hint": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryRecordHintTool",

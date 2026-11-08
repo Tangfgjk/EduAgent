@@ -170,6 +170,10 @@ class MasteryLoopCapability:
             elif tool_name == "mastery_grade":
                 state["quiz_awaiting_grade"] = False
                 state["quiz_graded"] = True
+            if tool_name == "mastery_research":
+                updated["_web_research_allowed"] = (
+                    context.enabled_tools is None or "web_search" in context.enabled_tools
+                )
             updated["_mastery_path_id"] = path_id
             updated["_attached_kb_names"] = list(context.knowledge_bases)
             updated["_inspected_image_hashes"] = list(
@@ -231,6 +235,7 @@ class MasteryLoopCapability:
                 "mastery_quiz",
                 "mastery_grade",
                 "mastery_assess",
+                "mastery_reflection",
                 "mastery_prepare_lesson",
             }:
                 # A replacement needs a quote from the actual current learner

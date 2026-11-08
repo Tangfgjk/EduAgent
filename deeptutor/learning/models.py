@@ -124,6 +124,8 @@ class QuizAttempt(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     question_id: str
+    evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
+    strategy_version: str = "baseline"
     knowledge_point_id: str
     module_id: str = ""
     is_correct: bool
@@ -182,6 +184,8 @@ class LearningEvidence(BaseModel):
 
     evidence_id: str = ""
     question_id: str = ""
+    evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
+    strategy_version: str = "baseline"
     knowledge_point_id: str
     timestamp: float = Field(default_factory=time.time)
     source: str = "mastery_path"
@@ -384,6 +388,8 @@ class PendingQuestion(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     question_id: str
+    evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
+    strategy_version: str = "baseline"
     knowledge_point_id: str
     module_id: str = ""
     prompt: str = ""
@@ -403,7 +409,7 @@ class PendingQuestion(BaseModel):
     # Server-owned exposure evidence, independent of visual-task metadata.
     # Never included in the learner's question/answer-key projection.
     assistance_used: bool = False
-    scaffold_level: int = Field(default=0, ge=0, le=2)
+    scaffold_level: int = Field(default=0, ge=0, le=3)
     scaffold_turn_id: str = ""
     # Native registration identity; later teaching must not contaminate an
     # unrelated question merely because it cites the same physical page.
@@ -542,6 +548,7 @@ class TopicSourceKind(str, Enum):
     BOOK = "book"
     NOTEBOOK = "notebook"
     KNOWLEDGE_BASE = "knowledge_base"
+    PROJECT_FILE = "project_file"
     FILE = "file"
     #: One chat session. ``source_id`` is its session id, or a
     #: ``partner:{pid}:{session_key}`` reference for a study partner's.
@@ -742,6 +749,12 @@ class LearningProgress(BaseModel):
     # Who is learning this goal. Absent on every path created before intake
     # existed, and on any goal whose learner has not been asked yet — readers
     # treat both the same way, so no migration is needed.
+    chapter_materials: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    learning_location: dict[str, Any] = Field(default_factory=dict)
+    wenjin_enabled: bool = False
+    research_sources: list[dict[str, Any]] = Field(default_factory=list)
+    reflections: list[dict[str, Any]] = Field(default_factory=list)
+    evolution: dict[str, Any] = Field(default_factory=dict)
     learner_profile: LearnerProfile | None = None
     # The learner-facing name of this path. Empty means "never named": the
     # display name is then derived (``policy.path_display_name``), which is how

@@ -1,5 +1,5 @@
-import { LayoutLearningHome } from "@/features/ui-layout/slots"
+import UnifiedLearningHome from '@/components/learning/UnifiedLearningHome'
 
 export default function LearningPage() {
-  return <LayoutLearningHome />
+  return <UnifiedLearningHome />
 }

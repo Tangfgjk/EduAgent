@@ -10,7 +10,7 @@ import re
 import time
 import uuid
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, StrictInt
 from pydantic import ValidationError as PydanticValidationError
 
@@ -296,6 +296,19 @@ class LearnerOverrideRequest(BaseModel):
 
 
 def _topic_sources(items: list[TopicSourceRequest]) -> list[TopicSource]:
+    for item in items:
+        if item.kind == TopicSourceKind.PROJECT_FILE:
+            from deeptutor.learning.projects import read_upload
+
+            try:
+                parsed = read_upload(item.source_id)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=422, detail="Uploaded material is unavailable in this workspace."
+                ) from exc
+            item.label = parsed["filename"]
+            item.excerpt = parsed["text"][:8000]
+            item.metadata = {"text_chars": len(parsed["text"])}
     return [
         TopicSource(
             id=item.id.strip() or f"source_{uuid.uuid4().hex}",
@@ -455,6 +468,7 @@ def _topic_payload_from_snapshot(
         "metadata": topic.metadata.model_dump(mode="json"),
         "sources": [source.model_dump(mode="json") for source in topic.sources],
         "path_revision": progress.version,
+        "wenjin_enabled": progress.wenjin_enabled,
         "next": learning_policy.next_objective(
             projected,
             now=moment,
@@ -1524,3 +1538,137 @@ async def generate_from_reading(book_id: str, body: GenerateFromReadingRequest):
             records=[NotebookRecordInput(**record) for record in records],
         ),
     )
+
+
+class WenjinConsentRequest(BaseModel):
+    enabled: bool
+
+
+@router.get("/topics/{path_id}/wenjin")
+async def get_wenjin_state(path_id: str):
+    from deeptutor.learning.wenjin import learner_continuity, state_summary
+
+    store = LearningStore()
+    progress = await asyncio.to_thread(store.load, path_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="Learning project not found.")
+    state = state_summary(progress)
+    state["prior_learning"] = await asyncio.to_thread(learner_continuity, store, progress)
+    return state
+
+
+@router.post("/topics/{path_id}/wenjin/enable")
+async def enable_wenjin(path_id: str):
+    from deeptutor.learning.wenjin import enable_path, state_summary
+
+    try:
+        progress = await asyncio.to_thread(enable_path, LearningStore(), path_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return state_summary(progress)
+
+
+@router.put("/topics/{path_id}/wenjin/consent")
+async def update_wenjin_consent(path_id: str, body: WenjinConsentRequest):
+    from deeptutor.learning.evolution import set_consent
+    from deeptutor.learning.wenjin import state_summary
+
+    store = LearningStore()
+    if not store.exists(path_id):
+        raise HTTPException(status_code=404, detail="Learning project not found.")
+    progress = await asyncio.to_thread(set_consent, store, path_id, body.enabled)
+    return state_summary(progress)
+
+
+@router.post("/topics/{path_id}/wenjin/rollback")
+async def rollback_wenjin_strategy(path_id: str):
+    from deeptutor.learning.evolution import rollback
+    from deeptutor.learning.wenjin import state_summary
+
+    store = LearningStore()
+    if not store.exists(path_id):
+        raise HTTPException(status_code=404, detail="Learning project not found.")
+    try:
+        progress = await asyncio.to_thread(rollback, store, path_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return state_summary(progress)
+
+
+@router.post("/project-materials")
+async def upload_project_material(file: UploadFile = File(...)):
+    from deeptutor.learning.projects import MAX_UPLOAD_BYTES, import_file
+
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        source = await import_file(file.filename or "document.txt", data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return source.model_dump(mode="json")
+
+
+class AttachProjectMaterialRequest(BaseModel):
+    source_id: str = Field(min_length=32, max_length=32)
+
+
+@router.post("/topics/{path_id}/project-materials")
+async def attach_project_material(path_id: str, body: AttachProjectMaterialRequest):
+    from deeptutor.learning.projects import attach_upload
+
+    try:
+        source = await asyncio.to_thread(attach_upload, LearningStore(), path_id, body.source_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return source.model_dump(mode="json")
+
+
+@router.get("/topics/{path_id}/project")
+async def get_learning_project(path_id: str):
+    store = LearningStore()
+    progress = await asyncio.to_thread(store.load, path_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="Learning project not found")
+    return {
+        "topic": await asyncio.to_thread(_topic_payload, store, path_id),
+        "location": progress.learning_location,
+        "chapters": {
+            key: {"created_at": value.get("created_at")}
+            for key, value in progress.chapter_materials.items()
+        },
+    }
+
+
+@router.post("/topics/{path_id}/chapters/{chapter_id}")
+async def prepare_project_chapter(path_id: str, chapter_id: str):
+    from deeptutor.learning.projects import generate_chapter
+
+    store = LearningStore()
+    if not await asyncio.to_thread(store.exists, path_id):
+        raise HTTPException(status_code=404, detail="Learning project not found")
+    try:
+        return await generate_chapter(store, path_id, chapter_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Chapter generation is unavailable. Check the language model settings and retry.",
+        ) from exc
+
+
+class ProjectLocationRequest(BaseModel):
+    surface: str = Field(default="reading", pattern="^(reading|tutoring)$")
+    chapter_id: str = Field(min_length=1, max_length=300)
+    position: float = Field(ge=0, le=1, allow_inf_nan=False)
+
+
+@router.put("/topics/{path_id}/project/location")
+async def update_project_location(path_id: str, body: ProjectLocationRequest):
+    from deeptutor.learning.projects import save_location
+
+    try:
+        return await asyncio.to_thread(
+            save_location, LearningStore(), path_id, body.chapter_id, body.position, body.surface
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

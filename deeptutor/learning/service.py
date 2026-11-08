@@ -590,6 +590,8 @@ class LearningService:
         visual_context: dict[str, Any] | None = None,
         assistance_used: bool = False,
         scaffold_level: int = 0,
+        evidence_kind: str = "recognition",
+        strategy_version: str = "baseline",
         verdict: dict[str, Any] | None = None,
     ) -> bool:
         """Mutate one aggregate with a grade without performing I/O."""
@@ -611,6 +613,8 @@ class LearningService:
             progress,
             QuizAttempt(
                 question_id=question_id,
+                evidence_kind=evidence_kind,
+                strategy_version=strategy_version,
                 knowledge_point_id=knowledge_point_id,
                 module_id=module_id,
                 is_correct=is_correct,
@@ -639,6 +643,8 @@ class LearningService:
                 turn_id=turn_id,
                 assessment_type="review" if already_scheduled else "quiz",
             )
+            evidence.evidence_kind = evidence_kind
+            evidence.strategy_version = strategy_version
             evidence.visual_context = visual_context or {}
             evidence.hints_used = max(
                 int((visual_context or {}).get("hints_used") or 0),
@@ -934,6 +940,11 @@ class LearningService:
                 )
 
             leaves = pending.questions or [pending]
+            if tx.progress.wenjin_enabled:
+                from deeptutor.learning.evolution import policy_for_next
+                strategy = policy_for_next(tx.progress)
+                for leaf in leaves:
+                    leaf.strategy_version = strategy["version"]
             known_ids = {kp.id for module in tx.progress.modules for kp in module.knowledge_points}
             for question in leaves:
                 if question.knowledge_point_id not in known_ids:
@@ -1060,7 +1071,7 @@ class LearningService:
             question = next((item for item in questions if item.question_id == question_id), None)
             if question is None or question_id in interaction.answers:
                 raise MasteryInteractionError("The question is no longer awaiting an answer.")
-            if level not in (1, 2) or level > question.scaffold_level + 1:
+            if level not in (1, 2, 3) or level > question.scaffold_level + 1:
                 raise MasteryInteractionError("Offer a direction cue before a step hint.")
             if level <= question.scaffold_level:
                 return question.scaffold_level
@@ -1728,6 +1739,8 @@ class LearningService:
                 visual_context=pending.visual_context,
                 assistance_used=pending.assistance_used,
                 scaffold_level=pending.scaffold_level,
+                evidence_kind=pending.evidence_kind,
+                strategy_version=pending.strategy_version,
                 verdict=verdict,
             )
         )
@@ -1735,6 +1748,19 @@ class LearningService:
             is_correct = verdict["is_correct"]
             visual_result = verdict["result"]
             visual_diagnosis = verdict["feedback"]
+        if is_correct is not None and tx.progress.wenjin_enabled:
+            import copy
+
+            from deeptutor.learning.evolution import monitor_evolution, update_evolution
+            before = copy.deepcopy(tx.progress.evolution)
+            update_evolution(tx.progress)
+            monitor_evolution(tx.progress)
+            if before != tx.progress.evolution:
+                tx.emit("wenjin.strategy_evaluated", {
+                    "status": tx.progress.evolution.get("status"),
+                    "active": tx.progress.evolution.get("active"),
+                    "evaluation": tx.progress.evolution.get("evaluation"),
+                }, session_id=session_id, turn_id=turn_id)
         return raw_answer, is_correct, visual_result, visual_diagnosis
 
     def replace_modules_for_path(
@@ -2103,6 +2129,7 @@ class LearningService:
 
         def create(tx):
             tx.progress.name = str(name or "").strip()[:_MAX_PATH_NAME_LEN]
+            tx.progress.wenjin_enabled = True
             tx.put_topic(metadata, sources)
             applied_modules = [module.model_copy(deep=True) for module in modules]
             self._resolve_final_relations(
@@ -2676,6 +2703,9 @@ class LearningService:
                 )
 
             self._recompute_objective_state(tx.progress, kp_id, scheduler)
+            if tx.progress.wenjin_enabled:
+                from deeptutor.learning.evolution import revalidate_after_repair
+                revalidate_after_repair(tx.progress)
             if interaction is not None and interaction.result.get("group_question_id"):
                 self._refresh_group_result(tx, interaction)
             tx.touch()

@@ -1,5 +1,5 @@
-import NewLearningPage from '@/components/learning/NewLearningPage'
+import UnifiedLearningHome from '@/components/learning/UnifiedLearningHome'
 
 export default function Page() {
-  return <NewLearningPage />
+  return <UnifiedLearningHome />
 }

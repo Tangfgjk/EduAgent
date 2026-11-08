@@ -71,9 +71,11 @@ def path_display_name(progress: LearningProgress) -> str:
     return first_module or progress.book_id
 
 
-def gate_threshold(kp_type: KnowledgeType) -> float:
+def gate_threshold(kp_type: KnowledgeType, *, evidence: bool = False) -> float:
     """The quantitative mastery bar for *kp_type* (qualitative types report
     their pass-display value so callers have a single number to show)."""
+    if evidence:
+        return 1.0
     if kp_type in QUALITATIVE_TYPES:
         return _QUALITATIVE_PASS_DISPLAY
     return QUANTITATIVE_GATE.get(kp_type, 0.9)
@@ -87,9 +89,12 @@ def is_assessed_mastered(progress: LearningProgress, kp: KnowledgePoint) -> bool
     """
     if not set(kp.required_visual_tasks).issubset(visual_achievements(progress, kp.id)):
         return False
+    if progress.wenjin_enabled:
+        from deeptutor.learning.wenjin import objective_evidence
+        return not objective_evidence(progress, kp)["missing"]
     if kp.type in QUALITATIVE_TYPES:
         return bool(progress.qualitative_mastery.get(kp.id, False))
-    return progress.mastery_levels.get(kp.id, 0.0) >= gate_threshold(kp.type)
+    return progress.mastery_levels.get(kp.id, 0.0) >= gate_threshold(kp.type, evidence=progress.wenjin_enabled)
 
 
 def visual_achievements(progress: LearningProgress, kp_id: str) -> list[str]:
@@ -161,6 +166,10 @@ def is_mastered(progress: LearningProgress, kp: KnowledgePoint) -> bool:
 def display_mastery(progress: LearningProgress, kp: KnowledgePoint) -> float:
     """A 0..1 number for the map UI. Qualitatively-mastered points show full;
     otherwise the recency-weighted accuracy stands in."""
+    if progress.wenjin_enabled:
+        from deeptutor.learning.wenjin import objective_evidence
+        coverage = objective_evidence(progress, kp)
+        return 1 - len(coverage["missing"]) / len(coverage["required"])
     if kp.type in QUALITATIVE_TYPES and progress.qualitative_mastery.get(kp.id):
         return _QUALITATIVE_PASS_DISPLAY
     return float(progress.mastery_levels.get(kp.id, 0.0))
@@ -291,7 +300,7 @@ def find_knowledge_point(
     return None, "", ""
 
 
-def gate_kind(kp: KnowledgePoint) -> str:
+def gate_kind(kp: KnowledgePoint, *, evidence: bool = False) -> str:
     """Which gate ``kp`` has to clear — ``qualitative`` or ``quantitative``.
 
     Public because the tutor's tools report it too: a quiz attempt on a
@@ -299,7 +308,7 @@ def gate_kind(kp: KnowledgePoint) -> str:
     so every surface that shows a mastery number has to be able to say which
     kind of gate that number is being read against.
     """
-    return "qualitative" if kp.type in QUALITATIVE_TYPES else "quantitative"
+    return "evidence" if evidence else "qualitative" if kp.type in QUALITATIVE_TYPES else "quantitative"
 
 
 def next_objective(
@@ -327,9 +336,9 @@ def next_objective(
             knowledge_point_name=kp.name if kp else "",
             knowledge_point_type=kp.type.value if kp else "",
             status=objective_status(progress, kp) if kp else "learning",
-            gate=gate_kind(kp) if kp else "",
+            gate=gate_kind(kp, evidence=progress.wenjin_enabled) if kp else "",
             mastery=display_mastery(progress, kp) if kp else 0.0,
-            threshold=gate_threshold(kp.type) if kp else 0.0,
+            threshold=gate_threshold(kp.type, evidence=progress.wenjin_enabled) if kp else 0.0,
             reason="A posed question is awaiting the learner's answer; grade it with mastery_grade.",
             pending_prompt=pending.prompt,
             pending_question=public_pending_question(pending),
@@ -354,9 +363,9 @@ def next_objective(
                 knowledge_point_name=kp.name,
                 knowledge_point_type=kp.type.value,
                 status=objective_status(progress, kp),
-                gate=gate_kind(kp),
+                gate=gate_kind(kp, evidence=progress.wenjin_enabled),
                 mastery=display_mastery(progress, kp),
-                threshold=gate_threshold(kp.type),
+                threshold=gate_threshold(kp.type, evidence=progress.wenjin_enabled),
                 reason=(task.reason or "This objective is due for spaced-repetition review."),
                 forgetting_risk=task.forgetting_risk,
             )
@@ -367,7 +376,7 @@ def next_objective(
             if is_mastered(progress, kp):
                 continue
             status = objective_status(progress, kp)
-            gate = gate_kind(kp)
+            gate = gate_kind(kp, evidence=progress.wenjin_enabled)
             if status == "new":
                 action = (
                     "teach"
@@ -379,6 +388,10 @@ def next_objective(
                 action = "assess"
             else:
                 action = "practice"
+            decision_reason = ""
+            if progress.wenjin_enabled:
+                from deeptutor.learning.wenjin import teaching_decision
+                decision_reason = teaching_decision(progress, kp)["reason"]
             step = NextStep(
                 action=action,
                 scaffold=scaffold_recommendation(progress, kp.id),
@@ -390,8 +403,8 @@ def next_objective(
                 status=status,
                 gate=gate,
                 mastery=display_mastery(progress, kp),
-                threshold=gate_threshold(kp.type),
-                reason=(
+                threshold=gate_threshold(kp.type, evidence=progress.wenjin_enabled),
+                reason=decision_reason or (
                     (
                         "Untouched objective — teach before assessing, as the learner requested."
                         if action == "teach"
@@ -552,7 +565,7 @@ def objective_report(
         "module_id": module_id,
         "module_name": module_name,
         "status": objective_status(progress, kp),
-        "gate": gate_kind(kp),
+        "gate": gate_kind(kp, evidence=progress.wenjin_enabled),
         "mastered": is_mastered(progress, kp),
         "assessed_mastered": is_assessed_mastered(progress, kp),
         "mastery_source": mastery_source(progress, kp),
@@ -562,7 +575,7 @@ def objective_report(
             else ""
         ),
         "mastery": round(display_mastery(progress, kp), 3),
-        "threshold": round(gate_threshold(kp.type), 3),
+        "threshold": round(gate_threshold(kp.type, evidence=progress.wenjin_enabled), 3),
         "attempts": attempts,
         "correct_count": sum(1 for attempt in attempts if attempt["is_correct"]),
         # The learner's own words, kept as the evidence behind a qualitative pass.

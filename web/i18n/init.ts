@@ -10,7 +10,10 @@ export type { AppLanguage } from "./languages";
 let _initialized = false;
 
 export function initI18n(language?: unknown) {
-  if (_initialized) return i18n;
+  if (_initialized || i18n.isInitialized) {
+    _initialized = true;
+    return i18n;
+  }
 
   const resources: Resource = {
     en: { app: enApp },

@@ -64,6 +64,7 @@ import { topicDisplayName, type Translate } from "./format";
 import { LevelUpCelebration } from "./LevelUpCelebration";
 import { MasteryComposer } from "./MasteryComposer";
 import { ProgressRing } from "./ProgressRing";
+import { WenjinLearningPanel } from "./WenjinLearningPanel";
 import { StudyOutline } from "./StudyOutline";
 
 const OUTLINE_STORAGE_KEY = "dt.mastery.outline";
@@ -673,6 +674,10 @@ export function MasteryStudy({
         </PageBarSlot>
       </header>
 
+      {sessionMode !== "outline" && (
+        <WenjinLearningPanel pathId={pathId} revision={topic.path_revision} streaming={state.isStreaming}
+          onSend={message => sendMessage(message)} />
+      )}
       <div className="flex min-h-0 flex-1">
         <aside
           className={`hidden shrink-0 overflow-y-auto transition-[width] duration-200 xl:block ${

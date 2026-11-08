@@ -477,9 +477,12 @@ def _topic_material_manifest(path_id: str) -> tuple[str, dict[str, str]]:
         if progress is None:
             return "", {}
         topic = store.get_topic(path_id, progress=progress)
-        if topic is None or not topic.sources:
+        if topic is None:
             return "", {}
         materials = build_topic_materials(topic.sources)
+        from deeptutor.learning.projects import append_chapter_materials
+
+        append_chapter_materials(materials, progress)
         if materials.warnings:
             logger.warning(
                 "Mastery topic %s: %d material(s) could not be loaded: %s",

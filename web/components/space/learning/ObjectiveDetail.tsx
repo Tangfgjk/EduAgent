@@ -184,7 +184,9 @@ function GateBar({ report }: { report: ObjectiveReport }) {
     <div>
       <div className="flex items-baseline justify-between text-xs">
         <span className="text-[var(--muted-foreground)]">
-          {report.gate === "qualitative"
+          {report.gate === "evidence"
+            ? t("wenjinTutor.evidenceGate")
+            : report.gate === "qualitative"
             ? t("Qualitative gate: explain it in your own words")
             : t("Quantitative gate: {{pct}}%", { pct: thresholdPct })}
         </span>

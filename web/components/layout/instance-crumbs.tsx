@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { InstanceCrumb, type CrumbItem } from '@/components/layout/LocationCrumbs'
 import { PageBarSlot } from '@/components/layout/PageChrome'
 import { learningLibrary } from '@/lib/learning-library'
+import { learningProjectRoute } from '@/lib/learning-project-api'
 import { fetchMasteryTopicIndex } from '@/lib/learning-api'
 import { fetchReadingCollectionIndex } from '@/lib/reading-workspace-api'
 import { listKnowledgeBases } from '@/features/knowledge/api/catalog'
@@ -15,7 +16,6 @@ import {
   MASTERY_HOME,
   READING_HOME,
   bookRoute,
-  masteryTopicRoute,
   readingFolderRoute,
 } from '@/lib/learning-routes'
 import type { Book } from '@/lib/book-types'
@@ -69,7 +69,7 @@ export function MasteryPathCrumb({ id, label, onRename, bare }: CrumbProps) {
       (await fetchMasteryTopicIndex()).map(topic => ({
         id: topic.path_id,
         label: `${topic.emoji ? `${topic.emoji} ` : ''}${topic.name || topic.path_id}`,
-        href: masteryTopicRoute(topic.path_id),
+        href: learningProjectRoute(topic.path_id),
       })),
     []
   )

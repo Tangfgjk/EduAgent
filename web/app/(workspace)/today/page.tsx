@@ -36,8 +36,8 @@ export default function TodayPage() {
   const activities = allLearningActivity(sources);
   const latest = activities.find((activity) => activity.progress === undefined || activity.progress < 1);
   const startLinks = [
-    { href: "/learning/reading", surface: "reading", label: "workbench.upload", icon: Upload },
-    { href: "/learning/mastery", surface: "chat", label: "workbench.topic", icon: BookOpen },
+    { href: "/learning/new", surface: "chat", label: "workbench.upload", icon: Upload },
+    { href: "/learning", surface: "chat", label: "workbench.topic", icon: BookOpen },
   ].filter(({ href, surface }) => canUse(href, surface));
   const choices = startLinks.length > 0 && (
     <div className="grid gap-3 sm:grid-cols-2">

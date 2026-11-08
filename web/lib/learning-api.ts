@@ -288,7 +288,7 @@ export interface ObjectiveReport {
   type: string;
   module_name: string;
   status: ObjectiveStatus;
-  gate: "quantitative" | "qualitative";
+  gate: "quantitative" | "qualitative" | "evidence";
   mastered: boolean;
   assessed_mastered: boolean;
   explained?: { summary: string; timestamp: number };
@@ -419,6 +419,7 @@ export async function generateModulesFromNotebook(
 // Mirrors deeptutor/learning/models.py TopicSourceKind.
 export type TopicSourceKind =
   | "goal"
+  | "project_file"
   | "book"
   | "notebook"
   | "knowledge_base"

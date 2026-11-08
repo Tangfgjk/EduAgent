@@ -98,6 +98,8 @@ MASTERY_TOOL_NAMES: tuple[str, ...] = (
     "mastery_quiz",
     "mastery_note_explained",
     "mastery_record_hint",
+    "mastery_research",
+    "mastery_reflection",
     "mastery_grade",
     "mastery_skip_question",
     "mastery_repair_question",
@@ -870,6 +872,19 @@ class MasteryStatusTool(BaseTool):
             if progress
             else {},
         }
+        if progress and progress.wenjin_enabled:
+            from deeptutor.learning.wenjin import state_summary
+            payload["wenjin"] = state_summary(progress)
+            from deeptutor.learning.wenjin import learner_continuity
+            payload["wenjin"]["prior_learning"] = learner_continuity(service.store, progress)
+            if kwargs.get("_working_brief"):
+                brief = payload["wenjin"]
+                current_id = (brief["objective"] or {}).get("id")
+                brief["objectives"] = [item for item in brief["objectives"] if item["id"] == current_id]
+                brief["sources"] = [{**item, "excerpt": item["excerpt"][:1200]} for item in brief["sources"][-3:]]
+                brief["reflections"] = brief["reflections"][-2:]
+                brief["prior_learning"] = brief["prior_learning"][:3]
+                brief["strategy"] = {key: value for key, value in brief["strategy"].items() if key != "history"}
         interaction = service.store.get_active_interaction(path_id)
         if interaction is not None:
             pending_interaction: dict[str, Any] = {
@@ -977,6 +992,63 @@ def _public_delivery(kwargs: dict[str, Any], path_id: str, quote: str) -> dict |
     }
 
 
+class MasteryResearchTool(BaseTool):
+    def get_definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name="mastery_research",
+            description="Search for learning sources for the current topic or a specific evidence gap. Available without uploads. Results carry URLs and excerpts; never invent citations.",
+            parameters=[ToolParameter(name="query", type="string", description="A focused subject or prerequisite query.")],
+        )
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        path_id = _resolve_path_id(kwargs)
+        if not path_id:
+            return _no_path_result()
+        if not kwargs.get("_web_research_allowed", True):
+            return _json_result({
+                "status": "disabled",
+                "sources": [],
+                "instruction": "The learner has disabled web search. Continue with available materials and general foundational explanations; uploads remain optional.",
+            }, meta_key="mastery_research")
+        from deeptutor.learning.wenjin import research_topic
+        try:
+            result = await research_topic(
+                _new_service().store, path_id, str(kwargs.get("query") or ""),
+                session_id=_resolve_session_id(kwargs), turn_id=_resolve_turn_id(kwargs),
+            )
+        except ValueError as exc:
+            return ToolResult(content=str(exc), success=False)
+        return _json_result(result, meta_key="mastery_research")
+
+
+class MasteryReflectionTool(BaseTool):
+    def get_definition(self) -> ToolDefinition:
+        return ToolDefinition(
+            name="mastery_reflection",
+            description="Save the learner's actual reflection on a learning objective. Call after asking how they solved it or what strategy changed. Does not award mastery. Never fabricate a reflection.",
+            parameters=[ToolParameter(name="knowledge_point_id", type="string", description="Exact objective ID.")],
+        )
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        refusal = _wrong_mode_result("mastery_reflection", kwargs)
+        if refusal is not None:
+            return refusal
+        path_id = _resolve_path_id(kwargs)
+        if not path_id:
+            return _no_path_result()
+        from deeptutor.learning.wenjin import record_reflection
+        try:
+            progress = await asyncio.to_thread(
+                record_reflection, _new_service().store, path_id,
+                str(kwargs.get("knowledge_point_id") or ""),
+                str(kwargs.get("_learner_message") or ""),
+                session_id=_resolve_session_id(kwargs), turn_id=_resolve_turn_id(kwargs),
+            )
+        except ValueError as exc:
+            return ToolResult(content=str(exc), success=False)
+        return _json_result({"status": "recorded", "path_revision": progress.version}, meta_key="mastery_reflection")
+
+
 class MasteryRecordHintTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
@@ -984,7 +1056,7 @@ class MasteryRecordHintTool(BaseTool):
             description="After publicly delivering a hint for an unanswered question, record it before grading. Never record a planned hint or reveal the answer.",
             parameters=[
                 ToolParameter(name="question_id", type="string", description="Exact pending question or group leaf ID."),
-                ToolParameter(name="level", type="integer", description="1 for a direction cue, 2 for a concrete next step."),
+                ToolParameter(name="level", type="integer", description="1 for a direction cue, 2 for a concrete next step, 3 for an analogous worked example without solving the current task."),
                 ToolParameter(name="hint_quote", type="string", description="Exact text of the hint already delivered publicly this turn."),
             ],
         )
@@ -1182,9 +1254,9 @@ class MasteryQuizTool(BaseTool):
                     name="question_type",
                     type="string",
                     description=(
-                        "'choice' (exact match), 'short' (exact / fuzzy for ≤30 "
-                        "chars), or 'open' (keyword overlap). When omitted, options "
-                        "infer 'choice'; otherwise the default is 'short'."
+                        "'choice' for option recognition, 'short' for brief responses, "
+                        "or 'open' for reasoning and worked processes evaluated by the server. "
+                        "When omitted, options infer choice; otherwise short."
                     ),
                     required=False,
                     default="short",
@@ -1234,6 +1306,13 @@ class MasteryQuizTool(BaseTool):
                     # Withheld from the trace for the same reason as
                     # expected_answer: it names the right answer.
                     sensitive=True,
+                ),
+                ToolParameter(
+                    name="evidence_kind",
+                    type="string",
+                    description="The ability actually tested. Recognition identifies an answer; explanation asks why; application requires doing it; transfer applies it in a changed situation. Use open answers for the last three.",
+                    required=False,
+                    enum=["recognition", "explanation", "application", "transfer"],
                 ),
                 ToolParameter(
                     name="difficulty",
@@ -1530,7 +1609,7 @@ class MasteryQuizTool(BaseTool):
                 for question in pending.questions or [pending]
             )
         )
-        if qualitative_practice:
+        if qualitative_practice and not progress.wenjin_enabled:
             # The mirror of ``record_qualitative_for_path``, which refuses
             # outright when mastery_assess is aimed at a quantitative
             # objective. This direction stays allowed — a question is a fair
@@ -1652,8 +1731,19 @@ class MasteryQuizTool(BaseTool):
                     content=f"Visual practice is unavailable: {exc}. Inspect/clarify the source; no assessment was created.",
                     success=False,
                 )
+        evidence_kind = str(kwargs.get("evidence_kind") or "recognition")
+        from deeptutor.learning.wenjin import KINDS, objective_evidence
+        if evidence_kind not in KINDS:
+            return ToolResult(content="Unknown ability evidence kind.", success=False)
+        if progress.wenjin_enabled:
+            if q_type == "choice" and evidence_kind != "recognition":
+                return ToolResult(content="An option choice cannot demonstrate an explanation or worked application. Ask an open task.", success=False)
+            evidence = objective_evidence(progress, kp)
+            if evidence_kind in evidence["achieved"] and evidence["missing"] and _mode_of(kwargs) != "review":
+                return ToolResult(content="This ability already has independent evidence. Check the missing abilities: " + ", ".join(evidence["missing"]), success=False)
         pending = PendingQuestion(
             question_id=uuid.uuid4().hex,
+            evidence_kind=evidence_kind,
             knowledge_point_id=kp_id,
             module_id=module_id,
             prompt=question,
@@ -1841,7 +1931,7 @@ class MasteryGradeTool(BaseTool):
             result=str(interaction.result.get("result") or ""),
         )
         mastered = bool(kp and is_mastered(progress, kp))
-        gate = gate_kind(kp) if kp else ""
+        gate = gate_kind(kp, evidence=progress.wenjin_enabled) if kp else ""
         # What to do after the verdict. A qualitative objective needs its own
         # branch: quiz accuracy lands in ``mastery_levels`` without moving that
         # gate — it can even read a full 1.0 against a 1.0 threshold while
@@ -1850,7 +1940,11 @@ class MasteryGradeTool(BaseTool):
         # question can clear. That loop is invisible from the chat, where the
         # tutor narrates progress it never actually recorded, and visible on
         # the outline rail, which correctly never moves.
-        if mastered:
+        if progress.wenjin_enabled and kp is not None:
+            from deeptutor.learning.wenjin import teaching_decision
+            decision = teaching_decision(progress, kp)
+            next_move = "by the evidence-based teaching decision: " + json.dumps(decision, ensure_ascii=False)
+        elif mastered:
             next_move = "going: this objective is mastered, so continue with mastery_status.next."
         elif gate == "qualitative":
             next_move = (
@@ -1876,7 +1970,7 @@ class MasteryGradeTool(BaseTool):
             "knowledge_point_id": pending.knowledge_point_id,
             "question_id": pending.question_id,
             "mastery": round(display_mastery(progress, kp), 3) if kp else 0.0,
-            "threshold": round(gate_threshold(kp.type), 3) if kp else 0.0,
+            "threshold": round(gate_threshold(kp.type, evidence=progress.wenjin_enabled), 3) if kp else 0.0,
             # Which gate that number is being read against. Without it a
             # qualitative objective reports mastery 1.0 / threshold 1.0 /
             # mastered false, which is not a reading anyone can act on.
@@ -1988,7 +2082,7 @@ class MasteryGradeTool(BaseTool):
             result.update(
                 {
                     "mastery": round(display_mastery(progress, kp), 3) if kp else 0,
-                    "gate": gate_kind(kp) if kp else "",
+                    "gate": gate_kind(kp, evidence=progress.wenjin_enabled) if kp else "",
                     "mastered": bool(kp and is_mastered(progress, kp)),
                 }
             )
@@ -2068,6 +2162,11 @@ class MasteryAssessTool(BaseTool):
         if kp is None:
             return ToolResult(
                 content=f"Unknown objective {kp_id!r}; call mastery_status for valid ids.",
+                success=False,
+            )
+        if progress.wenjin_enabled:
+            return ToolResult(
+                content="In evidence-based tutoring, pose an open mastery_quiz with evidence_kind=explanation, then grade its actual answer. This binds independence and help to the task and cannot grant mastery from an unbound conversation statement.",
                 success=False,
             )
         if kp.type not in QUALITATIVE_TYPES:
@@ -3815,6 +3914,8 @@ MASTERY_TOOL_TYPES: tuple[type[BaseTool], ...] = (
     MasteryStatusTool,
     MasteryNoteExplainedTool,
     MasteryRecordHintTool,
+    MasteryResearchTool,
+    MasteryReflectionTool,
     MasteryQuizTool,
     MasteryGradeTool,
     MasterySkipQuestionTool,

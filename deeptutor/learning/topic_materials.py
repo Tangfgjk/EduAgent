@@ -489,7 +489,20 @@ def build_topic_materials(sources: Iterable[Any]) -> TopicMaterials:
             # Explicit origin is account-validated by workspace_context. Legacy
             # sources without one continue to resolve in the topic's store.
             with workspace_context(origin) if origin is not None else nullcontext():
-                if kind == "book":
+                if kind == "project_file":
+                    from deeptutor.learning.projects import read_upload
+
+                    parsed = read_upload(source_id)
+                    loaded = [
+                        TopicMaterial(
+                            sid="project_file:" + source_id,
+                            kind=kind,
+                            name=label,
+                            full_text=_clip(parsed["text"], min(MAX_NOTEBOOK_CHARS, budget)),
+                            outline=_clip(parsed["text"], MAX_OUTLINE_CHARS),
+                        )
+                    ]
+                elif kind == "book":
                     loaded = _load_book_materials(source_id, label, budget)
                 elif kind == "notebook":
                     loaded = [_load_notebook_material(source_id, label, budget)]
