@@ -1,0 +1,4 @@
+# Full existing application plus the Guizi Wenjin additions.
+-r full.txt
+-r classroom-media.txt
+-r diagnosis-training.txt

@@ -1,0 +1,21 @@
+[Unit]
+Description=Guizi Wenjin backend
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wenjin
+Group=wenjin
+WorkingDirectory=/opt/guiziwenjin
+EnvironmentFile=/etc/guiziwenjin/app.env
+ExecStart=/opt/guiziwenjin/.venv/bin/python /opt/guiziwenjin/scripts/run_wenjin_server.py backend
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
