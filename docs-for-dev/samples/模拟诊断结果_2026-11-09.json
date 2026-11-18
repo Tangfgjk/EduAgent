@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "source_system": "模拟演示（非真实学情）",
+  "result_id": "SIM-DEMO-20261109",
+  "result_version": "1",
+  "student_ref": "DEMO-0001",
+  "subject": "math",
+  "scope": "模拟二元一次方程组学情：所有概率均为人工构造，仅用于体验导入和陪学参考，不是真实学生诊断。",
+  "observed_on": "2026-11-09",
+  "model_version": "SIMULATED-NO-MODEL",
+  "taxonomy_version": "SIM-MATH-v1",
+  "mapping_version": "SIM-MAP-v1",
+  "zero_encoding": "zero_is_untested",
+  "total_knowledge_count": 3,
+  "estimates": [
+    {
+      "knowledge_id": "SIM-K001",
+      "knowledge_name": "二元一次方程的定义",
+      "measurement_status": "estimated",
+      "probability": 0.35
+    },
+    {
+      "knowledge_id": "SIM-K002",
+      "knowledge_name": "代入消元法",
+      "measurement_status": "estimated",
+      "probability": 0.8
+    },
+    {
+      "knowledge_id": "SIM-K003",
+      "knowledge_name": "加减消元法",
+      "measurement_status": "estimated",
+      "probability": 0
+    }
+  ]
+}

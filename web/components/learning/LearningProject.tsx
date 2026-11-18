@@ -6,10 +6,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from '@/components/common/MarkdownRenderer'
 import { LearningShell } from './LearningShell'
+import DiagnosticFactsPanel from './DiagnosticFactsPanel'
+import { scopedUrl } from '@/lib/workspace-scope'
+import ExternalDiagnosisPanel from './ExternalDiagnosisPanel'
+import DiagnosticImpact from './DiagnosticImpact'
 import { projectRequest, projectEndpoint, learningProjectRoute, uploadProjectFile, type LearningProject } from '@/lib/learning-project-api'
 import { fetchMasteryTopicSessions, type MapModule, type TopicSession } from '@/lib/learning-api'
 import { masterySessionRoute as newSessionRoute } from '@/lib/mastery-mode'
 import { masterySessionRoute, masteryTopicRoute } from '@/lib/learning-routes'
+import ProjectPractice from './ProjectPractice'
 import { setPendingPrompt } from '@/lib/pending-prompt'
 
 type ChapterContent = { chapter_id: string; content: string; created_at: number }
@@ -21,6 +26,7 @@ export default function LearningProjectPage() {
   const router = useRouter()
   const { i18n } = useTranslation()
   const tr = (zh: string, en: string) => i18n.language.startsWith('zh') ? zh : en
+  const [tab, setTab] = useState<'overview' | 'chats' | 'materials' | 'practice'>('chats')
   const [project, setProject] = useState<LearningProject | null>(null)
   const [sessions, setSessions] = useState<TopicSession[]>([])
   const [error, setError] = useState('')
@@ -109,20 +115,33 @@ export default function LearningProjectPage() {
     <LearningShell title={topic.name} subtitle={topic.metadata.goal} back={false}>
       {sourceInput}
       {error && <p role="alert" className="mb-4 text-destructive">{error}</p>}
+      <nav aria-label={tr('项目工作区','Project workspace')} className="mb-6 flex flex-wrap gap-2">
+        {([['chats','对话','Conversations'],['overview','章节与学习','Chapters'],['materials','项目资料','Materials'],['practice','项目练习','Practice']] as const).map(([key,zh,en])=><button key={key} type="button" aria-pressed={tab===key} onClick={()=>setTab(key)} className={'rounded-lg px-4 py-2 text-sm '+(tab===key?'bg-primary text-primary-foreground':'border border-border')}>{tr(zh,en)}</button>)}
+        <Link className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/classroom')}>互动课堂</Link>
+        <Link className="rounded-lg border border-border px-4 py-2 text-sm" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/diagnosis')}>{tr('学习诊断','Diagnosis')}</Link>
+      </nav>
+      {tab==='chats'&&<section><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{tr('项目对话','Project conversations')}</h2><Link href={newSessionRoute(pathId,modules.length?'study':'outline')} className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground">{tr('新建对话','New conversation')}</Link></div><p className="my-3 text-sm text-muted-foreground">{tr('这里的对话属于当前项目，共用本项目的学习目标、资料与学习记录。','These conversations belong to this project and use its goal, materials and learning records.')}</p><ul className="space-y-2">{sessions.map(session=><li key={session.session_id}><Link href={masterySessionRoute(pathId,session.session_id)} className="block rounded-xl border border-border bg-card p-4">{session.title}<p className="mt-1 text-xs text-muted-foreground">{new Date(session.updated_at*1000).toLocaleString(i18n.language)}</p></Link></li>)}</ul>{!sessions.length&&<p className="py-8 text-muted-foreground">{tr('还没有项目对话，从上方新建对话开始。','No conversations yet. Start one above.')}</p>}</section>}
+      {tab==='materials'&&sources}
+      {tab==='practice'&&<ProjectPractice key={pathId} pathId={pathId}/>}
+      <div hidden={tab!=='overview'}>
+
       <div className="rounded-2xl border border-border bg-card p-6">
         <p className="text-sm text-muted-foreground">{modules.length ? tr('当前学习', 'Current learning') : tr('下一步', 'Next step')}</p>
         <h2 className="mt-2 text-xl font-semibold">{current?.name || tr('先和津津确认目标与大纲', 'Agree on your goal and outline with Jinjin')}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{modules.length ? tr('阅读位置与学习证据分别保存，随时回来继续。','Your reading position and ability evidence are saved separately.') : tr('津津会了解你的起点，提出大纲。你确认后再按章学习。', 'Jinjin will discuss your starting point and propose an outline for you to confirm.')}</p>
         <Link href={resume} className="mt-5 inline-flex rounded-lg bg-primary px-4 py-2.5 text-primary-foreground">{modules.length ? tr('继续学习', 'Continue learning') : tr('和津津确认目标与大纲', 'Plan with Jinjin')}</Link>
       </div>
+      <DiagnosticImpact key={pathId+":impact"} pathId={pathId} />
       {!!modules.length && <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{tr('学习章节', 'Chapters')}</h2><Link href={newSessionRoute(pathId,'outline')} className="text-sm text-primary">{tr('调整大纲', 'Adjust outline')}</Link></div>
-        <ol className="mt-3 space-y-3">{modules.map((module,index) => <li key={module.id}><Link href={learningProjectRoute(pathId,module.id)} className="flex items-start gap-4 rounded-xl border border-border bg-card p-4 hover:border-primary"><span className="text-primary">{String(index+1).padStart(2,'0')}</span><div className="min-w-0 flex-1"><h3 className="font-medium">{module.name}</h3><p className="mt-1 text-sm text-muted-foreground">{module.objective}</p><p className="mt-2 text-xs text-muted-foreground">{tr('独立能力已确认','Abilities confirmed')} {module.mastered}/{module.total} · {project.chapters[module.id] ? tr('章节内容已保存', 'Chapter content saved') : tr('打开后准备章节内容', 'Open to prepare chapter content')}</p></div><span>→</span></Link></li>)}</ol>
+        <ol className="mt-3 space-y-3">{modules.map((module,index) => <li key={module.id}><Link href={learningProjectRoute(pathId,module.id)} className="flex items-start gap-4 rounded-xl border border-border bg-card p-4 hover:border-primary"><span className="text-primary">{String(index+1).padStart(2,'0')}</span><div className="min-w-0 flex-1"><h3 className="font-medium">{module.name}</h3><p className="mt-1 text-sm text-muted-foreground">{module.objective}</p><p className="mt-2 text-xs text-muted-foreground">{tr('独立能力已确认','Abilities confirmed')} {module.mastered}/{module.total} · {project.chapters[module.id] ? tr('章节内容已保存', 'Chapter content saved') : tr('打开后准备章节内容', 'Open to prepare chapter content')}</p></div><span>→</span></Link><Link className="mt-2 inline-block text-sm text-primary underline" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/classroom?module='+encodeURIComponent(module.id))}>学习本章PPT</Link></li>)}</ol>
       </section>}
-      <div className="mt-6">{sources}</div>
-      <details className="mt-6 text-sm"><summary className="cursor-pointer text-muted-foreground">{tr('会话与项目设置','Conversations and project settings')}</summary>
+      </div>
+      <div hidden={tab!=="overview"}><DiagnosticFactsPanel key={pathId} pathId={pathId} />
+      <ExternalDiagnosisPanel key={pathId + ":external"} pathId={pathId} objectives={modules.flatMap(module=>module.knowledge_points.map(point=>({id:point.id,name:point.name})))} />
+      <details className="mt-6 text-sm"><summary className="cursor-pointer text-muted-foreground">{tr('项目设置','Project settings')}</summary>
         <ul className="mt-3 space-y-2">{sessions.map(session => <li key={session.session_id}><Link href={masterySessionRoute(pathId,session.session_id)} className="text-primary">{session.title}</Link></li>)}</ul>
         <Link href={masteryTopicRoute(pathId)} className="mt-4 inline-block underline">{tr('打开原项目管理', 'Advanced project management')}</Link>
-      </details>
+      </details></div>
     </LearningShell>
   )
 }
@@ -179,7 +198,7 @@ function ChapterReader({pathId, chapter, initialPosition, onAsk, tr}: {
     <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-xs text-muted-foreground">
       <span>{tr('章节阅读','Chapter reading')}</span>
       <button id="chapter-ask" onClick={()=>void ask()} className="text-primary">{tr('围绕本章提问','Ask about this chapter')}</button>
-      <details><summary className="cursor-pointer">{tr('更多学习方式','More learning modes')}</summary><div className="absolute z-20 mt-2 rounded-lg border border-border bg-card p-3 shadow"><p>{tr('我教 AI · 待开发','Teach AI · Planned')}</p><p className="mt-2">{tr('互动课堂 · 待开发','Interactive classroom · Planned')}</p></div></details>
+      <details><summary className="cursor-pointer">{tr('更多学习方式','More learning modes')}</summary><div className="absolute z-20 mt-2 rounded-lg border border-border bg-card p-3 shadow"><p>{tr('我教 AI · 待开发','Teach AI · Planned')}</p><p className="mt-2"><Link href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/classroom')}>互动课堂</Link></p></div></details>
     </div>
     {saveError&&<p role="alert" className="px-4 py-2 text-xs text-destructive">{tr('位置未保存，请检查连接后重试。','Position not saved. Check your connection and retry.')} <button onClick={()=>void persist()} className="underline">{tr('重试','Retry')}</button></p>}
     {selection&&<button onClick={()=>void ask(selection)} className="bg-accent px-4 py-2 text-left text-sm text-primary">{tr('向津津询问选中的内容','Ask Jinjin about the selected passage')} →</button>}

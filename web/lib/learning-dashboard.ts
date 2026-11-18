@@ -5,7 +5,6 @@ import type { ReadingWorkspace } from '@/lib/reading-workspace-api'
 import type { SessionSummary } from '@/lib/session-api'
 import {
   bookRoute,
-  masteryTopicRoute,
   readingCollectionRoute,
   practiceRoute,
 } from '@/lib/learning-routes'
@@ -65,7 +64,7 @@ export function allLearningActivity(sources: LearningSources): LearningActivity[
         key: `topic:${topic.content_workspace_id || ''}:${topic.path_id}`,
         kind: 'mastery' as const,
         title: topic.name || topic.metadata.goal,
-        href: scopedUrl(masteryTopicRoute(topic.path_id, ''), topic.content_workspace_id || ''),
+        href: scopedUrl('/learning/projects/' + encodeURIComponent(topic.path_id), topic.content_workspace_id || ''),
         updatedAt: topic.updated_at,
         createdAt: topic.metadata.created_at || topic.updated_at,
         progress: topic.map.counts.total ? topic.map.counts.mastered / topic.map.counts.total : 0,

@@ -91,10 +91,13 @@ def is_assessed_mastered(progress: LearningProgress, kp: KnowledgePoint) -> bool
         return False
     if progress.wenjin_enabled:
         from deeptutor.learning.wenjin import objective_evidence
+
         return not objective_evidence(progress, kp)["missing"]
     if kp.type in QUALITATIVE_TYPES:
         return bool(progress.qualitative_mastery.get(kp.id, False))
-    return progress.mastery_levels.get(kp.id, 0.0) >= gate_threshold(kp.type, evidence=progress.wenjin_enabled)
+    return progress.mastery_levels.get(kp.id, 0.0) >= gate_threshold(
+        kp.type, evidence=progress.wenjin_enabled
+    )
 
 
 def visual_achievements(progress: LearningProgress, kp_id: str) -> list[str]:
@@ -113,15 +116,32 @@ def visual_achievements(progress: LearningProgress, kp_id: str) -> list[str]:
 
 
 def learning_stage(progress: LearningProgress, kp_id: str) -> str:
+    if progress.wenjin_enabled:
+        from deeptutor.learning.wenjin import objective_evidence
+
+        point = find_knowledge_point(progress, kp_id)[0]
+        if point:
+            facts = objective_evidence(progress, point)
+            if facts["achieved"]:
+                return "independently_demonstrated"
+            if facts["assisted_successes"]:
+                return "practiced_with_help"
+            if facts["attempts"] or facts["excluded_count"]:
+                return "practiced_not_demonstrated"
     attempts = [
         item
         for item in progress.quiz_attempts
         if item.knowledge_point_id == kp_id and not item.voided
     ]
     evidence = [item for item in progress.learning_evidence if item.knowledge_point_id == kp_id]
-    if any(item.independent and item.is_correct for item in attempts) or any(
-        item.assessment_type == "qualitative" and item.result == "correct" and not item.hints_used
-        for item in evidence
+    if not progress.wenjin_enabled and (
+        any(item.independent and item.is_correct for item in attempts)
+        or any(
+            item.assessment_type == "qualitative"
+            and item.result == "correct"
+            and not item.hints_used
+            for item in evidence
+        )
     ):
         return "independently_demonstrated"
     if any(not item.independent for item in attempts) or any(item.hints_used for item in evidence):
@@ -168,6 +188,7 @@ def display_mastery(progress: LearningProgress, kp: KnowledgePoint) -> float:
     otherwise the recency-weighted accuracy stands in."""
     if progress.wenjin_enabled:
         from deeptutor.learning.wenjin import objective_evidence
+
         coverage = objective_evidence(progress, kp)
         return 1 - len(coverage["missing"]) / len(coverage["required"])
     if kp.type in QUALITATIVE_TYPES and progress.qualitative_mastery.get(kp.id):
@@ -308,7 +329,13 @@ def gate_kind(kp: KnowledgePoint, *, evidence: bool = False) -> str:
     so every surface that shows a mastery number has to be able to say which
     kind of gate that number is being read against.
     """
-    return "evidence" if evidence else "qualitative" if kp.type in QUALITATIVE_TYPES else "quantitative"
+    return (
+        "evidence"
+        if evidence
+        else "qualitative"
+        if kp.type in QUALITATIVE_TYPES
+        else "quantitative"
+    )
 
 
 def next_objective(
@@ -389,12 +416,24 @@ def next_objective(
             else:
                 action = "practice"
             decision_reason = ""
+            scaffold = scaffold_recommendation(progress, kp.id)
             if progress.wenjin_enabled:
                 from deeptutor.learning.wenjin import teaching_decision
-                decision_reason = teaching_decision(progress, kp)["reason"]
+
+                decision = teaching_decision(progress, kp)
+                decision_reason = decision["reason"]
+                scaffold = decision["scaffold"]
+                # Keep the public next-step protocol stable; diagnostic detail lives in wenjin.decision.
+                action = (
+                    "teach"
+                    if decision["action"] == "teach"
+                    else "probe"
+                    if decision["action"] in {"probe", "verify_independence", "verify_record", "verify_external_reference"}
+                    else "practice"
+                )
             step = NextStep(
                 action=action,
-                scaffold=scaffold_recommendation(progress, kp.id),
+                scaffold=scaffold,
                 module_id=module.id,
                 module_name=module.name,
                 knowledge_point_id=kp.id,
@@ -404,7 +443,8 @@ def next_objective(
                 gate=gate,
                 mastery=display_mastery(progress, kp),
                 threshold=gate_threshold(kp.type, evidence=progress.wenjin_enabled),
-                reason=decision_reason or (
+                reason=decision_reason
+                or (
                     (
                         "Untouched objective — teach before assessing, as the learner requested."
                         if action == "teach"

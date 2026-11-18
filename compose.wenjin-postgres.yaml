@@ -1,0 +1,25 @@
+name: wenjin-learning
+services:
+  postgres:
+    image: postgres:17.11
+    restart: unless-stopped
+    env_file:
+      - ./data/system/postgres/compose.env
+    ports:
+      - "127.0.0.1:55434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/system/postgres/init.sql:/docker-entrypoint-initdb.d/10-wenjin.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wenjin"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  postgres_data:

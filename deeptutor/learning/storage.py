@@ -436,6 +436,10 @@ class LearningStore:
         return value
 
     def _ensure_initialized(self) -> None:
+        from deeptutor.services.storage.postgres_adapter import enabled
+        if enabled(self.db_path):
+            self._initialized = True
+            return
         db_path = self.db_path.resolve()
         if self.db_path.exists() and (
             getattr(self, "_initialized", False) or db_path in _initialized_db_paths
@@ -649,6 +653,8 @@ class LearningStore:
                 conn.commit()
             self._initialized = True
             _initialized_db_paths.add(db_path)
+            from deeptutor.services.storage.postgres_adapter import enroll
+            enroll(self.db_path)
 
     @staticmethod
     def _converge_single_membership(conn: sqlite3.Connection) -> None:
@@ -714,6 +720,14 @@ class LearningStore:
     def _connect(self, *, initialize: bool = True) -> Iterator[sqlite3.Connection]:
         if initialize:
             self._ensure_initialized()
+        from deeptutor.services.storage.postgres_adapter import enabled, Connection
+        if enabled(self.db_path):
+            conn = Connection(self.db_path, autocommit=True)
+            try:
+                yield conn
+            finally:
+                conn.close()
+            return
         conn = sqlite3.connect(self.db_path, timeout=30.0, isolation_level=None)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
@@ -1195,7 +1209,11 @@ class LearningStore:
                 else:
                     progress = self._progress_from_row(row)
                 tx = LearningTransaction(conn, progress, created=created)
+                previous_plan = [m.model_dump(mode="json") for m in progress.modules]
                 yield tx
+                current_plan = [m.model_dump(mode="json") for m in tx.progress.modules]
+                if previous_plan != current_plan:
+                    tx.emit("plan.versioned", {"before": previous_plan, "after": current_plan, "base_revision": tx.base_revision, "reason": next((str(payload.get("reason") or payload.get("rationale") or event) for event,payload,_,_ in reversed(tx.events)), "Curriculum changed")})
                 if tx.changed:
                     now = time.time()
                     revision = tx.base_revision + 1

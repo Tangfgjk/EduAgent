@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 # process FastAPI deployments (the ``deeptutor start`` launcher) are fully covered;
 # multi-worker deployments still race and must rely on an external user store
 # (e.g. PocketBase), which is documented in the multi-user README.
-_USERS_WRITE_LOCK = threading.Lock()
+from deeptutor.services.storage.postgres_accounts import AccountLock
+_USERS_WRITE_LOCK = AccountLock()
 
 AUTH_DIR = SYSTEM_ROOT / "auth"
 USERS_FILE = AUTH_DIR / "users.json"
@@ -100,7 +101,16 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
+def _users_exist() -> bool:
+    from deeptutor.services.storage.postgres_accounts import enabled
+    return enabled() or USERS_FILE.exists()
+
+
 def _write_users(users: dict[str, dict[str, Any]]) -> None:
+    from deeptutor.services.storage.postgres_accounts import enabled, write
+    if enabled():
+        write(users)
+        return
     USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(USERS_FILE, json.dumps(users, indent=2, ensure_ascii=False))
 
@@ -182,7 +192,10 @@ def load_users(  # nosec B107 - empty defaults mean "no env fallback supplied".
     """Load canonical users, migrating legacy records and env fallback in memory."""
     migrate_legacy_multi_user_tree()
     users: dict[str, dict[str, Any]] | None = None
-    if USERS_FILE.exists():
+    from deeptutor.services.storage.postgres_accounts import enabled, read
+    if enabled():
+        users = read()
+    elif USERS_FILE.exists():
         users = _read_json(USERS_FILE)
     else:
         users = _migrate_legacy_users()
@@ -203,7 +216,7 @@ def load_users(  # nosec B107 - empty defaults mean "no env fallback supplied".
         canonical[str(username)] = record
         changed = changed or record != value
 
-    if USERS_FILE.exists() and changed:
+    if USERS_FILE.exists() and changed and not enabled():
         _write_users(canonical)
 
     # The bootstrap admin is merged in whenever it is configured, not only when
@@ -294,6 +307,9 @@ def get_user(username: str) -> dict[str, Any] | None:
 
 
 def get_user_by_id(user_id: str) -> tuple[str, dict[str, Any]] | None:
+    from deeptutor.services.storage.postgres_accounts import enabled, lookup
+    if enabled():
+        return lookup(user_id)
     for username, record in load_users().items():
         if str(record.get("id") or "") == user_id:
             return username, record
@@ -327,7 +343,7 @@ def set_learner_profile(username: str, profile: dict[str, Any] | None) -> dict[s
 def set_book_permission(username: str, permission: BookPermission) -> bool:
     """Atomically replace one ordinary user's shared-book permission."""
 
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
     with _USERS_WRITE_LOCK:
         users = load_users()
@@ -345,7 +361,7 @@ def remove_book_permission_overrides(book_id: str) -> list[str]:
     Returns affected user ids for the deletion audit summary.
     """
 
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return []
     affected: list[str] = []
     with _USERS_WRITE_LOCK:
@@ -372,7 +388,7 @@ def remove_book_permission_overrides(book_id: str) -> list[str]:
 
 
 def delete_user(username: str) -> bool:
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
     with _USERS_WRITE_LOCK:
         users = load_users()
@@ -395,7 +411,7 @@ def delete_user(username: str) -> bool:
 
 def set_password(username: str, hashed_password: str) -> dict[str, Any] | None:
     """Replace one account's password hash without changing its identity fields."""
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return None
     with _USERS_WRITE_LOCK:
         users = load_users()
@@ -413,7 +429,7 @@ def set_must_change_password(username: str, required: bool) -> bool:
     Set when an admin provisions the account, cleared once the owner proves
     they know the password and picks a new one.
     """
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
     with _USERS_WRITE_LOCK:
         users = load_users()
@@ -427,7 +443,7 @@ def set_must_change_password(username: str, required: bool) -> bool:
 
 def set_avatar(username: str, avatar: str) -> bool:
     """Update the avatar marker for an existing user. Returns True on success."""
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
     with _USERS_WRITE_LOCK:
         users = load_users()
@@ -486,13 +502,14 @@ def delete_avatar_file(user_id: str) -> None:
 def set_role(username: str, role: Role) -> bool:
     if role not in VALID_ROLES:
         raise ValueError(f"role must be one of {sorted(VALID_ROLES)}")
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
-    users = load_users()
-    if username not in users:
-        return False
-    users[username]["role"] = role
-    _write_users(users)
+    with _USERS_WRITE_LOCK:
+        users = load_users()
+        if username not in users:
+            return False
+        users[username]["role"] = role
+        _write_users(users)
     return True
 
 
@@ -502,7 +519,7 @@ def set_preset(
     """Update an account's configuration preset without changing its role."""
     if preset not in {"standard", "learner", "custom"}:
         raise ValueError("preset must be 'standard', 'learner', or 'custom'")
-    if not USERS_FILE.exists():
+    if not _users_exist():
         return False
     with _USERS_WRITE_LOCK:
         users = load_users()

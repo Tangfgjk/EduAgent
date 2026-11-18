@@ -874,7 +874,7 @@ class MasteryStatusTool(BaseTool):
         }
         if progress and progress.wenjin_enabled:
             from deeptutor.learning.wenjin import state_summary
-            payload["wenjin"] = state_summary(progress)
+            payload["wenjin"] = state_summary(progress, store=service.store)
             from deeptutor.learning.wenjin import learner_continuity
             payload["wenjin"]["prior_learning"] = learner_continuity(service.store, progress)
             if kwargs.get("_working_brief"):
@@ -1942,8 +1942,8 @@ class MasteryGradeTool(BaseTool):
         # the outline rail, which correctly never moves.
         if progress.wenjin_enabled and kp is not None:
             from deeptutor.learning.wenjin import teaching_decision
-            decision = teaching_decision(progress, kp)
-            next_move = "by the evidence-based teaching decision: " + json.dumps(decision, ensure_ascii=False)
+            decision = teaching_decision(progress, kp, store=service.store)
+            next_move = "with your own teaching choice informed by this diagnostic brief (recommendations, not commands): " + json.dumps(decision, ensure_ascii=False)
         elif mastered:
             next_move = "going: this objective is mastered, so continue with mastery_status.next."
         elif gate == "qualitative":

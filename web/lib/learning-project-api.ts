@@ -10,7 +10,8 @@ export async function projectRequest<T>(path: string, init?: RequestInit): Promi
   const response = await apiFetch(apiUrl('/api/mastery-paths' + path), init)
   if (!response.ok) {
     const data = await response.json().catch(() => ({}))
-    throw new Error(typeof data.detail === 'string' ? data.detail : '请求失败，请重试。')
+    const detail = Array.isArray(data.detail) ? data.detail.slice(0, 3).map((item: {loc?: (string | number)[]; msg?: string}) => (item.loc?.join('.') || '') + ': ' + (item.msg || '')).join('; ') : data.detail
+    throw new Error(typeof detail === 'string' ? detail : '请求失败，请重试。')
   }
   return response.json()
 }

@@ -70,12 +70,26 @@ def _interval(successes: int, total: int) -> tuple[float, float]:
 
 
 def metrics(progress, version: str, *, since: float = 0) -> dict:
+    from deeptutor.learning.diagnosis import project_facts
+
+    facts = project_facts(progress)
+    independent_refs = {
+        ref
+        for observation in facts.observations
+        if observation.validity == "recorded" and observation.assistance == "independent"
+        for ref in observation.source_refs
+    }
     attempts = [a for a in progress.quiz_attempts if not a.voided and a.timestamp >= since]
+    verified = {
+        id(a)
+        for index, a in enumerate(progress.quiz_attempts)
+        if f"quiz_attempts:{index}" in independent_refs
+    }
     independent = [
         a
         for a in attempts
         if a.strategy_version == version
-        and a.independent
+        and id(a) in verified
         and a.evidence_kind in ("application", "transfer", "explanation")
     ]
     successes = sum(a.result == "correct" for a in independent)
@@ -89,7 +103,7 @@ def metrics(progress, version: str, *, since: float = 0) -> dict:
                 for a in attempts
                 if a.knowledge_point_id == previous.knowledge_point_id
                 and a.timestamp >= previous.timestamp + 86400
-                and a.independent
+                and id(a) in verified
                 and a.evidence_kind in ("application", "transfer")
             ),
             None,

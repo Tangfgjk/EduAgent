@@ -1,0 +1,3 @@
+# Personal BKT fitting and durable PostgreSQL jobs
+-r postgres.txt
+scipy>=1.15,<2

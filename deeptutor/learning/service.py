@@ -592,6 +592,7 @@ class LearningService:
         scaffold_level: int = 0,
         evidence_kind: str = "recognition",
         strategy_version: str = "baseline",
+        diagnostic_question: PendingQuestion | None = None,
         verdict: dict[str, Any] | None = None,
     ) -> bool:
         """Mutate one aggregate with a grade without performing I/O."""
@@ -643,6 +644,17 @@ class LearningService:
                 turn_id=turn_id,
                 assessment_type="review" if already_scheduled else "quiz",
             )
+            from deeptutor.learning.diagnosis import assessment_context
+
+            evidence.evidence_id = evidence.evidence_id or uuid.uuid4().hex
+            evidence.learner_answer = user_answer
+            evidence.diagnostic_context = assessment_context(
+                progress, diagnostic_question, expected_answer, question_type,
+                assistance_used=assistance_used, scaffold_level=scaffold_level,
+                hints_used=int((visual_context or {}).get("hints_used") or 0),
+                semantic=verdict is not None,
+            )
+            progress.quiz_attempts[-1].diagnostic_evidence_id = evidence.evidence_id
             evidence.evidence_kind = evidence_kind
             evidence.strategy_version = strategy_version
             evidence.visual_context = visual_context or {}
@@ -1741,9 +1753,12 @@ class LearningService:
                 scaffold_level=pending.scaffold_level,
                 evidence_kind=pending.evidence_kind,
                 strategy_version=pending.strategy_version,
+                diagnostic_question=pending,
                 verdict=verdict,
             )
         )
+        if is_correct is not None and tx.progress.learning_evidence:
+            tx.progress.learning_evidence[-1].learner_answer = raw_answer
         if verdict:
             is_correct = verdict["is_correct"]
             visual_result = verdict["result"]
@@ -2277,7 +2292,10 @@ class LearningService:
             tx.touch()
             tx.emit(
                 "path.learner_profile_recorded",
-                {"fields": changed},
+                {"fields": changed,
+                 "values": {key: getattr(updated, key) for key in changed if key in cleaned},
+                 "learner_quote": learner_message,
+                 "provenance": "profile_service"},
                 session_id=session_id,
                 turn_id=turn_id,
             )
@@ -3006,7 +3024,13 @@ class LearningService:
         if evidence:
             progress.feynman_explanations[kp_id] = evidence
         moment = time.time()
+        from deeptutor.learning.diagnosis_models import DiagnosticContext
+
         review_evidence = LearningEvidence(
+            diagnostic_context=DiagnosticContext(
+                grading_method="semantic" if verdict else "legacy",
+                grading_version="native-v1", assistance="unknown",
+            ),
             evidence_id=evidence_id,
             knowledge_point_id=kp_id,
             timestamp=moment,

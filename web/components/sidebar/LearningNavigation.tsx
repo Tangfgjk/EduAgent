@@ -5,7 +5,7 @@ import { RecordGroups, RecordHeader, RecordTime, useRecordView } from './RecordL
 import { useLayoutEffect, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { ChevronRight, LayoutGrid, MessageCircle, Plus } from 'lucide-react'
+import { ChevronRight, Folder, LayoutGrid, MessageCircle, Plus } from 'lucide-react'
 import { learningSurface } from '@/components/learning/surfaces'
 import { allLearningActivity, fileLearningSessions, type LearningActivity } from '@/lib/learning-dashboard'
 import { isNavigationTargetActive } from '@/lib/navigation'
@@ -62,7 +62,9 @@ export function LearningNavigation({
   const at = (session: SessionSummary) => (sort === 'createdAt' ? session.created_at : session.updated_at)
   const placeholder = t('New chat')
   const titleOf = (session: SessionSummary) => displaySessionTitle(session.title, placeholder)
-  const records = allLearningActivity(sources)
+  const allRecords = allLearningActivity(sources)
+  const records = allRecords.filter(record => record.kind === "mastery")
+  const otherRecords = allRecords.filter(record => record.kind !== "mastery")
   const filed = fileLearningSessions(records, sessions?.rows ?? [])
   const rows: Row[] = [
     ...records.map(record => {
@@ -71,12 +73,10 @@ export function LearningNavigation({
       const time = sort === 'createdAt' ? record.createdAt : Math.max(record.updatedAt, ...children.map(at))
       return { kind: 'record' as const, key: record.key, record, sessions: children, time }
     }),
-    ...filed.loose.map(session => ({ kind: 'session' as const, key: session.session_id, session, time: at(session) })),
+
   ]
     .filter(row =>
-      row.kind === 'session'
-        ? matches(titleOf(row.session), view.query)
-        : matches(`${row.record.title} ${t(learningSurface(row.record.kind).title)}`, view.query) ||
+      matches(`${row.record.title} ${t(learningSurface(row.record.kind).title)}`, view.query) ||
           row.sessions.some(session => matches(titleOf(session), view.query))
     )
     .sort((a, b) => b.time - a.time || a.key.localeCompare(b.key))
@@ -88,14 +88,14 @@ export function LearningNavigation({
     })
   return (
     <div className="dt-learning-navigation">
-      <OverviewRow href="/learning/new" label={t('navigation.createLearning')} icon={Plus} />
+      <OverviewRow href="/learning/new" label={t('新建项目')} icon={Plus} />
       <OverviewRow
         href="/learning"
-        label={t('navigation.allLearning')}
+        label={t('全部项目')}
         icon={LayoutGrid}
       />
       <RecordHeader
-        title={t('navigation.learningRecords')}
+        title={t('项目')}
         count={rows.length}
         view={view}
         searchLabel={t('navigation.searchLearning')}
@@ -103,7 +103,7 @@ export function LearningNavigation({
       <div
         className="dt-learning-record-list"
         role="region"
-        aria-label={t('navigation.learningRecords')}
+        aria-label={t('项目')}
         tabIndex={0}
       >
         <Status loading={loading} error={failed.length > 0} retry={retry} />
@@ -139,6 +139,8 @@ export function LearningNavigation({
           }
         />
       </div>
+      {!!filed.loose.length && <details className="px-3 py-2 text-sm"><summary className="cursor-pointer text-muted-foreground">{t('未归入项目的对话')}</summary>{sessions?.render(filed.loose)}</details>}
+      <details className="px-3 py-2 text-sm"><summary className="cursor-pointer text-muted-foreground">{t('练习与其他学习记录')}</summary><Link href="/learning/practice" className="mt-3 block text-primary">{t('全部练习与错题')}</Link>{otherRecords.filter(r=>r.kind!=='practice').map(record=><Link key={record.key} href={record.href} className="mt-2 block truncate">{record.title}</Link>)}</details>
     </div>
   )
 }
@@ -164,9 +166,9 @@ function RecordNode({
   const pathname = usePathname()
   const search = useSearchParams()
   const selected = isNavigationTargetActive(record.href, pathname, new URLSearchParams(search.toString()))
-  const Icon = learningSurface(record.kind).icon
-  const expandable = sessions.length > 0 && Boolean(render)
-  const expanded = expandable && open
+  const Icon = Folder
+  const expandable = true
+  const expanded = open
   return (
     <div className="dt-record-node">
       <div className={`dt-record-node-row ${selected ? 'is-active' : ''} ${expanded ? 'is-open' : ''}`}>
@@ -207,7 +209,7 @@ function RecordNode({
           <RecordTime seconds={time} />
         </Link>
       </div>
-      {expanded && <div className="dt-record-children">{render!(sessions)}</div>}
+      {expanded && <div className="dt-record-children">{sessions.length ? render?.(sessions) : <p className="px-3 py-2 text-xs text-muted-foreground">{t("项目中暂无对话，打开项目即可开始。")}</p>}</div>}
     </div>
   )
 }

@@ -9,7 +9,8 @@ import { useMasteryStudySession } from "@/hooks/useMasteryStudySession";
 import { useMasteryOpening } from "@/hooks/useMasteryOpening";
 import { isMasteryDraftSendReady } from "@/lib/mastery-study-route";
 import { setPendingPrompt } from "@/lib/pending-prompt";
-import { MASTERY_OPENING_SCOPE } from "@/lib/mastery-mode";
+import { diagnosticOpeningScope } from "@/lib/diagnostic-impact";
+import { MASTERY_OPENING_SCOPE, type MasteryMode } from "@/lib/mastery-mode";
 import { initI18n } from "@/i18n/init";
 
 initI18n("en");
@@ -78,15 +79,17 @@ const topic = (pathId: string) => ({
 function Harness({
   pathId,
   sessionId,
+  mode = "outline",
 }: {
   pathId: string;
   sessionId?: string;
+  mode?: MasteryMode;
 }) {
   const { state, sendMessage } = useChatStateAdapter();
   const session = useMasteryStudySession(
     pathId,
     sessionId,
-    "outline",
+    mode,
   );
   const submit = useCallback(
     (content: string) => {
@@ -126,10 +129,10 @@ function Harness({
     </>
   );
 }
-const view = (pathId: string, sessionId?: string) => (
+const view = (pathId: string, sessionId?: string, mode: MasteryMode = "outline") => (
   <StrictMode>
     <ChatStateAdapterProvider>
-      <Harness pathId={pathId} sessionId={sessionId} />
+      <Harness pathId={pathId} sessionId={sessionId} mode={mode} />
     </ChatStateAdapterProvider>
   </StrictMode>
 );
@@ -338,4 +341,28 @@ it("only admits the exact committed draft and configuration", () => {
     expect(isMasteryDraftSendReady({ ...ready, ...override })).toBe(
       false,
     );
+});
+
+
+describe("diagnostic opening", () => {
+  it("starts the chosen check in study exactly once after the draft is ready", async () => {
+    const pending=deferred<ReturnType<typeof topic>>();
+    mocks.topic.mockReturnValue(pending.promise);
+    setPendingPrompt("Verify the imported reference for this objective",diagnosticOpeningScope("diagnostic-topic"));
+    const rendered=render(view("diagnostic-topic",undefined,"study"));
+    expect(starts()).toHaveLength(0);
+    await act(async()=>pending.resolve(topic("diagnostic-topic")));
+    await waitFor(()=>expect(starts()).toHaveLength(1));
+    expect(starts()[0]).toMatchObject({mastery_path_id:"diagnostic-topic",mastery_session_mode:"study",content:"Verify the imported reference for this objective"});
+    rendered.rerender(view("diagnostic-topic",undefined,"study"));
+    expect(starts()).toHaveLength(1);
+  });
+
+  it("does not send a different project's diagnostic request", async()=>{
+    mocks.topic.mockResolvedValue(topic("other-topic"));
+    setPendingPrompt("Do not leak this request",diagnosticOpeningScope("source-topic"));
+    render(view("other-topic",undefined,"study"));
+    await waitFor(()=>expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+    expect(starts()).toHaveLength(0);
+  });
 });

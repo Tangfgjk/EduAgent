@@ -11,26 +11,29 @@ vi.mock('@/hooks/useLearningIndex', () => ({ useLearningIndex: () => ({
   loading: false, failed: [], retry: vi.fn(), sources: {
     books: [], mastery: mastery.topics, reading: [], watching: [], practice: [
       { id: 1, question: 'Older material, recently studied', created_at: 100, updated_at: 900, content_workspace_id: 'physics' },
-      { id: 2, question: 'Newly created material', created_at: 800, updated_at: 800, content_workspace_id: '' },
+      { id: 2, question: 'Newly created project', created_at: 800, updated_at: 800, content_workspace_id: '' },
     ],
   },
 }) }))
 beforeEach(() => {
   localStorage.clear()
-  mastery.topics = []
+  mastery.topics = [
+    {path_id:'p1',name:'Older project, recently studied',updated_at:900,content_workspace_id:'physics',metadata:{status:'active',goal:'Older',created_at:100},map:{counts:{total:0,mastered:0}}},
+    {path_id:'p2',name:'Newly created project',updated_at:800,content_workspace_id:'',metadata:{status:'active',goal:'Newer',created_at:800},map:{counts:{total:0,mastered:0}}},
+  ]
 })
 
 it('sorts by creation independently of activity and retains the preference', () => {
   const view = render(<LearningNavigation />)
-  const records = () => within(screen.getByRole('region', { name: 'navigation.learningRecords' })).getAllByRole('link')
-  expect(records()[0]).toHaveTextContent('Older material')
+  const records = () => within(screen.getByRole('region', { name: '项目' })).getAllByRole('link')
+  expect(records()[0]).toHaveTextContent('Older project')
   fireEvent.click(screen.getByRole('button', { name: 'navigation.sortRecords' }))
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'navigation.createdTime' }))
-  expect(records()[0]).toHaveTextContent('Newly created material')
-  expect(records()[1]).toHaveAttribute('href', '/learning/practice?question=1&dt_workspace=physics')
+  expect(records()[0]).toHaveTextContent('Newly created project')
+  expect(records()[1]).toHaveAttribute('href', '/learning/projects/p1?dt_workspace=physics')
   view.unmount()
   render(<LearningNavigation />)
-  expect(records()[0]).toHaveTextContent('Newly created material')
+  expect(records()[0]).toHaveTextContent('Newly created project')
 })
 
 it('searches records without discarding the rest of the library', () => {
@@ -38,9 +41,9 @@ it('searches records without discarding the rest of the library', () => {
   fireEvent.click(screen.getByRole('button', { name: 'navigation.searchLearning' }))
   const input = screen.getByRole('searchbox', { name: 'navigation.searchLearning' })
   fireEvent.change(input, { target: { value: 'recently' } })
-  const list = within(screen.getByRole('region', { name: 'navigation.learningRecords' }))
+  const list = within(screen.getByRole('region', { name: '项目' }))
   expect(list.getAllByRole('link')).toHaveLength(1)
-  expect(list.getByRole('link')).toHaveTextContent('Older material')
+  expect(list.getByRole('link')).toHaveTextContent('Older project')
   fireEvent.keyDown(input, { key: 'Escape' })
   expect(list.getAllByRole('link')).toHaveLength(2)
 })
@@ -61,12 +64,13 @@ it('files a conversation under the record it was held in', () => {
     activeSessionId: null,
     render: list => <ul>{list.map(row => <li key={row.session_id}>{row.title}</li>)}</ul>,
   }} />)
-  const region = within(screen.getByRole('region', { name: 'navigation.learningRecords' }))
+  const region = within(screen.getByRole('region', { name: '项目' }))
   // The path takes the time of its latest conversation and leads the list.
   expect(region.getAllByRole('link')[0]).toHaveTextContent('Vectors')
   expect(region.queryByText('Dot products')).toBeNull()
   // A conversation whose path is gone stands on its own.
-  expect(region.getByText('Old path chat')).toBeInTheDocument()
+  expect(region.queryByText('Old path chat')).toBeNull()
+  expect(screen.getByText('Old path chat')).toBeInTheDocument()
   fireEvent.click(region.getByRole('button', { name: 'navigation.showRecordChats' }))
   expect(region.getByText('Dot products')).toBeInTheDocument()
   // Searching for a conversation finds it inside its record.
@@ -75,4 +79,11 @@ it('files a conversation under the record it was held in', () => {
   fireEvent.change(screen.getByRole('searchbox', { name: 'navigation.searchLearning' }), { target: { value: 'dot' } })
   expect(region.getByText('Dot products')).toBeInTheDocument()
   expect(region.queryByText('Old path chat')).toBeNull()
+})
+
+it('never lists individual practice tasks as projects',()=>{
+  render(<LearningNavigation/>);
+  const region=within(screen.getByRole('region',{name:'项目'}));
+  expect(region.queryByText('Older material, recently studied')).toBeNull();
+  expect(screen.getByText('全部练习与错题')).toHaveAttribute('href','/learning/practice');
 })

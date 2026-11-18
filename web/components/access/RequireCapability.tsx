@@ -3,7 +3,7 @@
 import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { CAPABILITY_LABEL, type Capability } from "@/lib/capability-routes";
+import { type Capability } from "@/lib/capability-routes";
 
 import { useCapabilityAccess } from "./CapabilityAccessContext";
 
@@ -18,7 +18,7 @@ export function LockedFeatureNotice({
   capability: Capability;
 }) {
   const { t } = useTranslation();
-  const modelLabel = t(CAPABILITY_LABEL[capability]);
+  void capability;
 
   return (
     <div className="flex h-full w-full items-center justify-center p-6">
@@ -30,11 +30,10 @@ export function LockedFeatureNotice({
           {t("Feature locked")}
         </h2>
         <p className="text-sm leading-relaxed text-[var(--muted-foreground)]">
-          {t(
-            "Your account doesn't have {{model}} assigned yet. Please contact your administrator to get access.",
-            { model: modelLabel },
-          )}
+          请先配置自己的提供方和 API Key，配置完成后即可使用陪学。
+
         </p>
+        <a href="/settings/personal-models" className="rounded-xl bg-[var(--primary)] px-4 py-2 text-[var(--primary-foreground)]">配置我的模型</a>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export const SETTINGS_PAGE_GROUPS: { label: Lang; keys: string[] }[] = [
   { label: { en: 'Personal', zh: '个人' }, keys: ['general', 'workspace', 'data-migration', 'appearance', 'usage'] },
   {
     label: { en: 'Models & services', zh: '模型与服务' },
-    keys: ['connections', 'llm', 'task-models', 'embedding', 'search', 'voice', 'multimodal'],
+    keys: ['personal-models', 'connections', 'llm', 'task-models', 'embedding', 'search', 'voice', 'multimodal'],
   },
   {
     label: { en: 'Learning & conversation', zh: '学习与对话' },
@@ -60,6 +60,7 @@ export function settingsPageFamily(key: string): string[] {
 }
 
 const extraPages: SettingsLeaf[] = [
+  {key: 'personal-models', label: {en: 'My model', zh: '我的模型'}, blurb: {en: 'Your provider and API key', zh: '配置自己的提供方和 API Key'}, icon: Bot, href: '/settings/personal-models', tile: ''},
   {
     key: 'progress',
     label: { en: 'Learning progress', zh: '学习进度' },
@@ -121,7 +122,7 @@ const extraPages: SettingsLeaf[] = [
 
 export function visibleSettingsPages(access: SettingsAccess): SettingsLeaf[] {
   return [
-    ...extraPages,
+    ...extraPages.filter(page => page.key !== 'personal-models' || access.hideAdminOnly),
     ...SETTINGS_CATEGORIES.filter(category => isSettingsCategoryVisible(category, access))
       .flatMap(category => category.children ?? [{ ...category, tile: '' }])
       .filter(

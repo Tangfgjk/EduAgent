@@ -1,0 +1,2 @@
+# Optional offline reference validation; online replay has no pyBKT dependency.
+pyBKT==1.4.3

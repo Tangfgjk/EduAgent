@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { consumePendingPrompt } from "@/lib/pending-prompt";
+import { diagnosticOpeningScope } from "@/lib/diagnostic-impact";
+import { consumePendingPrompt, setPendingPrompt } from "@/lib/pending-prompt";
 import {
   MASTERY_OPENING_SCOPE,
   masteryOpeningMessage,
@@ -35,11 +36,15 @@ export function useMasteryOpening({
     if (!topicReady || hasMessages || sessionLoading || sessionError)
       return;
     if (isStreaming || openingSentRef.current === pathId) return;
-    const opening =
+    const diagnostic = consumePendingPrompt(diagnosticOpeningScope(pathId)).trim();
+    const opening = diagnostic ||
       consumePendingPrompt(MASTERY_OPENING_SCOPE).trim() ||
       masteryOpeningMessage(sessionMode, t);
     // Study mode has no automatic opening. Latch only after submitting.
-    if (opening && submit(opening)) openingSentRef.current = pathId;
+    if (opening) {
+      if (submit(opening)) openingSentRef.current = pathId;
+      else setPendingPrompt(opening, diagnostic ? diagnosticOpeningScope(pathId) : MASTERY_OPENING_SCOPE);
+    }
   }, [
     hasMessages,
     pathId,

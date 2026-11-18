@@ -2547,3 +2547,35 @@ async def get_usage_statistics(
 
     combined = await asyncio.to_thread(combined_usage_records, records, start, end)
     return await asyncio.to_thread(aggregate_usage, combined, year=year, timezone=timezone)
+
+
+class PersonalApiModelPayload(BaseModel):
+    provider: str = Field(max_length=60)
+    base_url: str = Field(default="", max_length=1000)
+    model: str = Field(min_length=1, max_length=200)
+    api_key: str | None = Field(default=None, max_length=4096, repr=False)
+
+
+@router.get("/personal-model")
+async def get_personal_api_model():
+    from deeptutor.multi_user.personal_api_models import view
+    return view()
+
+
+@router.put("/personal-model")
+async def save_personal_api_model(payload: PersonalApiModelPayload):
+    from deeptutor.multi_user.personal_api_models import save
+    try:
+        result = await asyncio.to_thread(save, payload.provider, payload.base_url.strip(), payload.model, payload.api_key)
+        clear_llm_config_cache()
+        return result
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+
+
+@router.delete("/personal-model")
+async def remove_personal_api_model():
+    from deeptutor.multi_user.personal_api_models import remove
+    result = remove()
+    clear_llm_config_cache()
+    return result

@@ -921,6 +921,20 @@ def resolve_llm_runtime_config(
     """
     catalog_service = service or get_model_catalog_service()
     loaded = _with_personal_llm_profiles(_load_catalog(catalog))
+    from deeptutor.multi_user.context import get_current_user_or_none
+    user = get_current_user_or_none()
+    if user is not None and not user.is_admin:
+        from deeptutor.multi_user.model_access import allowed_llm_options, apply_allowed_llm_selection
+        if llm_selection is None:
+            options = allowed_llm_options()
+            choice = options["active"] or next(iter(options["options"]), None)
+            if choice is None:
+                raise ValueError("请先在设置 → 我的模型配置提供方和 API Key")
+            llm_selection = {"profile_id": choice["profile_id"], "model_id": choice["model_id"]}
+        payload = llm_selection.to_dict() if isinstance(llm_selection, LLMSelection) else llm_selection
+        apply_allowed_llm_selection(payload)
+        # Autonomous calls use the student's choice, never the admin task model.
+        service_name = "llm"
     # Parse the payload once: ``apply_llm_selection_to_catalog`` would otherwise
     # re-parse it, so a malformed selection would be validated (and rejected)
     # from two places. ``from_payload`` is idempotent on an already-parsed value.

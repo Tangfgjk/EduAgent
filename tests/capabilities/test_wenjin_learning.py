@@ -17,6 +17,7 @@ from deeptutor.learning.evolution import (
 )
 from deeptutor.learning.models import (
     KnowledgePoint,
+    LearningEvidence,
     LearningModule,
     LearningProgress,
     PendingQuestion,
@@ -73,6 +74,17 @@ def add(
             strategy_version=strategy,
         )
     )
+
+    # Simulate current native receipts rather than claiming independence from legacy defaults.
+    from deeptutor.learning.diagnosis_models import DiagnosticContext
+    attempt = state.quiz_attempts[-1]
+    attempt.diagnostic_evidence_id = "receipt-" + question
+    state.learning_evidence.append(LearningEvidence(
+        evidence_id=attempt.diagnostic_evidence_id, question_id=question,
+        knowledge_point_id=kp_id, result=attempt.result, evidence_kind=kind, timestamp=timestamp,
+        hints_used=0 if independent else 1,
+        diagnostic_context=DiagnosticContext(assistance="independent" if independent else "assisted"),
+    ))
 
 
 def test_recognition_alone_never_proves_explanation():

@@ -8,6 +8,7 @@ import html
 import json
 import re
 import time
+from typing import Literal
 import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
@@ -16,6 +17,10 @@ from pydantic import ValidationError as PydanticValidationError
 
 from deeptutor.learning import policy as learning_policy
 from deeptutor.learning import prompts as learning_prompts
+from deeptutor.learning.external_diagnosis_models import (
+    ExternalCommitRequest,
+    ExternalPreviewRequest,
+)
 from deeptutor.learning.models import (
     KnowledgePoint,
     KnowledgeType,
@@ -1552,7 +1557,9 @@ async def get_wenjin_state(path_id: str):
     progress = await asyncio.to_thread(store.load, path_id)
     if progress is None:
         raise HTTPException(status_code=404, detail="Learning project not found.")
-    state = state_summary(progress)
+    state = await asyncio.to_thread(state_summary, progress, store=store)
+    interaction = await asyncio.to_thread(store.get_active_interaction, path_id)
+    state["resume_session_id"] = interaction.session_id if interaction else None
     state["prior_learning"] = await asyncio.to_thread(learner_continuity, store, progress)
     return state
 
@@ -1672,3 +1679,396 @@ async def update_project_location(path_id: str, body: ProjectLocationRequest):
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/topics/{path_id}/diagnostic-facts")
+async def get_diagnostic_facts(path_id: str):
+    """Read native diagnostic facts only; no assessment or mastery mutation."""
+    from deeptutor.learning.diagnosis import load_project_facts
+
+    try:
+        facts = await asyncio.to_thread(load_project_facts, LearningStore(), path_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return facts.model_dump(mode="json")
+
+
+class DiagnosticPreferenceRequest(BaseModel):
+    strategy: Literal["teach_first", "probe_first"]
+
+
+@router.put("/topics/{path_id}/wenjin/preference")
+async def set_diagnostic_preference(path_id: str, body: DiagnosticPreferenceRequest):
+    from deeptutor.learning.wenjin import state_summary
+
+    store = LearningStore()
+    if not await asyncio.to_thread(store.exists, path_id):
+        raise HTTPException(status_code=404, detail="Learning project not found")
+    progress, _ = await asyncio.to_thread(
+        LearningService(store).record_learner_profile, path_id,
+        fields={"teaching_strategy": body.strategy},
+        learner_message="Explicit learning-sequence preference selected in UI: " + body.strategy,
+    )
+    return state_summary(progress)
+
+
+# Existing result import only: all operations inherit authenticated owner/workspace scope.
+
+
+async def _external_import_call(path_id: str, operation, *args):
+    from deeptutor.learning.external_diagnoses import ExternalImportConflict
+    store = LearningStore()
+    if not await asyncio.to_thread(store.exists, path_id):
+        raise HTTPException(status_code=404, detail="Learning project not found")
+    try:
+        return await asyncio.to_thread(operation, store, path_id, *args)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ExternalImportConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/topics/{path_id}/diagnostic-imports/preview")
+async def preview_external_diagnosis(path_id: str, body: ExternalPreviewRequest):
+    from deeptutor.learning.external_diagnoses import preview_import
+    return await _external_import_call(path_id, preview_import, body)
+
+
+@router.post("/topics/{path_id}/diagnostic-imports")
+async def commit_external_diagnosis(path_id: str, body: ExternalCommitRequest):
+    from deeptutor.learning.external_diagnoses import commit_import
+    return await _external_import_call(path_id, commit_import, body)
+
+
+@router.get("/topics/{path_id}/diagnostic-imports")
+async def get_external_diagnoses(path_id: str):
+    from deeptutor.learning.external_diagnoses import list_imports
+    return await _external_import_call(path_id, list_imports)
+
+
+@router.post("/topics/{path_id}/diagnostic-imports/{import_id}/revoke")
+async def revoke_external_diagnosis(path_id: str, import_id: str):
+    from deeptutor.learning.external_diagnoses import revoke_import
+    return await _external_import_call(path_id, revoke_import, import_id)
+
+
+@router.get("/topics/{path_id}/diagnostic-impact")
+async def get_diagnostic_import_impact(path_id: str):
+    from deeptutor.learning.diagnostic_impact import load_import_impact
+    return await _external_import_call(path_id, load_import_impact)
+
+
+class DiagnosticDatasetRequest(BaseModel):
+    source_revision: int
+    excluded_ids: list[str] = Field(default_factory=list, max_length=10000)
+    synthetic: bool = False
+
+
+async def _dataset_call(path_id, function, *args):
+    try:
+        return await asyncio.to_thread(function, LearningStore(), path_id, *args)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/topics/{path_id}/diagnosis/evidence")
+async def diagnostic_catalogue(path_id: str):
+    from deeptutor.learning.diagnostic_datasets import catalogue
+
+    return await _dataset_call(path_id, catalogue)
+
+
+@router.get("/topics/{path_id}/diagnosis/datasets")
+async def diagnostic_datasets(path_id: str):
+    from deeptutor.learning.diagnostic_datasets import snapshots
+
+    return await _dataset_call(path_id, snapshots)
+
+
+@router.post("/topics/{path_id}/diagnosis/datasets")
+async def diagnostic_dataset_create(path_id: str, body: DiagnosticDatasetRequest):
+    from deeptutor.learning.diagnostic_datasets import create_snapshot
+
+    return await _dataset_call(
+        path_id, create_snapshot, body.source_revision, body.excluded_ids, body.synthetic
+    )
+
+
+@router.get("/topics/{path_id}/diagnosis/datasets/{snapshot_id}")
+async def diagnostic_dataset_get(path_id: str, snapshot_id: str):
+    from deeptutor.learning.diagnostic_datasets import snapshots
+
+    return await _dataset_call(path_id, snapshots, snapshot_id)
+
+
+@router.get("/topics/{path_id}/diagnosis/source")
+async def diagnostic_source(path_id: str, observation_id: str):
+    from deeptutor.learning.diagnostic_datasets import catalogue
+    from deeptutor.api.routers.sessions import get_session
+
+    data = await _dataset_call(path_id, catalogue)
+    row = next((r for r in data["rows"] if r["observation_id"] == observation_id), None)
+    if row is None or not row["session_id"]:
+        raise HTTPException(status_code=404, detail="没有可定位的原对话")
+    session = await get_session(row["session_id"])
+    from deeptutor.services.session import get_session_store
+
+    turn = await get_session_store().get_turn(row["turn_id"]) if row["turn_id"] else None
+    assistant_id = (
+        turn.get("assistant_message_id")
+        if turn and turn.get("session_id") == row["session_id"]
+        else None
+    )
+    messages = []
+    for m in session.get("messages", []):
+        if m.get("role") not in ("user", "assistant"):
+            continue
+        meta = m.get("metadata") or {}
+        matched = bool(
+            (assistant_id is not None and m.get("id") == assistant_id)
+            or row["turn_id"]
+            and (
+                m.get("turn_id") == row["turn_id"]
+                or meta.get("turn_id") == row["turn_id"]
+                or any(
+                    (e.get("metadata") or {}).get("turn_id") == row["turn_id"]
+                    for e in (m.get("events") or [])
+                    if isinstance(e, dict)
+                )
+            )
+        )
+        messages.append(
+            {
+                "id": m.get("id"),
+                "role": m.get("role"),
+                "content": m.get("content", "")
+                if isinstance(m.get("content", ""), str)
+                else json.dumps(m.get("content"), ensure_ascii=False),
+                "matched": matched,
+            }
+        )
+    return {
+        "session_id": row["session_id"],
+        "title": session.get("title", "原对话"),
+        "turn_id": row["turn_id"],
+        "messages": messages,
+        "located": any(m["matched"] for m in messages),
+    }
+
+
+class PersonalTrainingRequest(BaseModel):
+    source_revision: int = Field(ge=0)
+
+
+@router.get("/topics/{path_id}/diagnosis/training")
+async def personal_training_runs(path_id: str):
+    from deeptutor.learning.personal_training import runs
+    return await _dataset_call(path_id, runs)
+
+
+@router.post("/topics/{path_id}/diagnosis/training")
+async def personal_training_start(path_id: str, body: PersonalTrainingRequest):
+    from deeptutor.learning.training_jobs import submit
+    return await _dataset_call(path_id, submit, body.source_revision)
+
+
+class PlanRollbackRequest(BaseModel):
+    event_id: int
+    source_revision: int = Field(ge=0)
+
+
+@router.get("/topics/{path_id}/diagnosis/plans")
+async def diagnosis_plan_history(path_id: str):
+    from deeptutor.learning.plan_versions import history
+    return await _dataset_call(path_id, history)
+
+
+@router.post("/topics/{path_id}/diagnosis/plans/rollback")
+async def diagnosis_plan_rollback(path_id: str, body: PlanRollbackRequest):
+    from deeptutor.learning.plan_versions import rollback
+    return await _dataset_call(path_id, rollback, body.event_id, body.source_revision)
+
+
+@router.get("/topics/{path_id}/diagnosis/training/jobs")
+async def personal_training_jobs(path_id: str):
+    from deeptutor.learning.training_jobs import list_jobs
+    return await _dataset_call(path_id,list_jobs)
+
+
+class ModelRollbackRequest(BaseModel):
+    run_id: str
+
+
+@router.post("/topics/{path_id}/diagnosis/training/rollback")
+async def personal_model_rollback(path_id: str,body: ModelRollbackRequest):
+    from deeptutor.learning.personal_training import rollback_parameters
+    return await _dataset_call(path_id,rollback_parameters,body.run_id)
+
+
+class LearningHelpRequest(BaseModel):
+    kind: Literal["hint","explain","example","steps","worked_example","checklist","reflection"]
+    session_id: str = Field(default="",max_length=200)
+    request_id: str = Field(min_length=1,max_length=100)
+
+
+@router.post("/topics/{path_id}/wenjin/help-requests")
+async def record_learning_help_request(path_id: str,body: LearningHelpRequest):
+    store=LearningStore()
+    if not store.exists(path_id):raise HTTPException(status_code=404,detail="Learning project not found")
+    if body.session_id and store.path_id_for_session(body.session_id)!=path_id:
+        raise HTTPException(status_code=403,detail="Session does not belong to this project")
+    def record(tx):
+        pending=tx.progress.pending_question
+        tx.emit("scaffold.requested",{"request_id":body.request_id,"kind":body.kind,"question_id":pending.question_id if pending else None,"objective_id":pending.knowledge_point_id if pending else None,"delivery_status":"requested_not_delivered"},session_id=body.session_id)
+    updated,_=await asyncio.to_thread(store.mutate,path_id,record)
+    return {"request_id":body.request_id,"revision":updated.version}
+
+
+@router.post("/topics/{path_id}/diagnosis/training/jobs/{job_id}/retry")
+async def retry_personal_training_job(path_id: str,job_id: str):
+    from deeptutor.learning.training_jobs import retry_job
+    return await _dataset_call(path_id,retry_job,job_id)
+
+
+class ClassroomCreateRequest(BaseModel):
+    mode: Literal["curriculum_ppt", "legacy"] = "curriculum_ppt"
+    module_id: str = Field(default="",max_length=120)
+    objective_ids: list[str] = Field(default_factory=list, max_length=30)
+    minutes: int = Field(default=15, ge=5, le=60)
+
+class ClassroomControlRequest(BaseModel):
+    action: Literal["position", "retry", "cancel", "finish", "skip", "resume", "step", "view"]
+    position: int | None = Field(default=None, ge=0)
+
+class ClassroomAnswerRequest(BaseModel):
+    index: int = Field(ge=0)
+    choice: int = Field(ge=0, le=5)
+
+class ClassroomAskRequest(BaseModel):
+    index: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=4000)
+    request_id: str = Field(min_length=1, max_length=100)
+
+@router.get("/topics/{path_id}/classrooms")
+async def list_classrooms(path_id: str):
+    from deeptutor.learning.classroom import listing
+    return await _dataset_call(path_id, listing)
+
+@router.post("/topics/{path_id}/classrooms")
+async def create_classroom(path_id: str, body: ClassroomCreateRequest):
+    from deeptutor.learning.classroom import create
+    return await _dataset_call(path_id, create, body.objective_ids, body.minutes, body.mode=="curriculum_ppt", body.module_id)
+
+@router.get("/topics/{path_id}/classrooms/{cid}")
+async def get_classroom(path_id: str, cid: str):
+    from deeptutor.learning.classroom import load
+    return await _dataset_call(path_id, load, cid)
+
+@router.delete("/topics/{path_id}/classrooms/{cid}")
+async def delete_classroom(path_id: str, cid: str):
+    from deeptutor.learning.classroom import remove
+    return await _dataset_call(path_id, remove, cid)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/confirm")
+async def confirm_classroom(path_id: str, cid: str, body: dict):
+    from deeptutor.learning.classroom import confirm, Outline
+    try: sections=Outline.model_validate(body).sections
+    except ValueError: raise HTTPException(422, "课堂大纲格式不正确") from None
+    return await _dataset_call(path_id, confirm, cid, sections)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/control")
+async def control_classroom(path_id: str, cid: str, body: ClassroomControlRequest):
+    from deeptutor.learning.classroom import control
+    return await _dataset_call(path_id, control, cid, body.action, body.position)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/answer")
+async def answer_classroom(path_id: str, cid: str, body: ClassroomAnswerRequest):
+    from deeptutor.learning.classroom import answer
+    return await _dataset_call(path_id, answer, cid, body.index, body.choice)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/ask")
+async def ask_classroom(path_id: str, cid: str, body: ClassroomAskRequest):
+    from deeptutor.learning.classroom import ask
+    try:return await ask(LearningStore(),path_id,cid,body.index,body.text,body.request_id)
+    except LookupError:raise HTTPException(404,"课堂不存在") from None
+    except ValueError as exc:raise HTTPException(422,str(exc)) from None
+    except RuntimeError as exc:raise HTTPException(409,str(exc)) from None
+    except Exception:raise HTTPException(503,"课堂提问暂未完成，请稍后重试") from None
+
+
+class ClassroomAssetRequest(BaseModel):
+    kind: Literal["voice", "pdf", "pptx", "video", "simulation", "linear"]
+    index: int = Field(default=0, ge=0)
+    range: Literal["page","chapter","course"] | None = None
+    engine: Literal["local","configured"] = "local"
+    rate: float = Field(default=1,ge=.75,le=1.5)
+
+class ClassroomAssetControlRequest(BaseModel):
+    action: Literal["cancel","retry","playback"]
+    seconds: float = Field(default=0,ge=0)
+    playback_rate: float = Field(default=1,ge=.5,le=2)
+
+@router.get("/classroom-media/capabilities")
+async def classroom_media_capabilities():
+    from deeptutor.learning.classroom_av import capabilities
+    return await asyncio.to_thread(capabilities)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/assets/{key}/control")
+async def control_classroom_asset(path_id:str,cid:str,key:str,body:ClassroomAssetControlRequest):
+    from deeptutor.learning.classroom_media import control
+    return await _dataset_call(path_id,control,cid,key,body.action,body.seconds,body.playback_rate)
+
+class ClassroomSimulationRequest(BaseModel):
+    phase: Literal["predict", "operate", "explain"]
+    text: str = Field(default="", max_length=3000)
+    choices: list[int] = Field(default_factory=list, max_length=8)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/assets")
+async def request_classroom_asset(path_id: str,cid: str,body: ClassroomAssetRequest):
+    from deeptutor.learning.classroom_media import request
+    return await _dataset_call(path_id,request,cid,body.kind,body.index,body.range,body.engine,body.rate)
+
+@router.get("/topics/{path_id}/classrooms/{cid}/assets/{key}")
+async def get_classroom_asset(path_id: str,cid: str,key: str):
+    from deeptutor.learning.classroom_media import get, view
+    return view(await _dataset_call(path_id,get,cid,key))
+
+@router.get("/topics/{path_id}/classrooms/{cid}/assets/{key}/files/{name}")
+async def download_classroom_asset(path_id: str,cid: str,key: str,name: str):
+    from fastapi.responses import FileResponse
+    from deeptutor.learning.classroom_media import resource
+    path=await _dataset_call(path_id,resource,cid,key,name)
+    mime={'.txt':'text/plain; charset=utf-8','.json':'application/json','.wav':'audio/wav','.mp4':'video/mp4','.vtt':'text/vtt','.pdf':'application/pdf','.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation'}
+    return FileResponse(path,media_type=mime.get(path.suffix,'application/octet-stream'),filename=path.name)
+
+@router.post("/topics/{path_id}/classrooms/{cid}/assets/{key}/interact")
+async def classroom_simulation(path_id: str,cid: str,key: str,body: ClassroomSimulationRequest):
+    from deeptutor.learning.classroom_media import interact
+    if body.phase in {'predict','explain'} and not body.text.strip():raise HTTPException(422,'请填写预测或解释')
+    return await _dataset_call(path_id,interact,cid,key,body.phase,body.text,body.choices)
+
+
+@router.get("/topics/{path_id}/classrooms/{cid}/assets")
+async def list_classroom_assets(path_id:str,cid:str):
+    from deeptutor.learning.classroom_media import listing
+    return await _dataset_call(path_id,listing,cid)
+
+
+class SlideTutorRequest(BaseModel):
+    index:int=Field(ge=0)
+    intent:Literal['explain','check']='explain'
+
+@router.post('/topics/{path_id}/classrooms/{cid}/tutor')
+async def slide_tutor_handoff(path_id:str,cid:str,body:SlideTutorRequest):
+    from deeptutor.learning.classroom import tutor_handoff
+    return await _dataset_call(path_id,tutor_handoff,cid,body.index,body.intent)

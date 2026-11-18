@@ -297,8 +297,40 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"v1 memory migration failed: {e}")
 
+    from deeptutor.services.storage.postgres_adapter import config_path
+    training_stop = asyncio.Event()
+    training_task = None
+    classroom_task = None
+    classroom_media_task = None
+    classroom_video_task = None
+    if config_path().exists():
+        from deeptutor.learning.training_jobs import worker as training_worker
+        training_task = asyncio.create_task(training_worker(training_stop))
+        from deeptutor.learning.classroom import worker as classroom_worker
+        classroom_task = asyncio.create_task(classroom_worker(training_stop))
+        from deeptutor.learning.classroom_media import worker as media_worker
+        classroom_media_task = asyncio.create_task(media_worker(training_stop,"other"))
+        classroom_video_task = asyncio.create_task(media_worker(training_stop,"video"))
     app.state.ready = True
     yield
+    training_stop.set()
+    try:
+        if training_task is not None:
+            await asyncio.wait_for(training_task, timeout=10)
+    except TimeoutError:
+        if training_task is not None:training_task.cancel()
+
+
+    if classroom_task is not None:
+        try: await asyncio.wait_for(classroom_task, timeout=10)
+        except TimeoutError: classroom_task.cancel()
+
+    if classroom_video_task is not None:
+        try: await asyncio.wait_for(classroom_video_task, timeout=10)
+        except TimeoutError: classroom_video_task.cancel()
+    if classroom_media_task is not None:
+        try: await asyncio.wait_for(classroom_media_task, timeout=10)
+        except TimeoutError: classroom_media_task.cancel()
 
     # Execute on shutdown
     app.state.ready = False

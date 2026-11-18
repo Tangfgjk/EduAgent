@@ -258,12 +258,18 @@ class SQLiteSessionStore:
     def __init__(self, db_path: Path | None = None) -> None:
         path_service = get_path_service()
         self.db_path = db_path or path_service.get_chat_history_db()
+        from deeptutor.services.storage.postgres_adapter import enabled
+        if enabled(self.db_path):
+            self._lock = asyncio.Lock()
+            return
         ensure_private_directory(self.db_path.parent)
-        self._migrate_legacy_db(path_service)
         self._lock = asyncio.Lock()
         with _migration_lock(self.db_path):
+            self._migrate_legacy_db(path_service)
             self._initialize()
         ensure_private_file(self.db_path)
+        from deeptutor.services.storage.postgres_adapter import enroll
+        enroll(self.db_path)
 
     def _migrate_legacy_db(self, path_service) -> None:
         """Move the legacy ``data/chat_history.db`` into ``data/user/`` once."""
@@ -277,9 +283,16 @@ class SQLiteSessionStore:
         try:
             os.replace(legacy_path, self.db_path)
         except OSError:
-            # Fall back to leaving the legacy DB in place if an OS-level move
-            # is not possible; the new DB path will be initialized empty.
-            pass
+            # An open Windows handle can prevent rename. Preserve the source
+            # and copy a consistent snapshot instead of starting with no history.
+            # Propagate backup errors so a failed migration cannot look successful.
+            source = sqlite3.connect(legacy_path.as_uri() + "?mode=ro", uri=True)
+            destination = sqlite3.connect(self.db_path)
+            try:
+                source.backup(destination)
+            finally:
+                destination.close()
+                source.close()
 
     def _initialize(self) -> None:
         with self._connect() as conn:
@@ -1129,6 +1142,15 @@ class SQLiteSessionStore:
         # transaction semantics and deterministic close. The inner `with conn`
         # commits on clean exit and rolls back on exception, so call sites do
         # NOT need an explicit conn.commit() (any remaining ones are no-ops).
+        from deeptutor.services.storage.postgres_adapter import enabled, Connection
+        if enabled(self.db_path):
+            conn = Connection(self.db_path)
+            try:
+                with conn:
+                    yield conn
+            finally:
+                conn.close()
+            return
         conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")

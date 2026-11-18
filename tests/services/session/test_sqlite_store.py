@@ -90,6 +90,7 @@ def test_sqlite_store_migrates_legacy_chat_history_db(tmp_path: Path) -> None:
         with sqlite3.connect(legacy_db) as conn:
             conn.execute("CREATE TABLE legacy (id INTEGER PRIMARY KEY)")
             conn.commit()
+        conn.close()
 
         store = SQLiteSessionStore()
 
@@ -99,6 +100,32 @@ def test_sqlite_store_migrates_legacy_chat_history_db(tmp_path: Path) -> None:
         service._project_root = original_root
         service._user_data_dir = original_user_dir
 
+
+
+def test_legacy_history_backup_when_rename_is_blocked(tmp_path, monkeypatch):
+    service = PathService.get_instance()
+    original_root, original_user_dir = service._project_root, service._user_data_dir
+    try:
+        service._project_root = tmp_path
+        service._user_data_dir = tmp_path / "data" / "user"
+        legacy = tmp_path / "data" / "chat_history.db"
+        legacy.parent.mkdir(parents=True)
+        conn = sqlite3.connect(legacy)
+        conn.execute("CREATE TABLE legacy (id INTEGER PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT INTO legacy VALUES (1, 'retained history')")
+        conn.commit()
+        conn.close()
+
+        def blocked(*args):
+            raise PermissionError("open Windows handle")
+
+        monkeypatch.setattr("deeptutor.services.session.sqlite_store.os.replace", blocked)
+        store = SQLiteSessionStore()
+        assert legacy.exists()
+        with sqlite3.connect(store.db_path) as copied:
+            assert copied.execute("SELECT value FROM legacy").fetchone()[0] == "retained history"
+    finally:
+        service._project_root, service._user_data_dir = original_root, original_user_dir
 
 def test_store_migrates_legacy_notebook_review_columns(tmp_path: Path) -> None:
     db_path = tmp_path / "legacy-notebook.db"

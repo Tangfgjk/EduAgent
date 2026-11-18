@@ -168,7 +168,10 @@ const Multimodal = dynamic(
   { loading },
 );
 
+const PersonalModels = dynamic(() => import("@/features/settings/sections/models/PersonalModelsSection"), { loading });
+
 const PAGES: Record<string, React.ComponentType> = {
+  "personal-models": PersonalModels,
   "data-migration": DataMigration,
   voice: Voice,
   multimodal: Multimodal,

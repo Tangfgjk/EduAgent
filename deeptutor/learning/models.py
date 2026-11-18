@@ -7,6 +7,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
+from deeptutor.learning.diagnosis_models import DiagnosticContext
+from deeptutor.learning.external_diagnosis_models import ExternalDiagnosisRecord
+
 _KNOWLEDGE_TYPE_LEGACY: dict[str, str] = {
     "记忆型": "memory",
     "概念型": "concept",
@@ -123,6 +126,7 @@ class DiagnosticResult(BaseModel):
 class QuizAttempt(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    diagnostic_evidence_id: str = ""
     question_id: str
     evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
     strategy_version: str = "baseline"
@@ -182,6 +186,7 @@ class LearningEvidence(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    diagnostic_context: DiagnosticContext | None = None
     evidence_id: str = ""
     question_id: str = ""
     evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
@@ -749,6 +754,7 @@ class LearningProgress(BaseModel):
     # Who is learning this goal. Absent on every path created before intake
     # existed, and on any goal whose learner has not been asked yet — readers
     # treat both the same way, so no migration is needed.
+    external_diagnoses: list[ExternalDiagnosisRecord] = Field(default_factory=list)
     chapter_materials: dict[str, dict[str, Any]] = Field(default_factory=dict)
     learning_location: dict[str, Any] = Field(default_factory=dict)
     wenjin_enabled: bool = False

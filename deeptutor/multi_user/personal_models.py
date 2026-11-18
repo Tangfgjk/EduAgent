@@ -76,8 +76,10 @@ def _personal_catalog_profiles() -> list[dict[str, Any]]:
     # Checked rather than loaded blind: ``load()`` writes a default catalog
     # when the file is absent, and a user who never touched Codex should not
     # get a settings file created on every options request.
+    from .personal_api_models import profiles as api_profiles
+    own_api = api_profiles()
     if not service.path.exists():
-        return []
+        return own_api
     profiles = service.load().get("services", {}).get("llm", {}).get("profiles", []) or []
     return [
         profile
@@ -85,7 +87,7 @@ def _personal_catalog_profiles() -> list[dict[str, Any]]:
         if isinstance(profile, dict)
         and is_owner_bound(profile)
         and (profile.get("managed_by") != _CODEX_MANAGED_BY or _codex_profile_is_current(profile))
-    ]
+    ] + own_api
 
 
 def personal_llm_rows() -> list[dict[str, Any]]:

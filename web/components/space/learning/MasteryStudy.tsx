@@ -173,7 +173,7 @@ export function MasteryStudy({
   /** What a conversation opened here is for; ignored for an existing one. */
   requestedMode?: MasteryMode;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     state,
     sendMessage,
@@ -311,6 +311,10 @@ export function MasteryStudy({
   // the rail is dismissible — and the choice sticks, since a learner who
   // wants the width wants it on every session, not just this one.
   const [outlineOpen, setOutlineOpen] = useState(true);
+  const [helpHost, setHelpHost] = useState<HTMLDivElement | null>(null);
+  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false);
+  const outlineLabel = i18n.language.startsWith("zh") ? "大纲" : "Outline";
+  const closeOutlineLabel = i18n.language.startsWith("zh") ? "关闭大纲" : "Close outline";
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -641,6 +645,11 @@ export function MasteryStudy({
         />
 
         <div className="flex shrink-0 items-center gap-1.5 pl-2">
+          <span className="xl:hidden"><button type="button" onClick={() => setMobileOutlineOpen(open => !open)}
+            aria-label={outlineLabel} aria-expanded={mobileOutlineOpen} aria-controls="mobile-study-outline"
+            className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-foreground">{outlineLabel}</button></span>
+          <span className="hidden xl:block"><button type="button" onClick={toggleOutline} aria-label={outlineLabel} aria-expanded={outlineOpen}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-foreground">{outlineLabel}</button></span>
           <Tooltip label={t("Save to Notebook")}>
             <button
               type="button"
@@ -675,10 +684,20 @@ export function MasteryStudy({
       </header>
 
       {sessionMode !== "outline" && (
-        <WenjinLearningPanel pathId={pathId} revision={topic.path_revision} streaming={state.isStreaming}
+        <WenjinLearningPanel sessionId={state.sessionId} showResume={state.messages.length===0} key={pathId} helpHost={helpHost} pathId={pathId} revision={topic.path_revision} streaming={state.isStreaming}
           onSend={message => sendMessage(message)} />
       )}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
+        {mobileOutlineOpen && <div className="absolute inset-0 z-40 xl:hidden">
+          <button type="button" aria-label={closeOutlineLabel} className="absolute inset-0 bg-black/30" onClick={() => setMobileOutlineOpen(false)} />
+          <aside id="mobile-study-outline" role="region" aria-label={i18n.language.startsWith("zh") ? "学习大纲" : "Learning outline"}
+            onKeyDown={event => { if (event.key === "Escape") setMobileOutlineOpen(false); }}
+            className="relative h-full w-[min(300px,85%)] overflow-y-auto border-r border-border bg-background px-5 py-4 shadow-xl">
+            <button type="button" onClick={() => setMobileOutlineOpen(false)} className="mb-3 rounded-lg border border-border px-3 py-1.5 text-xs">{closeOutlineLabel}</button>
+            <StudyOutline topic={topic} currentPointId={waypoint.id} justMasteredId={celebration?.pointId ?? null}
+              collapsed={false} onToggleCollapsed={() => setMobileOutlineOpen(false)} />
+          </aside>
+        </div>}
         <aside
           className={`hidden shrink-0 overflow-y-auto transition-[width] duration-200 xl:block ${
             outlineOpen ? "w-[252px] px-5 py-5" : "w-9"
@@ -882,6 +901,7 @@ export function MasteryStudy({
               ref={composerBoxRef}
               className="shrink-0 bg-[var(--background)]"
             >
+              {sessionMode !== "outline" && <div ref={setHelpHost} />}
               <MasteryComposer
                 placeholder={t("Ask your tutor about “{{waypoint}}”…", {
                   waypoint: waypoint.name,

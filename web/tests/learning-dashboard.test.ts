@@ -68,6 +68,7 @@ test('recent learning mixes four sources by epoch seconds and keeps six', () => 
   )
   assert.equal(recent[1].href, '/learning/watching/s?dt_workspace=')
   assert.equal(recent[2].title, 'Home')
+  assert.equal(recent[2].href, '/learning/projects/active?dt_workspace=')
   assert.equal(recent[2].progress, 0.5)
   assert.equal(recent[3].title, 'Memory')
   assert.equal(recent[4].title, 'Settings')
@@ -100,7 +101,7 @@ test('surface stats count each kind and name the piece of it touched last', () =
   assert.equal(stats.books.latest?.title, 'c')
   assert.equal(stats.watching.latest?.updatedAt, 90)
   // Archived paths are not work in progress, so they are neither counted nor shown.
-  assert.equal(stats.mastery.latest?.href, '/learning/mastery/active?dt_workspace=')
+  assert.equal(stats.mastery.latest?.href, '/learning/projects/active?dt_workspace=')
   const empty = learningSurfaceStats({ books: [], mastery: [], reading: [], watching: [] })
   assert.equal(empty.reading.count, 0)
   assert.equal(empty.reading.latest, undefined)
