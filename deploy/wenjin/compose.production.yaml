@@ -1,0 +1,44 @@
+name: guiziwenjin
+services:
+  postgres:
+    image: postgres:17.11
+    env_file: /etc/guiziwenjin/database.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /etc/guiziwenjin/postgres-init.sql:/docker-entrypoint-initdb.d/10-wenjin.sql:ro
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wenjin"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 640m
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=60", "-c", "work_mem=4MB"]
+    logging: &logging
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  app:
+    image: guiziwenjin:20261123
+    env_file: /etc/guiziwenjin/app.env
+    volumes:
+      - /opt/guiziwenjin/data:/opt/guiziwenjin/data
+      - frontend_cache:/opt/guiziwenjin/web/.next/standalone/.next/cache
+    ports: ["127.0.0.1:3782:3782"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [private, internet]
+    read_only: true
+    tmpfs: ["/tmp:size=1g,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 512
+    mem_limit: 2300m
+    restart: unless-stopped
+    logging: *logging
+networks:
+  private: {internal: true}
+  internet: {}
+volumes:
+  postgres_data:
+  frontend_cache:

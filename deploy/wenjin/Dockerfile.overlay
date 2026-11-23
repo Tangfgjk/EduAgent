@@ -1,0 +1,10 @@
+# Reuse the locally built Linux dependencies and frontend; only copy source here.
+FROM guiziwenjin:20261123-base
+WORKDIR /opt/guiziwenjin
+COPY deeptutor/ deeptutor/
+COPY deeptutor_cli/ deeptutor_cli/
+COPY scripts/ scripts/
+COPY requirements/ requirements/
+COPY deploy/wenjin/container_entrypoint.py deploy/wenjin/container_entrypoint.py
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT

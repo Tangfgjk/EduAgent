@@ -152,3 +152,11 @@ temp/
 # ============================================
 LICENSE
 Communication.md
+
+# All runtime state, credentials and per-user data stay out of build contexts.
+/data/
+**/.env*
+!**/.env.example
+
+# Agent-bundled Markdown skills are runtime resources.
+!deeptutor/**/*.md
