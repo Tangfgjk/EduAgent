@@ -1,6 +1,7 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
+import { startVisibleEventStream } from './visible-event-stream'
 import { activeWorkspaceId } from './workspace-scope'
 import {
   getTaskBoard,
@@ -58,48 +59,31 @@ export function startTaskBoardSync({ stream = true }: { stream?: boolean } = {})
     const unsubscribe = subscribeTaskBoardChanges((board, responseWorkspaceId) => {
       if (isCurrent() && responseWorkspaceId === workspaceId) accept(board)
     })
-    void refreshTaskBoard()
-    const source =
-      stream && typeof EventSource !== 'undefined'
-        ? new EventSource(taskBoardUrl('/events', workspaceId), { withCredentials: true })
-        : null
-    let fallback: ReturnType<typeof setInterval> | undefined
-    const startFallback = () => {
-      if (!isCurrent()) return
-      fallback ??= setInterval(() => {
-        if (!document.hidden) void refreshTaskBoard()
-      }, 3000)
-    }
-    if (source) {
-      source.onmessage = event => {
+    const stopStream = startVisibleEventStream({
+      url: taskBoardUrl('/events', workspaceId),
+      enabled: stream,
+      interval: 3000,
+      refresh: () => {
+        if (isCurrent()) void refreshTaskBoard()
+      },
+      onMessage: event => {
         if (!isCurrent()) return
         try {
           accept(JSON.parse(event.data))
         } catch {
           void refreshTaskBoard()
         }
-      }
-      source.onerror = startFallback
-      source.onopen = () => {
-        if (!isCurrent()) return
-        clearInterval(fallback)
-        fallback = undefined
-      }
-    } else if (stream) startFallback()
-    const focus = () => {
-      if (!document.hidden) void refreshTaskBoard()
-    }
-    window.addEventListener('focus', focus)
-    document.addEventListener('visibilitychange', focus)
+      },
+    })
     stop = () => {
       unsubscribe()
-      source?.close()
-      clearInterval(fallback)
-      window.removeEventListener('focus', focus)
-      document.removeEventListener('visibilitychange', focus)
+      stopStream()
     }
   }
+  let released = false
   return () => {
+    if (released) return
+    released = true
     if (--owners === 0) {
       stop?.()
       stop = undefined

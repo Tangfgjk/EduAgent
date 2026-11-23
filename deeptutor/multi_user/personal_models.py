@@ -77,6 +77,7 @@ def _personal_catalog_profiles() -> list[dict[str, Any]]:
     # when the file is absent, and a user who never touched Codex should not
     # get a settings file created on every options request.
     from .personal_api_models import profiles as api_profiles
+
     own_api = api_profiles()
     if not service.path.exists():
         return own_api

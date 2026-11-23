@@ -1261,6 +1261,7 @@ async def register(body: RegisterRequest, request: Request, response: Response) 
     from deeptutor.services.auth import hash_password
 
     first = is_first_user()
+
     def create_account():
         return save_user(
             body.username,

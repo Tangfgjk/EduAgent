@@ -1,7 +1,10 @@
 """Verified native PostgreSQL business migration."""
 
-import hashlib, sqlite3
+import hashlib
+import sqlite3
+
 from psycopg import sql
+
 from deeptutor.services.storage.postgres_adapter import connect_raw, schema_name, translate
 
 
@@ -142,7 +145,9 @@ def migrate(source):
 def migrate_accounts(source):
     """Migrate canonical accounts without overwriting an active registry."""
     import json
+
     from psycopg.types.json import Jsonb
+
     from deeptutor.multi_user.models import VALID_ROLES
 
     users = json.loads(source.read_text(encoding="utf-8"))

@@ -54,6 +54,14 @@ vi.mock("@/lib/llm-options", () => ({
   invalidateLLMOptionsCache: vi.fn(),
   listLLMOptions: vi.fn(async () => ({ active: null, options: [] })),
 }));
+// Syntax highlighting is covered by its own component tests. Loading its
+// renderer asynchronously here made the settings-transaction test depend on
+// unrelated chunk loading and CPU pressure during a full run.
+vi.mock("@/components/common/RichCodeBlock", () => ({
+  default: () => <pre data-testid="code-preview" />,
+}));
+let mountGeneration = 0;
+let capturedGeneration = -1;
 let settings: ReturnType<typeof useSettings>;
 let live: ReturnType<typeof defaultCatalog>;
 let stored: any;
@@ -64,6 +72,7 @@ const reply = (value: unknown, ok = true) => ({
   json: async () => value,
 });
 beforeEach(() => {
+  mountGeneration += 1;
   live = defaultCatalog();
   stored = null;
   mocks.push.mockReset();
@@ -97,6 +106,7 @@ function Capture() {
   const value = useSettings();
   useEffect(() => {
     settings = value;
+    capturedGeneration = mountGeneration;
   }, [value]);
   return null;
 }
@@ -140,7 +150,10 @@ function App({ page = "workspace" }: { page?: string }) {
   );
 }
 async function ready() {
-  await waitFor(() => expect(settings.settingsLoading).toBe(false));
+  await waitFor(() => {
+    expect(capturedGeneration).toBe(mountGeneration);
+    expect(settings.settingsLoading).toBe(false);
+  });
 }
 const writes = (endpoint: string) =>
   mocks.fetch.mock.calls.filter(

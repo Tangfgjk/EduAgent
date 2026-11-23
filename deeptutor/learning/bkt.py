@@ -44,8 +44,10 @@ def diagnostic_estimate(progress, kp, params: BKTParameters | None = None, *, st
     training_id = None
     if params is None and store is not None:
         from deeptutor.learning.personal_training import active_parameters
-        trained=active_parameters(store,progress.book_id,kp.id,scope)
-        if trained:params,training_id=trained
+
+        trained = active_parameters(store, progress.book_id, kp.id, scope)
+        if trained:
+            params, training_id = trained
     params = params or BKTParameters()
     rows = [o for o in project_facts(progress).observations if o.objective_id == kp.id]
     counts = Counter(o.observation_id for o in rows)
@@ -119,7 +121,8 @@ def diagnostic_estimate(progress, kp, params: BKTParameters | None = None, *, st
     return {
         "model_family": "BKT",
         "model_version": "classic-no-forgetting-v1",
-        "parameter_set_id": ("personal-" if training_id else "experimental-") + _digest(asdict(params))[:16],
+        "parameter_set_id": ("personal-" if training_id else "experimental-")
+        + _digest(asdict(params))[:16],
         "parameter_origin": "personal_time_holdout" if training_id else "assumed_not_fitted",
         "training_run_id": training_id,
         "parameters": asdict(params),
@@ -134,7 +137,11 @@ def diagnostic_estimate(progress, kp, params: BKTParameters | None = None, *, st
         "excluded_counts": {k: v for k, v in sorted(excluded.items()) if v},
         "streams": streams,
         "summary": (
-            ("已使用本人经过时间留出检验的参数重新跟踪独立作答；由导师结合目标和实际表现判断下一步。" if training_id else "已根据独立作答生成实验性跟踪，参数尚未校准；由导师结合目标和实际表现判断下一步。")
+            (
+                "已使用本人经过时间留出检验的参数重新跟踪独立作答；由导师结合目标和实际表现判断下一步。"
+                if training_id
+                else "已根据独立作答生成实验性跟踪，参数尚未校准；由导师结合目标和实际表现判断下一步。"
+            )
             if streams
             else "尚无符合条件的独立作答，暂不估计掌握程度；可以先交流或尝试一个小任务。"
         ),

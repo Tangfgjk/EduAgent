@@ -101,7 +101,6 @@ def test_sqlite_store_migrates_legacy_chat_history_db(tmp_path: Path) -> None:
         service._user_data_dir = original_user_dir
 
 
-
 def test_legacy_history_backup_when_rename_is_blocked(tmp_path, monkeypatch):
     service = PathService.get_instance()
     original_root, original_user_dir = service._project_root, service._user_data_dir
@@ -126,6 +125,7 @@ def test_legacy_history_backup_when_rename_is_blocked(tmp_path, monkeypatch):
             assert copied.execute("SELECT value FROM legacy").fetchone()[0] == "retained history"
     finally:
         service._project_root, service._user_data_dir = original_root, original_user_dir
+
 
 def test_store_migrates_legacy_notebook_review_columns(tmp_path: Path) -> None:
     db_path = tmp_path / "legacy-notebook.db"

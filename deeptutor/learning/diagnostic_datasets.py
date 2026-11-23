@@ -8,7 +8,7 @@ import uuid
 from deeptutor.learning.bkt import diagnostic_estimate
 from deeptutor.learning.diagnosis import _digest, project_facts
 
-RULE_VERSION = "independent-binary-v1"
+RULE_VERSION = "independent-binary-v2-provenance"
 
 
 def catalogue(store, path_id):
@@ -25,19 +25,32 @@ def catalogue(store, path_id):
             for s in diagnostic_estimate(p, k)["streams"]
             for ref in s["source_refs"]
         }
-        help_requests={e.payload.get("question_id") for e in events if e.event_type=="scaffold.requested" and e.payload.get("question_id")}
+        help_requests = {
+            e.payload.get("question_id")
+            for e in events
+            if e.event_type == "scaffold.requested" and e.payload.get("question_id")
+        }
         rows = []
-        synthetic = any(
-            word in p.name.lower() for word in ("验收", "模拟", "synthetic", "test fixture")
-        )
+        synthetic = p.data_origin == "synthetic"
+
         for o in facts.observations:
             reasons = []
             if not any(ref in eligible_refs for ref in o.source_refs):
                 reasons.append("不满足独立二元作答及任务快照规则")
             if not o.session_id or not o.turn_id:
                 reasons.append("缺少对话来源")
-            if synthetic:
-                reasons.append("模拟或验收项目")
+            source_receipts = [
+                p.learning_evidence[int(ref.split(":")[1])]
+                for ref in o.source_refs
+                if ref.startswith("learning_evidence:")
+            ]
+            unknown_origin = not source_receipts or any(
+                e.data_origin == "legacy_unknown" for e in source_receipts
+            )
+            if synthetic or any(e.data_origin == "synthetic" for e in source_receipts):
+                reasons.append("模拟数据，不用于个人训练")
+            if unknown_origin:
+                reasons.append("历史记录来源尚未核验，不用于个人训练")
             if o.question_id in help_requests:
                 reasons.append("该题曾请求帮助，需另用独立任务核验后纳入训练")
             if o.context and o.context.grading_method == "semantic":
@@ -48,6 +61,7 @@ def catalogue(store, path_id):
                 if o.objective_id in points
                 else o.objective_id,
                 eligibility="excluded" if reasons else "eligible",
+                data_origins=sorted({e.data_origin for e in source_receipts}),
                 exclusion_reasons=reasons,
                 feedback=next(
                     (
@@ -58,8 +72,16 @@ def catalogue(store, path_id):
                     "",
                 ),
             )
-            origin = next((e.visual_context for e in p.learning_evidence if "receipt:" + e.evidence_id == o.observation_id and e.source == "classroom"), None)
-            if origin: row["classroom_origin"] = origin
+            origin = next(
+                (
+                    e.visual_context
+                    for e in p.learning_evidence
+                    if "receipt:" + e.evidence_id == o.observation_id and e.source == "classroom"
+                ),
+                None,
+            )
+            if origin:
+                row["classroom_origin"] = origin
             row["events"] = [
                 {"id": e.id, "type": e.event_type, "at": e.created_at, "payload": e.payload}
                 for e in events
@@ -75,7 +97,33 @@ def catalogue(store, path_id):
                 "rule_version": RULE_VERSION,
                 "rows": sorted(rows, key=lambda x: (x["occurred_at"], x["observation_id"])),
                 "self_reports": facts.self_reports,
-                "support_activity": [{"id":e.id,"type":e.event_type,"session_id":e.session_id,"turn_id":e.turn_id,"at":e.created_at,"kind":e.payload.get("kind"),"question_id":e.payload.get("question_id"),"level":e.payload.get("level")} for e in events if e.event_type in {"scaffold.requested","interaction.hint_delivered"}][-100:],
+                "teaching_activity": [
+                    {
+                        "id": s["id"],
+                        "objective_name": s["objective_name"],
+                        "state": s["state"],
+                        "assisted": s["help_delivered"],
+                        "human_turn_count": sum(m["role"] == "human" for m in s["messages"]),
+                        "updated_at": s["updated_at"],
+                    }
+                    for s in sorted(
+                        p.teach_ai_sessions.values(), key=lambda s: s["updated_at"], reverse=True
+                    )[:40]
+                ],
+                "support_activity": [
+                    {
+                        "id": e.id,
+                        "type": e.event_type,
+                        "session_id": e.session_id,
+                        "turn_id": e.turn_id,
+                        "at": e.created_at,
+                        "kind": e.payload.get("kind"),
+                        "question_id": e.payload.get("question_id"),
+                        "level": e.payload.get("level"),
+                    }
+                    for e in events
+                    if e.event_type in {"scaffold.requested", "interaction.hint_delivered"}
+                ][-100:],
                 "quality": quality(rows),
                 "limitations": [
                     "自由交流和自述不直接生成训练正误标签。",

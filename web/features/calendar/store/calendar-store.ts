@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { startVisibleEventStream } from '@/lib/visible-event-stream'
 import {
   calendarStreamUrl,
   getLayers,
@@ -79,38 +80,25 @@ let stop: (() => void) | undefined
 /** One stream per tab, shared by the page and the reminder runtime. */
 export function startCalendarSync(): () => void {
   if (++owners === 1) {
-    const source =
-      typeof EventSource !== 'undefined'
-        ? new EventSource(calendarStreamUrl(), { withCredentials: true })
-        : null
-    let fallback: ReturnType<typeof setInterval> | undefined
-    const poll = () => {
-      if (!document.hidden) void refreshCalendars()
-    }
-    if (source) {
-      source.onmessage = event => {
+    stop = startVisibleEventStream({
+      url: calendarStreamUrl(),
+      refresh: () => {
+        void refreshCalendars()
+      },
+      interval: 15_000,
+      onMessage: event => {
         try {
           noteCalendarRevision(Number(JSON.parse(event.data).revision) || 0)
         } catch {
-          poll()
+          void refreshCalendars()
         }
-      }
-      source.onerror = () => {
-        fallback ??= setInterval(poll, 15_000)
-      }
-      source.onopen = () => {
-        clearInterval(fallback)
-        fallback = undefined
-      }
-    } else fallback = setInterval(poll, 15_000)
-    window.addEventListener('focus', poll)
-    stop = () => {
-      source?.close()
-      clearInterval(fallback)
-      window.removeEventListener('focus', poll)
-    }
+      },
+    })
   }
+  let released = false
   return () => {
+    if (released) return
+    released = true
     if (--owners === 0) {
       stop?.()
       stop = undefined

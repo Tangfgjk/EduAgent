@@ -1,15 +1,18 @@
 """Repository-level PostgreSQL acceptance with disposable source databases."""
 
-import asyncio, sqlite3
+import asyncio
 from pathlib import Path
+import sqlite3
 from unittest.mock import patch
-import pytest
+
 from psycopg import sql
+import pytest
+
+from deeptutor.learning.models import LearningModule, LearningProgress, TopicMetadata
+from deeptutor.learning.storage import LearningStore
+from deeptutor.services.session.sqlite_store import SQLiteSessionStore
 from deeptutor.services.storage.postgres_adapter import Connection, connect_raw, schema_name
 from deeptutor.services.storage.postgres_migration import migrate
-from deeptutor.services.session.sqlite_store import SQLiteSessionStore
-from deeptutor.learning.storage import LearningStore
-from deeptutor.learning.models import LearningProgress, LearningModule, TopicMetadata
 
 
 def test_native_learning_topic_upsert_cas_and_no_sqlite_writes(tmp_path):

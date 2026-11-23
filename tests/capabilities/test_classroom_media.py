@@ -1,12 +1,14 @@
-import runpy
 from pathlib import Path
-from psycopg.types.json import Jsonb
+import runpy
 import zipfile
+
+from psycopg.types.json import Jsonb
 import pytest
-from deeptutor.learning import classroom_media as media
+
 from deeptutor.learning import classroom as cr
-from deeptutor.learning.storage import LearningStore
+from deeptutor.learning import classroom_media as media
 from deeptutor.learning.models import LearningProgress
+from deeptutor.learning.storage import LearningStore
 
 room = runpy.run_path(str(Path(__file__).with_name("test_classroom.py")))["room"]
 ready = runpy.run_path(str(Path(__file__).with_name("test_classroom.py")))["ready"]
@@ -115,60 +117,76 @@ def test_linear_simulator_extracts_real_equation_without_code(tmp_path):
 
 
 def test_partial_chapter_av_cache_options_and_task_controls(room, monkeypatch):
-    store,cid=setup_room(room,monkeypatch)
-    with cr.locked(store,"p",cid) as (c,d):
-        page=d["pages"][0]
-        d.update(state="queued_pages",pages=[dict(page,module_id="m",id="one"),dict(page,module_id="m",id="two"),dict(page,module_id="other",id="three")])
-        cr.put(c,d)
-    a=media.request(store,"p",cid,"voice",0,"chapter")
-    assert a["indices"]==[0,1] and a["page_count"]==2 and a["partial"]
-    assert media.request(store,"p",cid,"voice",1,"chapter")["key"]==a["key"]
-    assert media.request(store,"p",cid,"voice",0,"chapter",rate=1.25)["key"]!=a["key"]
-    with pytest.raises(ValueError): media.request(store,"p",cid,"video",0,"course")
-    assert media.request(store,"p",cid,"video",0,"page")["state"]=="queued"
+    store, cid = setup_room(room, monkeypatch)
+    with cr.locked(store, "p", cid) as (c, d):
+        page = d["pages"][0]
+        d.update(
+            state="queued_pages",
+            pages=[
+                dict(page, module_id="m", id="one"),
+                dict(page, module_id="m", id="two"),
+                dict(page, module_id="other", id="three"),
+            ],
+        )
+        cr.put(c, d)
+    a = media.request(store, "p", cid, "voice", 0, "chapter")
+    assert a["indices"] == [0, 1] and a["page_count"] == 2 and a["partial"]
+    assert media.request(store, "p", cid, "voice", 1, "chapter")["key"] == a["key"]
+    assert media.request(store, "p", cid, "voice", 0, "chapter", rate=1.25)["key"] != a["key"]
+    with pytest.raises(ValueError):
+        media.request(store, "p", cid, "video", 0, "course")
+    assert media.request(store, "p", cid, "video", 0, "page")["state"] == "queued"
     with media.connection() as c:
-        job=media.get(store,"p",cid,a["key"])["body"]
-        job.update(state="running",token="old-worker")
-        c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s",(Jsonb(job),a["key"]))
-    cancelled=media.control(store,"p",cid,a["key"],"cancel")
-    assert cancelled["state"]=="cancelled"
-    assert media.get(store,"p",cid,a["key"])["body"]["token"] is None
-    assert media.control(store,"p",cid,a["key"],"retry")["state"]=="queued"
-    assert store.load("p").learning_evidence==[]
+        job = media.get(store, "p", cid, a["key"])["body"]
+        job.update(state="running", token="old-worker")
+        c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s", (Jsonb(job), a["key"]))
+    cancelled = media.control(store, "p", cid, a["key"], "cancel")
+    assert cancelled["state"] == "cancelled"
+    assert media.get(store, "p", cid, a["key"])["body"]["token"] is None
+    assert media.control(store, "p", cid, a["key"], "retry")["state"] == "queued"
+    assert store.load("p").learning_evidence == []
 
 
-def test_playback_persists_with_owner_isolation(room,monkeypatch,tmp_path):
-    store,cid=setup_room(room,monkeypatch)
-    a=media.request(store,"p",cid,"voice")
+def test_playback_persists_with_owner_isolation(room, monkeypatch, tmp_path):
+    store, cid = setup_room(room, monkeypatch)
+    a = media.request(store, "p", cid, "voice")
     with media.connection() as c:
-        job=media.get(store,"p",cid,a["key"])["body"];job.update(state="ready",duration=30)
-        c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s",(Jsonb(job),a["key"]))
-    media.control(store,"p",cid,a["key"],"playback",12.5,1.25)
-    assert media.view(media.get(store,"p",cid,a["key"]))["playback"]["seconds"]==12.5
-    with pytest.raises(ValueError):media.control(store,"p",cid,a["key"],"playback",50,1)
-    other=LearningStore(tmp_path/"different-owner");other.save(LearningProgress(book_id="p"))
-    with pytest.raises(LookupError):media.control(other,"p",cid,a["key"],"playback",3,1)
+        job = media.get(store, "p", cid, a["key"])["body"]
+        job.update(state="ready", duration=30)
+        c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s", (Jsonb(job), a["key"]))
+    media.control(store, "p", cid, a["key"], "playback", 12.5, 1.25)
+    assert media.view(media.get(store, "p", cid, a["key"]))["playback"]["seconds"] == 12.5
+    with pytest.raises(ValueError):
+        media.control(store, "p", cid, a["key"], "playback", 50, 1)
+    other = LearningStore(tmp_path / "different-owner")
+    other.save(LearningProgress(book_id="p"))
+    with pytest.raises(LookupError):
+        media.control(other, "p", cid, a["key"], "playback", 3, 1)
     assert not store.load("p").learning_evidence
 
 
-def test_missing_cached_files_are_requeued(room,monkeypatch):
-    store,cid=setup_room(room,monkeypatch)
-    a=media.request(store,"p",cid,"pdf")
+def test_missing_cached_files_are_requeued(room, monkeypatch):
+    store, cid = setup_room(room, monkeypatch)
+    a = media.request(store, "p", cid, "pdf")
     with media.connection() as c:
-        body=media.get(store,"p",cid,a["key"])["body"];body.update(state="ready",files=["not-on-disk.pdf"])
-        c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s",(Jsonb(body),a["key"]))
-    assert media.request(store,"p",cid,"pdf")["state"]=="queued"
+        body = media.get(store, "p", cid, a["key"])["body"]
+        body.update(state="ready", files=["not-on-disk.pdf"])
+        c.execute(
+            "UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s", (Jsonb(body), a["key"])
+        )
+    assert media.request(store, "p", cid, "pdf")["state"] == "queued"
 
 
-
-def test_playback_does_not_promote_an_old_export_over_newest_generation(room,monkeypatch):
-    store,cid=setup_room(room,monkeypatch)
-    old=media.request(store,"p",cid,"voice",rate=1)
-    latest=media.request(store,"p",cid,"voice",rate=1.25)
+def test_playback_does_not_promote_an_old_export_over_newest_generation(room, monkeypatch):
+    store, cid = setup_room(room, monkeypatch)
+    old = media.request(store, "p", cid, "voice", rate=1)
+    latest = media.request(store, "p", cid, "voice", rate=1.25)
     with media.connection() as c:
-        for a,created in [(old,1),(latest,2)]:
-            body=media.get(store,"p",cid,a["key"])["body"]
-            body.update(state="ready",duration=30,created=created)
-            c.execute("UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s",(Jsonb(body),a["key"]))
-    media.control(store,"p",cid,old["key"],"playback",10,1)
-    assert media.listing(store,"p",cid)[0]["key"]==latest["key"]
+        for a, created in [(old, 1), (latest, 2)]:
+            body = media.get(store, "p", cid, a["key"])["body"]
+            body.update(state="ready", duration=30, created=created)
+            c.execute(
+                "UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s", (Jsonb(body), a["key"])
+            )
+    media.control(store, "p", cid, old["key"], "playback", 10, 1)
+    assert media.listing(store, "p", cid)[0]["key"] == latest["key"]

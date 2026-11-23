@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class DiagnosticContext(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schema_version: Literal[1] = 1
+    goal_version: int = Field(default=0, ge=0)
     task_prompt: str = ""
     question_type: str = ""
     task_version: str = ""

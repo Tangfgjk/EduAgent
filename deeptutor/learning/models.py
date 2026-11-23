@@ -25,6 +25,9 @@ _ERROR_TYPE_LEGACY: dict[str, str] = {
 }
 
 
+from deeptutor.learning.goal_models import GoalContract, GoalProposal
+
+
 class KnowledgeType(str, Enum):
     MEMORY = "memory"
     CONCEPT = "concept"
@@ -186,6 +189,7 @@ class LearningEvidence(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    data_origin: Literal["learner", "synthetic", "legacy_unknown"] = "learner"
     diagnostic_context: DiagnosticContext | None = None
     evidence_id: str = ""
     question_id: str = ""
@@ -392,6 +396,7 @@ class PendingQuestion(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    goal_version: int = Field(default=0, ge=0)
     question_id: str
     evidence_kind: Literal["recognition", "explanation", "application", "transfer"] = "recognition"
     strategy_version: str = "baseline"
@@ -750,13 +755,24 @@ class ReadingLearningRecords(BaseModel):
 class LearningProgress(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    goal_contract: GoalContract | None = None
+    goal_proposal: GoalProposal | None = None
+    goal_history: list[GoalContract] = Field(default_factory=list)
+    goal_needs_confirmation: bool = False
     book_id: str
+    # Server-owned provenance; names and later edits cannot change training eligibility.
+    data_origin: Literal["learner", "synthetic", "legacy_unknown"] = "learner"
     # Who is learning this goal. Absent on every path created before intake
     # existed, and on any goal whose learner has not been asked yet — readers
     # treat both the same way, so no migration is needed.
     external_diagnoses: list[ExternalDiagnosisRecord] = Field(default_factory=list)
     chapter_materials: dict[str, dict[str, Any]] = Field(default_factory=dict)
     learning_location: dict[str, Any] = Field(default_factory=dict)
+    support_goal_updated_at: float = 0
+    support_plans: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    teach_ai_sessions: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    check_cycles: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    check_intent: dict[str, str] = Field(default_factory=dict)
     wenjin_enabled: bool = False
     research_sources: list[dict[str, Any]] = Field(default_factory=list)
     reflections: list[dict[str, Any]] = Field(default_factory=list)

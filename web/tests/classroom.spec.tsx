@@ -255,3 +255,17 @@ test('failed delete keeps the classroom available and shows the error', async ()
   expect(screen.getByRole('button', { name: '删除课堂' })).toBeVisible()
   expect(screen.getByRole('button', { name: '确认删除' })).toBeEnabled()
 })
+
+
+it('version history and media maintain separate identities without duplicate-key warnings', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const course = {...base, id:'versioned', version:2, state:'ready', pages:[{
+    id:'page',title:'版本课件说明',objective_id:'k',kind:'slide',goal:'理解',content:'新版课件',steps:[],narration:'',question:'',options:[],source_ids:[]
+  }]};
+  request.mockResolvedValue([course]);
+  try {
+    render(<Classroom />);
+    await screen.findByRole('heading', {name:'版本课件说明'});
+    expect(error.mock.calls.some(args=>String(args[0]).includes('same key'))).toBe(false);
+  } finally { error.mockRestore(); }
+});

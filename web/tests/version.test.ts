@@ -25,7 +25,7 @@ test("normalizeVersionTag rejects unparseable inputs", () => {
 test("clientEditionLabel names the web client by default", () => {
   assert.equal(
     clientEditionLabel("1.7.0", "Mozilla/5.0 Chrome/140.0"),
-    "Open DeepTutor Web v1.7.0",
+    "桂子问津 Web v1.7.0",
   );
 });
 
@@ -34,15 +34,15 @@ const SHELL = "Mozilla/5.0 Chrome/140.0 Electron/45.1.0 OpenDeepTutor/1.7.1";
 test("clientEditionLabel names each desktop edition", () => {
   assert.equal(
     clientEditionLabel("1.7.1", `${SHELL} (macOS; arm64)`),
-    "Open DeepTutor for MacOS with Apple Silicon v1.7.1",
+    "桂子问津 for MacOS with Apple Silicon v1.7.1",
   );
   assert.equal(
     clientEditionLabel("1.7.1", `${SHELL} (macOS; x64)`),
-    "Open DeepTutor for MacOS with Intel Silicon v1.7.1",
+    "桂子问津 for MacOS with Intel Silicon v1.7.1",
   );
   assert.equal(
     clientEditionLabel("1.7.1", `${SHELL} (Windows; x64)`),
-    "Open DeepTutor for Windows v1.7.1",
+    "桂子问津 for Windows v1.7.1",
   );
 });
 
@@ -61,10 +61,10 @@ test("clientEditionLabel has short forms for tight spaces", () => {
 test("clientEditionLabel still recognises 1.7.0 shells", () => {
   assert.equal(
     clientEditionLabel("1.7.0", `${SHELL} (macOS)`),
-    "Open DeepTutor for MacOS v1.7.0",
+    "桂子问津 for MacOS v1.7.0",
   );
 });
 
 test("clientEditionLabel omits an unparseable version", () => {
-  assert.equal(clientEditionLabel(undefined, ""), "Open DeepTutor Web");
+  assert.equal(clientEditionLabel(undefined, ""), "桂子问津 Web");
 });

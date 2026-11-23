@@ -1,6 +1,6 @@
 'use client'
 
-import DiagnosticImpact from "@/components/learning/DiagnosticImpact"
+import dynamic from "next/dynamic"
 import type { ImportImpact } from "@/lib/diagnostic-impact"
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -9,6 +9,9 @@ import Link from 'next/link'
 import { masteryTopicRoute, masterySessionRoute } from '@/lib/learning-routes'
 import { useTranslation } from 'react-i18next'
 import { apiFetch, apiUrl } from '@/lib/api'
+
+function DetailLoading(){const {t}=useTranslation();return <p role="status">{t('Loading…')}</p>}
+const DiagnosticImpact=dynamic(()=>import('@/components/learning/DiagnosticImpact'),{ssr:false,loading:DetailLoading});
 
 type Ability = 'recognition' | 'explanation' | 'application' | 'transfer'
 type Evidence = {
@@ -66,6 +69,7 @@ export function WenjinLearningPanel({
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [reload, setReload] = useState(0)
+  const [detailsOpen,setDetailsOpen]=useState(false)
   const drawer = useRef<HTMLDialogElement>(null)
   const helpMenu = useRef<HTMLDetailsElement>(null)
   useEffect(() => { drawer.current?.close(); helpMenu.current?.removeAttribute('open') }, [pathId])
@@ -152,6 +156,7 @@ export function WenjinLearningPanel({
 
         ].map(([kind,name,message])=><button key={name} type="button" disabled={streaming||busy} onClick={()=>void requestHelp(kind,message)} className="rounded-full border border-border px-3 py-1.5 text-sm hover:bg-primary/10 disabled:opacity-50">{name}</button>)}
         <button type="button" disabled={streaming||busy} onClick={()=>void choose('probe_first')} className="rounded-full border border-border px-3 py-1.5 text-sm disabled:opacity-50">{zh?'独立试试':'Try independently'}</button>
+        <Link className="px-2 py-1 text-xs text-primary underline" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/support')}>为什么这样帮助我</Link>
         <details ref={helpMenu} className="relative" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus() } }}><summary className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-sm">{zh?'更多帮助':'More help'}</summary><div className="absolute right-0 bottom-full z-30 mb-2 w-[min(18rem,85vw)] max-h-[50dvh] overflow-y-auto rounded-xl border border-border bg-background p-3 shadow-lg">
           <button type="button" disabled={streaming||busy} onClick={()=>{ if(helpMenu.current) helpMenu.current.open=false; void choose('teach_first') }} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50">{zh?'先听讲，稍后核查':'Teach first'}</button>
           {[
@@ -169,17 +174,18 @@ export function WenjinLearningPanel({
   return (
     <>
       <section className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-4 py-2 text-sm" aria-label={zh?'当前学习目标':'Current objective'}>
-        <button type="button" onClick={()=>drawer.current?.showModal()} className="min-w-0 flex-1 truncate text-left font-medium hover:text-primary">{state?.objective?.name || (zh?'查看学习目标与资料':'Learning context')} <span className="ml-1 text-xs text-muted-foreground">{zh?'详情':'Details'}</span></button>
+        <button type="button" onClick={()=>{setDetailsOpen(true);drawer.current?.showModal()}} className="min-w-0 flex-1 truncate text-left font-medium hover:text-primary">{state?.objective?.name || (zh?'查看学习目标与资料':'Learning context')} <span className="ml-1 text-xs text-muted-foreground">{zh?'详情':'Details'}</span></button>
+        <Link className="rounded-lg px-2 py-1 text-xs text-primary hover:bg-muted" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/checks')}>{zh?'核查与复习':'Checks and review'}</Link>
         <Link className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted" href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/diagnosis')}>{zh?'学习诊断':'Diagnosis'}</Link>
         <Link href={masteryTopicRoute(pathId)} aria-disabled={streaming} onClick={event=>{if(streaming)event.preventDefault()}} className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted aria-disabled:opacity-50">{zh?'返回项目':'Back to project'}</Link>
       </section>
       {error&&<p role="alert" className="px-4 py-2 text-xs text-destructive">{error} <button type="button" onClick={()=>setReload(v=>v+1)} className="underline">{t('Retry')}</button></p>}
       {showResume&&state?.objective&&<div className="flex flex-wrap items-center gap-2 border-b border-border bg-primary/5 px-4 py-2 text-xs"><span>{zh?'接着本项目学习：':'Continue project: '}{state.objective.name}</span>{state.resume_session_id && state.resume_session_id!==sessionId ? <Link className="rounded-full border border-border px-3 py-1" href={masterySessionRoute(pathId,state.resume_session_id)}>{zh?'继续上次':'Resume'}</Link> : <button type="button" disabled={streaming||busy} onClick={()=>onSend(zh?'请接着本项目上次的学习继续，先说明已记录的进度与未完成任务；有待答题时继续原题，不直接给答案。':'Resume using recorded project progress and pending task.')} className="rounded-full border border-border px-3 py-1 disabled:opacity-50">{zh?'继续上次':'Resume'}</button>}<button type="button" disabled={streaming||busy} onClick={()=>onSend(zh?'我想换个问题，请先问我想讨论什么，保留当前学习进度。':'Ask what I would like to discuss; keep my current progress.')} className="px-2 py-1">{zh?'换个问题':'Another question'}</button></div>}
       {helpHost ? createPortal(helpToolbar, helpHost) : null}
-    <dialog ref={drawer} aria-labelledby="wenjin-details-title" onClick={event=>{if(event.target===event.currentTarget)event.currentTarget.close()}} className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto border-l border-border bg-background p-0 text-sm text-foreground shadow-2xl backdrop:bg-black/35 sm:max-w-md">
+    <dialog ref={drawer} onClose={()=>setDetailsOpen(false)} aria-labelledby="wenjin-details-title" onClick={event=>{if(event.target===event.currentTarget)event.currentTarget.close()}} className="fixed inset-y-0 right-0 left-auto m-0 h-dvh max-h-none w-full max-w-none overflow-y-auto border-l border-border bg-background p-0 text-sm text-foreground shadow-2xl backdrop:bg-black/35 sm:max-w-md">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-5 py-4"><h2 id="wenjin-details-title" className="font-semibold">{zh?'学习目标与资料':'Learning context'}</h2><button type="button" onClick={()=>drawer.current?.close()} className="rounded-lg border border-border px-3 py-1.5">{zh?'关闭':'Close'}</button></header>
       <div className="space-y-5 p-5">
-    <DiagnosticImpact pathId={pathId} impact={state?.import_impact??null} onSend={onSend} compact disabled={streaming||busy} />
+    {detailsOpen&&<DiagnosticImpact pathId={pathId} impact={state?.import_impact??null} onSend={onSend} compact disabled={streaming||busy} />}
 
         {error && <p role="alert" className="text-destructive">{error} <button type="button" className="underline" onClick={() => setReload(value => value + 1)}>{t('Retry')}</button></p>}
         {!state && !error && <p>{t('Loading…')}</p>}

@@ -81,8 +81,8 @@ it("loads conversation history while navigation remains usable, then preserves s
   expect(scroller).not.toContainElement(
     screen.getByRole("tab", { name: "navigation.home" }),
   );
-  // Settings lives in the header's workspace menu, outside the history scroller.
-  fireEvent.click(screen.getByRole("button", { name: /General workspace/ }));
+  // Settings lives in the bottom account menu, outside the history scroller.
+  fireEvent.click(screen.getByRole("button", { name: "wenjin.accountMenu" }));
   expect(scroller).not.toContainElement(
     screen.getByRole("menuitem", { name: "Settings" }),
   );

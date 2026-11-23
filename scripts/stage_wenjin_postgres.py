@@ -11,9 +11,10 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from deeptutor.learning.personal_training import connection
 from psycopg import sql
 from psycopg.types.json import Jsonb
+
+from deeptutor.learning.personal_training import connection
 
 
 def canonical(row):

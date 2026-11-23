@@ -5,10 +5,12 @@ from contextlib import contextmanager
 import copy
 import json
 import time
-import uuid
 from typing import Literal
-from pydantic import BaseModel, Field
+import uuid
+
 from psycopg.types.json import Jsonb
+from pydantic import BaseModel, Field
+
 from deeptutor.learning.personal_training import connection, scope
 from deeptutor.learning.storage import LearningStore
 
@@ -103,6 +105,9 @@ def public(d):
         "attempts",
         "scope",
         "ask_requests",
+        "answer_outbox",
+        "answer_store_root",
+        "answer_retry_at",
     ):
         result.pop(key, None)
     for page in result["pages"]:
@@ -116,6 +121,7 @@ def public(d):
 
 
 def load(store, project, cid):
+    flush_answers(store, project, cid)
     with locked(store, project, cid) as (_, d):
         return public(d)
 
@@ -134,9 +140,9 @@ def listing(store, project):
         ]
 
 
-
 def remove(store, project, cid):
     """Hide a classroom and revoke in-flight jobs, preserving learning evidence."""
+    flush_answers(store, project, cid)
     from deeptutor.learning import classroom_media
 
     with locked(store, project, cid) as (c, d):
@@ -146,8 +152,13 @@ def remove(store, project, cid):
         c.execute(
             "UPDATE wenjin_classroom_assets SET body=body || %s,updated=%s "
             "WHERE scope=%s AND project=%s AND cid=%s",
-            (Jsonb({"state": "cancelled", "token": None, "lease": 0}),
-             time.time(), scope(store), project, cid),
+            (
+                Jsonb({"state": "cancelled", "token": None, "lease": 0}),
+                time.time(),
+                scope(store),
+                project,
+                cid,
+            ),
         )
     return {"id": cid, "deleted": True}
 
@@ -444,12 +455,51 @@ def generation_failure(d, exc):
         feedback = None
     retrying = d["attempts"] < 2
     d.update(
-        state=("queued_pages" if d["outline"] or d.get("mode") == "curriculum_ppt" else "queued_outline") if retrying else "failed",
+        state=(
+            "queued_pages"
+            if d["outline"] or d.get("mode") == "curriculum_ppt"
+            else "queued_outline"
+        )
+        if retrying
+        else "failed",
         lease=0,
-        error=reason + ("，正在自动重试；已生成页面保留。" if retrying else "，自动重试已结束。请点击“重试未完成步骤”继续；已生成页面保留。"),
-        generation_issue={"code": code, "message": reason, "retrying": retrying, "attempt": d["attempts"]},
+        error=reason
+        + (
+            "，正在自动重试；已生成页面保留。"
+            if retrying
+            else "，自动重试已结束。请点击“重试未完成步骤”继续；已生成页面保留。"
+        ),
+        generation_issue={
+            "code": code,
+            "message": reason,
+            "retrying": retrying,
+            "attempt": d["attempts"],
+        },
         retry_feedback=feedback,
     )
+
+
+def recover_answers(d):
+    """Re-enter the persisted owner scope before retrying a pending projection."""
+    from pathlib import Path
+
+    from deeptutor.multi_user.identity import get_user_by_id
+    from deeptutor.multi_user.models import CurrentUser
+    from deeptutor.multi_user.paths import scope_for_user, user_context
+    from deeptutor.services.workspace.context import workspace_context
+
+    u = d["owner"]
+    record = get_user_by_id(u["id"])
+    if not record or record[1].get("disabled") or record[1]["role"] != u["role"]:
+        raise ValueError("账号不可用")
+    user = CurrentUser(
+        u["id"], u["username"], u["role"], scope_for_user(u["id"], is_admin=u["role"] == "admin")
+    )
+    with user_context(user), workspace_context(d["workspace"]):
+        store = LearningStore(Path(d["answer_store_root"]))
+        if scope(store) != d["scope"]:
+            raise ValueError("课堂作用域已变化")
+        flush_answers(store, d["project"], d["id"])
 
 
 async def worker(stop):
@@ -458,6 +508,22 @@ async def worker(stop):
     while not stop.is_set():
         d = None
         try:
+            pending_answer = None
+            with connection() as c:
+                initialize(c)
+                row = c.execute(
+                    "SELECT body FROM wenjin_classrooms WHERE body->>'deleted_at' IS NULL AND body->'answer_outbox' <> '{}'::jsonb AND COALESCE((body->>'answer_retry_at')::double precision,0)<%s ORDER BY updated FOR UPDATE SKIP LOCKED LIMIT 1",
+                    (time.time(),),
+                ).fetchone()
+                if row:
+                    pending_answer = row[0]
+                    pending_answer["answer_retry_at"] = time.time() + 30
+                    put(c, pending_answer)
+            if pending_answer:
+                try:
+                    await asyncio.to_thread(recover_answers, pending_answer)
+                except Exception:
+                    logging.getLogger(__name__).exception("Classroom answer projection pending")
             with connection() as c:
                 initialize(c)
                 row = c.execute(
@@ -505,7 +571,13 @@ async def worker(stop):
                                 if len(current["pages"]) == len(current["outline"])
                                 else "queued_pages"
                             )
-                        current.update(attempts=0, lease=0, error=None, generation_issue=None, retry_feedback=None)
+                        current.update(
+                            attempts=0,
+                            lease=0,
+                            error=None,
+                            generation_issue=None,
+                            retry_feedback=None,
+                        )
                         put(c, current)
                 except Exception as exc:
                     logging.getLogger(__name__).exception("Classroom generation failed")
@@ -529,82 +601,141 @@ async def worker(stop):
             await asyncio.sleep(2)
 
 
-def answer(store, project, cid, index, value):
-    from deeptutor.learning.models import LearningEvidence, PendingQuestion
+def _answer_context(progress, page, evidence_id):
     from deeptutor.learning.diagnosis import assessment_context
+    from deeptutor.learning.goal_contract import bind_task
+    from deeptutor.learning.models import PendingQuestion
 
+    question = PendingQuestion(
+        question_id=evidence_id,
+        knowledge_point_id=page["objective_id"],
+        prompt=page["question"],
+        expected_answer=page["options"][page["answer_index"]],
+        assistance_used=True,
+    )
+    bind_task(progress, question)
+    return assessment_context(
+        progress, question, question.expected_answer, "choice", assistance_used=True, semantic=True
+    )
+
+
+def answer(store, project, cid, index, value):
+    """Commit the first answer and its outbox together before projecting evidence.
+
+    This also supports stores that still use SQLite. A crash at either commit is
+    replayable, and another choice on retry can never replace the first receipt.
+    """
     with locked(store, project, cid) as (c, d):
         if not 0 <= index < len(d["pages"]):
-            raise ValueError("页面未就绪")
+            raise ValueError("该页尚未准备好")
         page = d["pages"][index]
         key = page["id"]
-        if key in d["answers"]:
-            return public(d)
-        if page["kind"] != "quiz" or not 0 <= value < len(page["options"]):
-            raise ValueError("无效答案")
-        correct = value == page["answer_index"]
-        evidence_id = f"classroom-{cid}-{key}"
-
-        def record(tx):
-            if not any(
-                k.id == page["objective_id"]
-                for m in tx.progress.modules
-                for k in m.knowledge_points
+        if key not in d["answers"]:
+            if (
+                page["kind"] != "quiz"
+                or type(value) is not int
+                or not 0 <= value < len(page["options"])
             ):
-                raise ValueError("项目知识点已变化，请先更新课堂大纲")
-            if any(e.evidence_id == evidence_id for e in tx.progress.learning_evidence):
-                return
-            question = PendingQuestion(
-                question_id=evidence_id,
-                knowledge_point_id=page["objective_id"],
-                prompt=page["question"],
-                expected_answer=page["options"][page["answer_index"]],
-                assistance_used=True,
+                raise ValueError("无效答案")
+            evidence_id = f"classroom-{cid}-{key}"
+            # Recover a pre-outbox crash using the already committed fact.
+            progress = store.load(project)
+            existing = next(
+                (e for e in progress.learning_evidence if e.evidence_id == evidence_id),
+                None,
             )
-            tx.progress.learning_evidence.append(
-                LearningEvidence(
-                    evidence_id=evidence_id,
-                    question_id=evidence_id,
-                    knowledge_point_id=page["objective_id"],
-                    source="classroom",
-                    result="correct" if correct else "incorrect",
-                    learner_answer=page["options"][value],
-                    hints_used=1,
-                    feedback=page["explanation"],
-                    diagnostic_context=assessment_context(
-                        tx.progress,
-                        question,
-                        question.expected_answer,
-                        "choice",
-                        assistance_used=True,
-                        semantic=True,
+            if existing:
+                if existing.learner_answer not in page["options"]:
+                    raise ValueError("历史作答与当前课件不一致，请联系维护人员核对")
+                value = page["options"].index(existing.learner_answer)
+            receipt = {
+                "choice": value,
+                "correct": existing.result == "correct"
+                if existing
+                else value == page["answer_index"],
+                "feedback": existing.feedback if existing else page["explanation"],
+                "evidence_id": evidence_id,
+                "evidence_status": "recorded" if existing else "pending",
+            }
+            d["answers"][key] = receipt
+            if not existing:
+                d["answer_store_root"] = str(store.db_path.parent.resolve())
+                d.setdefault("answer_outbox", {})[key] = {
+                    "page": copy.deepcopy(page),
+                    "receipt": copy.deepcopy(receipt),
+                    "diagnostic_context": _answer_context(progress, page, evidence_id).model_dump(
+                        mode="json"
                     ),
-                    visual_context={
+                    "version": d["version"],
+                    "at": time.time(),
+                }
+            put(c, d)
+    flush_answers(store, project, cid)
+    with locked(store, project, cid) as (_, d):
+        return public(d)
+
+
+def flush_answers(store, project, cid):
+    """Replay durable receipts; acknowledgement failure never changes their facts."""
+    from deeptutor.learning.models import DiagnosticContext, LearningEvidence
+
+    with locked(store, project, cid) as (c, d):
+        pending = d.get("answer_outbox", {})
+        if not pending:
+            return
+        for key, item in list(pending.items()):
+            page, receipt = item["page"], item["receipt"]
+            evidence_id = receipt["evidence_id"]
+
+            def record(tx):
+                existing = next(
+                    (e for e in tx.progress.learning_evidence if e.evidence_id == evidence_id), None
+                )
+                if existing:
+                    if (
+                        existing.learner_answer != page["options"][receipt["choice"]]
+                        or (existing.result == "correct") != receipt["correct"]
+                    ):
+                        raise ValueError("作答回执与历史证据不一致，已停止同步以保留原始记录")
+                    return
+                context = (
+                    DiagnosticContext.model_validate(item["diagnostic_context"])
+                    if item.get("diagnostic_context")
+                    else _answer_context(tx.progress, page, evidence_id)
+                )
+                tx.progress.learning_evidence.append(
+                    LearningEvidence(
+                        evidence_id=evidence_id,
+                        question_id=evidence_id,
+                        knowledge_point_id=page["objective_id"],
+                        source="classroom",
+                        result="correct" if receipt["correct"] else "incorrect",
+                        learner_answer=page["options"][receipt["choice"]],
+                        hints_used=1,
+                        feedback=receipt["feedback"],
+                        timestamp=item["at"],
+                        diagnostic_context=context,
+                        visual_context={
+                            "classroom_id": cid,
+                            "scene_id": key,
+                            "classroom_version": item["version"],
+                        },
+                    )
+                )
+                tx.emit(
+                    "classroom.answer_recorded",
+                    {
                         "classroom_id": cid,
                         "scene_id": key,
-                        "classroom_version": d["version"],
+                        "evidence_id": evidence_id,
+                        "assistance": "assisted",
                     },
                 )
-            )
-            tx.emit(
-                "classroom.answer_recorded",
-                {
-                    "classroom_id": cid,
-                    "scene_id": key,
-                    "evidence_id": evidence_id,
-                    "assistance": "assisted",
-                },
-            )
 
-        store.mutate(project, record)
-        d["answers"][key] = {
-            "choice": value,
-            "correct": correct,
-            "feedback": page["explanation"],
-            "evidence_id": evidence_id,
-        }
+            store.mutate(project, record)
+            d["answers"][key]["evidence_status"] = "recorded"
+            del pending[key]
         put(c, d)
-        return public(d)
 
 
 async def ask(store, project, cid, index, text, request_id):
@@ -701,6 +832,9 @@ def tutor_handoff(store, project, cid, index, intent):
             "classroom_id": cid,
             "slide_id": page["id"],
             "deck_version": d["version"],
+            "content_origin": page.get("content_origin", "generated"),
+            "content_review": page.get("content_review", "not_independently_verified"),
+            "edition": d.get("edition"),
             "module_id": page.get("module_id", ""),
             "objective_id": page["objective_id"],
             "title": page["title"],

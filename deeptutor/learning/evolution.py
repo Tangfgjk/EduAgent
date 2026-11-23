@@ -7,12 +7,51 @@ learner choice and authentication rules are outside the editable policy.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
+from pathlib import Path
 import time
 
-CONSTRAINT_HASH = hashlib.sha256(
-    b"wenjin:independent-evidence:source-isolation:learner-choice:no-answer-leak:v1"
-).hexdigest()
+# Versioned host-enforced invariants, not labels for an editable prompt.
+CONSTRAINTS = {
+    "version": 2,
+    "independent_evidence": {
+        "assistance": "independent",
+        "grading": "deterministic",
+        "validity": "recorded",
+    },
+    "source_scope": "owner/workspace/project/objective-version",
+    "learner_choice": "never override explicit assistance choice",
+    "fading": "one step; current goal; fresh independent evidence; restorable",
+    "strategy_surface": "sealed teaching templates only; no assessment or access changes",
+    "comparison": "equal-stratum-weight; minimum 12 per arm per stratum; simultaneous intervals",
+}
+
+
+def _hash(value):
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
+
+
+# Bind each saved candidate to the deployed implementations of host guards.
+# Changing these rules between deployments requires re-admission, even if the
+# human-readable registry label was accidentally left unchanged.
+_GUARD_FILES = (
+    "learning/learning_support.py",
+    "learning/goal_contract.py",
+    "learning/wenjin.py",
+    "learning/diagnosis.py",
+    "learning/check_cycles.py",
+    "learning/strategy_effects.py",
+    "multi_user/tool_access.py",
+)
+CONSTRAINTS["implementation_digests"] = {
+    name: hashlib.sha256((Path(__file__).parents[1] / name).read_bytes()).hexdigest()
+    for name in _GUARD_FILES
+}
+CONSTRAINT_HASH = _hash(CONSTRAINTS)
+
 
 TEMPLATES = {
     "reason_first": {
@@ -24,33 +63,91 @@ TEMPLATES = {
         "instruction": "Use a contrasting case to reveal the misconception. Wait before giving any further help.",
     },
 }
+TEMPLATES.update(
+    {
+        "self_explain": {
+            "name": "自己解释一步",
+            "error_prompt": "Ask the learner to explain one chosen step in their own words without supplying the solution.",
+            "instruction": "Ask for one step's rationale, then Wait for the learner.",
+        },
+        "plan_first": {
+            "name": "先列计划",
+            "error_prompt": "Ask the learner to state a short plan before calculating; do not solve the task.",
+            "instruction": "Ask for the first planned step, then Wait for the learner.",
+        },
+        "boundary_check": {
+            "name": "辨析适用条件",
+            "error_prompt": "Ask which condition permits the method and request a counterexample without giving the answer.",
+            "instruction": "Ask one boundary question, then Wait for the learner.",
+        },
+    }
+)
+TEMPLATES["reason_first"]["name"] = "先说明理由"
+TEMPLATES["contrast_first"]["name"] = "对照不同例子"
+
+
+APPROVED_TEMPLATE_HASHES = {
+    "reason_first": "5751a667f954a8788e80e7cb3add78537426fda435c30d8162c4cdcb22715558",
+    "contrast_first": "e2285e81d0d45f92e7b28657c595d2e7ca599a89f8d06b03fd03188471988059",
+    "self_explain": "879ed0607711e4101fc2e8bd04d1ca3b4511c44e1e0ee5ecbfa5773c988a9e93",
+    "plan_first": "37764b5d63f5b2e3328aa9ef6b6b53f20cc44099ee6e8bb4cef30af9cf41b138",
+    "boundary_check": "fa7355e33d1ec62ef2aa161824c290c7033a29dbd603e0118145d9cf44254dde",
+}
 
 
 def regression_check(template: str) -> dict:
-    """Frozen admissibility scenarios over the only editable policy surface."""
+    """Static artifact admission; behavioral regressions run against real host tools in CI.
+
+    This result does not claim to validate arbitrary model-generated prose.
+    """
+    body = TEMPLATES.get(template)
+    digest = _hash(body) if body else ""
     cases = {
-        "known_template": template in TEMPLATES,
-        "no_answer_key": all(
-            "expected_answer" not in value for value in TEMPLATES.get(template, {}).values()
-        ),
-        "wait_for_learner": "Wait" in TEMPLATES.get(template, {}).get("instruction", "")
-        or "wait" in TEMPLATES.get(template, {}).get("instruction", ""),
-        "immutable_constraints": bool(CONSTRAINT_HASH),
+        "known_template": template in APPROVED_TEMPLATE_HASHES,
+        "reviewed_body": bool(body) and digest == APPROVED_TEMPLATE_HASHES.get(template),
+        "immutable_constraints": _hash(CONSTRAINTS) == CONSTRAINT_HASH,
     }
-    return {"passed": all(cases.values()), "cases": cases, "constraint_hash": CONSTRAINT_HASH}
+    return {
+        "passed": all(cases.values()),
+        "cases": cases,
+        "constraint_hash": _hash(CONSTRAINTS),
+        "template_hash": digest,
+        "scope": "static_artifact_admission",
+    }
 
 
 def policy_for_next(progress) -> dict:
     state = progress.evolution
     active = state.get("active", {"version": "baseline", "template": "reason_first"})
     candidate = state.get("candidate")
-    if state.get("consent") and candidate and candidate["status"] == "trial":
+    if (
+        state.get("consent")
+        and state.get("protocol") == "observed-delivery-v2"
+        and candidate
+        and candidate["status"] == "trial"
+    ):
         # Stable deterministic allocation survives restart and does not use identity traits.
         allocation_key = f"{progress.book_id}:{sum(not a.voided for a in progress.quiz_attempts)}"
         slot = hashlib.sha256(allocation_key.encode()).digest()[0] % 5
         if slot == 4:
             active = candidate
-    template = TEMPLATES.get(active.get("template"), TEMPLATES["reason_first"])
+    current = regression_check(active.get("template", ""))
+    if active["version"] != "baseline":
+        saved = (
+            active.get("regression", {})
+            if not candidate or active["version"] != candidate["version"]
+            else candidate.get("regression", {})
+        )
+        if not saved.get("passed") or any(
+            saved.get(key) != current.get(key) for key in ("constraint_hash", "template_hash")
+        ):
+            active = {"version": "baseline", "template": "reason_first"}
+
+    if not regression_check(active.get("template", ""))["passed"]:
+        active = {"version": "baseline", "template": "reason_first"}
+    if not regression_check(active["template"])["passed"]:
+        raise RuntimeError("No admitted teaching template available")
+    template = TEMPLATES[active["template"]]
     return {
         "version": active["version"],
         "template": active.get("template", "reason_first"),
@@ -58,10 +155,9 @@ def policy_for_next(progress) -> dict:
     }
 
 
-def _interval(successes: int, total: int) -> tuple[float, float]:
+def _interval(successes: int, total: int, *, z: float = 1.96) -> tuple[float, float]:
     if not total:
         return 0.0, 1.0
-    z = 1.96
     mean = successes / total
     divisor = 1 + z * z / total
     center = (mean + z * z / (2 * total)) / divisor
@@ -69,197 +165,71 @@ def _interval(successes: int, total: int) -> tuple[float, float]:
     return max(0.0, center - radius), min(1.0, center + radius)
 
 
-def metrics(progress, version: str, *, since: float = 0) -> dict:
-    from deeptutor.learning.diagnosis import project_facts
-
-    facts = project_facts(progress)
-    independent_refs = {
-        ref
-        for observation in facts.observations
-        if observation.validity == "recorded" and observation.assistance == "independent"
-        for ref in observation.source_refs
-    }
-    attempts = [a for a in progress.quiz_attempts if not a.voided and a.timestamp >= since]
-    verified = {
-        id(a)
-        for index, a in enumerate(progress.quiz_attempts)
-        if f"quiz_attempts:{index}" in independent_refs
-    }
-    independent = [
-        a
-        for a in attempts
-        if a.strategy_version == version
-        and id(a) in verified
-        and a.evidence_kind in ("application", "transfer", "explanation")
-    ]
-    successes = sum(a.result == "correct" for a in independent)
-    delayed = []
-    for previous in attempts:
-        if previous.strategy_version != version:
-            continue
-        followup = next(
-            (
-                a
-                for a in attempts
-                if a.knowledge_point_id == previous.knowledge_point_id
-                and a.timestamp >= previous.timestamp + 86400
-                and id(a) in verified
-                and a.evidence_kind in ("application", "transfer")
-            ),
-            None,
-        )
-        if followup and followup.question_id not in {a.question_id for a in delayed}:
-            delayed.append(followup)
-    return {
-        "independent_n": len(independent),
-        "independent_successes": successes,
-        "independent_interval": list(_interval(successes, len(independent))),
-        "delayed_n": len(delayed),
-        "delayed_successes": sum(a.result == "correct" for a in delayed),
-        "delayed_interval": list(
-            _interval(sum(a.result == "correct" for a in delayed), len(delayed))
-        ),
-    }
-
-
-def update_evolution(progress, *, now: float | None = None) -> None:
+def upgrade_protocol(progress, *, now=None):
     state = progress.evolution
-    if not state.get("consent"):
+    if not state.get("consent") or state.get("protocol") == "observed-delivery-v2":
         return
     moment = time.time() if now is None else now
-    active = state.setdefault("active", {"version": "baseline", "template": "reason_first"})
-    history = state.setdefault("history", [])
-    since = state.get("consent_at", moment)
-    candidate = state.get("candidate")
-    if candidate is None:
-        if sum(not a.voided and a.timestamp >= since for a in progress.quiz_attempts) < 6:
-            state["status"] = "collecting_evidence"
-            return
-        template = "contrast_first" if active["template"] == "reason_first" else "reason_first"
-        report = regression_check(template)
-        generation = len(history) + 1
-        candidate = {
-            "version": f"candidate-{generation}",
-            "template": template,
-            "status": "trial" if report["passed"] else "rejected",
-            "created_at": moment,
-            "regression": report,
-            "hypothesis": "Compare error prompts using independent explanation, application and delayed transfer.",
-            "allocation": 0.2,
-        }
-        state["candidate"] = candidate
-        state.pop("evaluation", None)
-        state["status"] = candidate["status"]
-        history.append(
+    if state.get("candidate") or state.get("evaluation"):
+        state.setdefault("history", []).append(
             {
-                "event": "candidate_created",
+                "event": "protocol_upgraded",
                 "at": moment,
-                "version": candidate["version"],
-                "constraint_hash": CONSTRAINT_HASH,
+                "archived_candidate": state.get("candidate"),
+                "archived_evaluation": state.get("evaluation"),
+                "reason": "历史无交付证明的结果仅作回顾，不作为新版效果依据",
             }
         )
-        return
-    if candidate["status"] in ("rejected", "rolled_back"):
-        closed = state.setdefault("closed_attempts", len(progress.quiz_attempts))
-        if len(progress.quiz_attempts) >= closed + 12:
-            state.pop("candidate", None)
-            state.pop("closed_attempts", None)
-            state["status"] = "collecting_evidence"
-        return
-    if candidate["status"] != "trial":
-        return
-    baseline = metrics(progress, active["version"], since=since)
-    treatment = metrics(progress, candidate["version"], since=since)
-    state["evaluation"] = {"baseline": baseline, "candidate": treatment}
-    enough = all(m["independent_n"] >= 12 and m["delayed_n"] >= 12 for m in (baseline, treatment))
-    if not enough:
-        state["status"] = "trial_insufficient_evidence"
-        return
-    improves = treatment["independent_interval"][0] > baseline["independent_interval"][1]
-    retains = treatment["delayed_interval"][0] >= baseline["delayed_interval"][1]
-    if candidate["regression"]["constraint_hash"] != CONSTRAINT_HASH:
-        candidate["status"] = "rejected"
-        state["status"] = "constraint_mismatch"
-    elif improves and retains:
-        state["previous"] = dict(active)
-        state["active"] = {"version": candidate["version"], "template": candidate["template"]}
-        state["promoted_at"] = moment
-        candidate["status"] = "promoted"
-        state["status"] = "monitoring"
-        history.append(
-            {
-                "event": "promoted",
-                "at": moment,
-                "version": candidate["version"],
-                "report": state["evaluation"],
-            }
-        )
-    elif (
-        treatment["independent_interval"][1] < baseline["independent_interval"][0]
-        or treatment["delayed_interval"][1] < baseline["delayed_interval"][0]
-    ):
-        candidate["status"] = "rejected"
-        state["status"] = "rejected"
-        history.append(
-            {
-                "event": "candidate_rejected",
-                "at": moment,
-                "version": candidate["version"],
-                "report": state["evaluation"],
-            }
-        )
+    for key in ("candidate", "evaluation", "promotion_evaluation", "previous"):
+        state.pop(key, None)
+    state.update(
+        protocol="observed-delivery-v2",
+        protocol_at=moment,
+        exposures=[],
+        status="collecting_evidence",
+    )
 
 
-def monitor_evolution(progress) -> None:
-    state = progress.evolution
-    if not state.get("consent") or state.get("status") != "monitoring":
-        return
-    current = metrics(progress, state["active"]["version"], since=state["promoted_at"])
-    old = (state.get("evaluation") or {}).get("baseline", {})
-    if current["independent_n"] < 12 or current["delayed_n"] < 12:
-        return
-    if (
-        current["independent_interval"][1] < old.get("independent_interval", [0, 1])[0]
-        or current["delayed_interval"][1] < old.get("delayed_interval", [0, 1])[0]
-    ):
-        previous = state["previous"]
-        state["history"].append(
-            {"event": "automatic_rollback", "at": time.time(), "report": current}
-        )
-        state["active"] = previous
-        state["status"] = "rolled_back"
-        state["candidate"]["status"] = "rolled_back"
-    elif current["independent_n"] >= 24 and current["delayed_n"] >= 24:
-        state["history"].append(
-            {"event": "monitoring_completed", "at": time.time(), "report": current}
-        )
-        state.pop("candidate", None)
-        state.pop("previous", None)
-        state["status"] = "collecting_evidence"
+def metrics(progress, version: str, *, since: float = 0):
+    from deeptutor.learning.strategy_effects import metrics as observed_metrics
+
+    return observed_metrics(progress, version, since=since)
+
+
+def update_evolution(progress, *, now=None):
+    from deeptutor.learning.strategy_effects import update
+
+    upgrade_protocol(progress, now=now)
+    update(progress, now=now)
+
+
+def monitor_evolution(progress):
+    update_evolution(progress)
 
 
 def set_consent(store, path_id: str, enabled: bool):
     def change(tx):
         state = tx.progress.evolution
-        previous = bool(state.get("consent"))
+        before = bool(state.get("consent"))
         state["consent"] = enabled
-        if enabled and not previous:
+        upgrade_protocol(tx.progress)
+        if enabled and not before:
             state["consent_at"] = time.time()
             state["status"] = "collecting_evidence"
             state.pop("candidate", None)
+            state.pop("evaluation", None)
         if not enabled:
             state["status"] = "paused"
-        tx.emit("wenjin.evolution_consent", {"enabled": enabled})
+        tx.emit("wenjin.evolution_consent", {"enabled": enabled, "protocol": state.get("protocol")})
 
-    progress, _ = store.mutate(path_id, change)
-    return progress
+    return store.mutate(path_id, change)[0]
 
 
 def rollback(store, path_id: str):
     def change(tx):
         state = tx.progress.evolution
         if "previous" not in state:
-            raise ValueError("No promoted strategy to roll back.")
+            raise ValueError("尚无已启用的候选策略可恢复")
         state["active"] = state.pop("previous")
         state["status"] = "rolled_back"
         if state.get("candidate"):
@@ -267,29 +237,11 @@ def rollback(store, path_id: str):
         state.setdefault("history", []).append({"event": "learner_rollback", "at": time.time()})
         tx.emit("wenjin.policy_rolled_back", {"active": state["active"]})
 
-    progress, _ = store.mutate(path_id, change)
-    return progress
+    return store.mutate(path_id, change)[0]
 
 
-def revalidate_after_repair(progress) -> None:
-    """Withdraw a promotion when corrected evidence no longer supports it."""
-    state = progress.evolution
-    if not state.get("consent") or state.get("status") != "monitoring" or not state.get("previous"):
-        update_evolution(progress)
-        return
-    baseline = metrics(progress, state["previous"]["version"], since=state["consent_at"])
-    treatment = metrics(progress, state["active"]["version"], since=state["consent_at"])
-    enough = all(m["independent_n"] >= 12 and m["delayed_n"] >= 12 for m in (baseline, treatment))
-    supported = (
-        enough
-        and treatment["independent_interval"][0] > baseline["independent_interval"][1]
-        and treatment["delayed_interval"][0] >= baseline["delayed_interval"][1]
-    )
-    state["evaluation"] = {"baseline": baseline, "candidate": treatment}
-    if not supported:
-        state["active"] = state["previous"]
-        state["candidate"]["status"] = "rolled_back"
-        state["status"] = "rolled_back"
-        state.setdefault("history", []).append(
-            {"event": "evidence_revalidation_rollback", "at": time.time()}
-        )
+def revalidate_after_repair(progress):
+    from deeptutor.learning.strategy_effects import update
+
+    upgrade_protocol(progress)
+    update(progress, repair=True)

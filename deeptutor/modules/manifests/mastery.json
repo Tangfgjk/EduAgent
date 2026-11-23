@@ -82,6 +82,18 @@
       "class_path": "deeptutor.tools.mastery_nav:MasteryNewSessionTool",
       "order": 43
     },
+    "mastery_support_plan": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasterySupportPlanTool",
+      "order": 63
+    },
+    "mastery_strategy_candidate": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryStrategyCandidateTool",
+      "order": 64
+    },
+    "mastery_strategy_delivery": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryStrategyDeliveryTool",
+      "order": 65
+    },
     "mastery_status": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryStatusTool",
       "order": 44
@@ -157,6 +169,10 @@
     "mastery_leave": {
       "class_path": "deeptutor.capabilities.mastery.tools:MasteryLeaveTool",
       "order": 59
+    },
+    "mastery_goal_propose": {
+      "class_path": "deeptutor.capabilities.mastery.tools:MasteryGoalProposeTool",
+      "order": 66
     }
   },
   "routes": [

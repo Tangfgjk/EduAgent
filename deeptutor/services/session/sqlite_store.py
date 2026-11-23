@@ -259,6 +259,7 @@ class SQLiteSessionStore:
         path_service = get_path_service()
         self.db_path = db_path or path_service.get_chat_history_db()
         from deeptutor.services.storage.postgres_adapter import enabled
+
         if enabled(self.db_path):
             self._lock = asyncio.Lock()
             return
@@ -269,6 +270,7 @@ class SQLiteSessionStore:
             self._initialize()
         ensure_private_file(self.db_path)
         from deeptutor.services.storage.postgres_adapter import enroll
+
         enroll(self.db_path)
 
     def _migrate_legacy_db(self, path_service) -> None:
@@ -1142,7 +1144,8 @@ class SQLiteSessionStore:
         # transaction semantics and deterministic close. The inner `with conn`
         # commits on clean exit and rolls back on exception, so call sites do
         # NOT need an explicit conn.commit() (any remaining ones are no-ops).
-        from deeptutor.services.storage.postgres_adapter import enabled, Connection
+        from deeptutor.services.storage.postgres_adapter import Connection, enabled
+
         if enabled(self.db_path):
             conn = Connection(self.db_path)
             try:

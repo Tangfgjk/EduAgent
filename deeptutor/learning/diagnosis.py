@@ -59,6 +59,7 @@ def assessment_context(
         "source": question.source_evidence,
     }
     return DiagnosticContext(
+        goal_version=getattr(question, "goal_version", 0),
         task_prompt=question.prompt,
         question_type=question_type,
         task_version=_digest(contract),
@@ -255,6 +256,7 @@ def project_facts(progress, events=()):
                 }
             )
     from deeptutor.learning.external_diagnoses import external_references
+
     facts.external_references = external_references(progress)
     return facts
 

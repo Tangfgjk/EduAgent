@@ -92,7 +92,7 @@ def is_assessed_mastered(progress: LearningProgress, kp: KnowledgePoint) -> bool
     if progress.wenjin_enabled:
         from deeptutor.learning.wenjin import objective_evidence
 
-        return not objective_evidence(progress, kp)["missing"]
+        return objective_evidence(progress, kp)["goal_achieved"]
     if kp.type in QUALITATIVE_TYPES:
         return bool(progress.qualitative_mastery.get(kp.id, False))
     return progress.mastery_levels.get(kp.id, 0.0) >= gate_threshold(
@@ -428,7 +428,13 @@ def next_objective(
                     "teach"
                     if decision["action"] == "teach"
                     else "probe"
-                    if decision["action"] in {"probe", "verify_independence", "verify_record", "verify_external_reference"}
+                    if decision["action"]
+                    in {
+                        "probe",
+                        "verify_independence",
+                        "verify_record",
+                        "verify_external_reference",
+                    }
                     else "practice"
                 )
             step = NextStep(

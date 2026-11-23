@@ -1,11 +1,15 @@
 import pytest
-from deeptutor.multi_user import personal_api_models as personal, model_access
+
+from deeptutor.multi_user import model_access
+from deeptutor.multi_user import personal_api_models as personal
 from deeptutor.services.config.provider_runtime import resolve_llm_runtime_config
 
 
 def test_private_key_isolation_and_autonomous_resolution(as_user, mu_isolated_root, monkeypatch):
     monkeypatch.setattr(model_access, "load_grant", lambda *_: {"models": {"llm": []}})
-    monkeypatch.setattr(model_access, "admin_catalog", lambda: {"services": {"llm": {"profiles": []}}})
+    monkeypatch.setattr(
+        model_access, "admin_catalog", lambda: {"services": {"llm": {"profiles": []}}}
+    )
     with as_user("alice"):
         result = personal.save("deepseek", "", "deepseek-chat", "alice-secret")
         assert result["configured"] and "alice-secret" not in str(result)
@@ -30,8 +34,11 @@ def test_private_key_isolation_and_autonomous_resolution(as_user, mu_isolated_ro
 
 def test_unconfigured_user_never_reads_process_model_cache(as_user, mu_isolated_root, monkeypatch):
     from deeptutor.services.llm import config
+
     monkeypatch.setattr(model_access, "load_grant", lambda *_: {"models": {"llm": []}})
-    monkeypatch.setattr(model_access, "admin_catalog", lambda: {"services": {"llm": {"profiles": []}}})
+    monkeypatch.setattr(
+        model_access, "admin_catalog", lambda: {"services": {"llm": {"profiles": []}}}
+    )
     monkeypatch.setattr(config, "resolve_llm_runtime_config", resolve_llm_runtime_config)
     monkeypatch.setattr(config, "_LLM_CONFIG_CACHE", object())
     with as_user("bob"):

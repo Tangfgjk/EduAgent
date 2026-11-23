@@ -93,7 +93,11 @@ if TYPE_CHECKING:
 # Tool names the pipeline mounts together when a mastery path is active. Kept
 # here so the mount policy and the registration list can't disagree.
 MASTERY_TOOL_NAMES: tuple[str, ...] = (
+    "mastery_goal_propose",
     "mastery_prepare_lesson",
+    "mastery_support_plan",
+    "mastery_strategy_candidate",
+    "mastery_strategy_delivery",
     "mastery_status",
     "mastery_quiz",
     "mastery_note_explained",
@@ -579,6 +583,18 @@ def _review_scope_refusal(
     kp, _module_id, _module_name = find_knowledge_point(progress, kp_id)
     if kp is None or is_mastered(progress, kp):
         return None
+    # A scheduled check re-tests a prior independent attempt without claiming
+    # that the existing mastery gate has been cleared.
+    from deeptutor.learning.check_cycles import handoff as check_handoff
+
+    check = check_handoff(progress)
+    if (
+        check
+        and check["objective_id"] == kp_id
+        and check["status"] == "in_progress"
+        and check["phase"] in {"review", "transfer"}
+    ):
+        return None
     return ToolResult(
         content=(
             f"{kp.name!r} is not mastered yet, and this conversation is "
@@ -874,17 +890,25 @@ class MasteryStatusTool(BaseTool):
         }
         if progress and progress.wenjin_enabled:
             from deeptutor.learning.wenjin import state_summary
+
             payload["wenjin"] = state_summary(progress, store=service.store)
             from deeptutor.learning.wenjin import learner_continuity
+
             payload["wenjin"]["prior_learning"] = learner_continuity(service.store, progress)
             if kwargs.get("_working_brief"):
                 brief = payload["wenjin"]
                 current_id = (brief["objective"] or {}).get("id")
-                brief["objectives"] = [item for item in brief["objectives"] if item["id"] == current_id]
-                brief["sources"] = [{**item, "excerpt": item["excerpt"][:1200]} for item in brief["sources"][-3:]]
+                brief["objectives"] = [
+                    item for item in brief["objectives"] if item["id"] == current_id
+                ]
+                brief["sources"] = [
+                    {**item, "excerpt": item["excerpt"][:1200]} for item in brief["sources"][-3:]
+                ]
                 brief["reflections"] = brief["reflections"][-2:]
                 brief["prior_learning"] = brief["prior_learning"][:3]
-                brief["strategy"] = {key: value for key, value in brief["strategy"].items() if key != "history"}
+                brief["strategy"] = {
+                    key: value for key, value in brief["strategy"].items() if key != "history"
+                }
         interaction = service.store.get_active_interaction(path_id)
         if interaction is not None:
             pending_interaction: dict[str, Any] = {
@@ -997,7 +1021,13 @@ class MasteryResearchTool(BaseTool):
         return ToolDefinition(
             name="mastery_research",
             description="Search for learning sources for the current topic or a specific evidence gap. Available without uploads. Results carry URLs and excerpts; never invent citations.",
-            parameters=[ToolParameter(name="query", type="string", description="A focused subject or prerequisite query.")],
+            parameters=[
+                ToolParameter(
+                    name="query",
+                    type="string",
+                    description="A focused subject or prerequisite query.",
+                )
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -1005,16 +1035,23 @@ class MasteryResearchTool(BaseTool):
         if not path_id:
             return _no_path_result()
         if not kwargs.get("_web_research_allowed", True):
-            return _json_result({
-                "status": "disabled",
-                "sources": [],
-                "instruction": "The learner has disabled web search. Continue with available materials and general foundational explanations; uploads remain optional.",
-            }, meta_key="mastery_research")
+            return _json_result(
+                {
+                    "status": "disabled",
+                    "sources": [],
+                    "instruction": "The learner has disabled web search. Continue with available materials and general foundational explanations; uploads remain optional.",
+                },
+                meta_key="mastery_research",
+            )
         from deeptutor.learning.wenjin import research_topic
+
         try:
             result = await research_topic(
-                _new_service().store, path_id, str(kwargs.get("query") or ""),
-                session_id=_resolve_session_id(kwargs), turn_id=_resolve_turn_id(kwargs),
+                _new_service().store,
+                path_id,
+                str(kwargs.get("query") or ""),
+                session_id=_resolve_session_id(kwargs),
+                turn_id=_resolve_turn_id(kwargs),
             )
         except ValueError as exc:
             return ToolResult(content=str(exc), success=False)
@@ -1026,7 +1063,11 @@ class MasteryReflectionTool(BaseTool):
         return ToolDefinition(
             name="mastery_reflection",
             description="Save the learner's actual reflection on a learning objective. Call after asking how they solved it or what strategy changed. Does not award mastery. Never fabricate a reflection.",
-            parameters=[ToolParameter(name="knowledge_point_id", type="string", description="Exact objective ID.")],
+            parameters=[
+                ToolParameter(
+                    name="knowledge_point_id", type="string", description="Exact objective ID."
+                )
+            ],
         )
 
     async def execute(self, **kwargs: Any) -> ToolResult:
@@ -1037,16 +1078,22 @@ class MasteryReflectionTool(BaseTool):
         if not path_id:
             return _no_path_result()
         from deeptutor.learning.wenjin import record_reflection
+
         try:
             progress = await asyncio.to_thread(
-                record_reflection, _new_service().store, path_id,
+                record_reflection,
+                _new_service().store,
+                path_id,
                 str(kwargs.get("knowledge_point_id") or ""),
                 str(kwargs.get("_learner_message") or ""),
-                session_id=_resolve_session_id(kwargs), turn_id=_resolve_turn_id(kwargs),
+                session_id=_resolve_session_id(kwargs),
+                turn_id=_resolve_turn_id(kwargs),
             )
         except ValueError as exc:
             return ToolResult(content=str(exc), success=False)
-        return _json_result({"status": "recorded", "path_revision": progress.version}, meta_key="mastery_reflection")
+        return _json_result(
+            {"status": "recorded", "path_revision": progress.version}, meta_key="mastery_reflection"
+        )
 
 
 class MasteryRecordHintTool(BaseTool):
@@ -1055,9 +1102,21 @@ class MasteryRecordHintTool(BaseTool):
             name="mastery_record_hint",
             description="After publicly delivering a hint for an unanswered question, record it before grading. Never record a planned hint or reveal the answer.",
             parameters=[
-                ToolParameter(name="question_id", type="string", description="Exact pending question or group leaf ID."),
-                ToolParameter(name="level", type="integer", description="1 for a direction cue, 2 for a concrete next step, 3 for an analogous worked example without solving the current task."),
-                ToolParameter(name="hint_quote", type="string", description="Exact text of the hint already delivered publicly this turn."),
+                ToolParameter(
+                    name="question_id",
+                    type="string",
+                    description="Exact pending question or group leaf ID.",
+                ),
+                ToolParameter(
+                    name="level",
+                    type="integer",
+                    description="1 for a direction cue, 2 for a concrete next step, 3 for an analogous worked example without solving the current task.",
+                ),
+                ToolParameter(
+                    name="hint_quote",
+                    type="string",
+                    description="Exact text of the hint already delivered publicly this turn.",
+                ),
             ],
         )
 
@@ -1072,7 +1131,9 @@ class MasteryRecordHintTool(BaseTool):
         quote = str(kwargs.get("hint_quote") or "").strip()
         level = kwargs.get("level")
         if not question_id or not 6 <= len(quote) <= 1000 or type(level) is not int:
-            return ToolResult(content="Provide the question ID, hint level and exact public hint.", success=False)
+            return ToolResult(
+                content="Provide the question ID, hint level and exact public hint.", success=False
+            )
         delivery = _public_delivery(kwargs, path_id, quote)
         if isinstance(delivery, ToolResult):
             return delivery
@@ -1089,7 +1150,9 @@ class MasteryRecordHintTool(BaseTool):
             )
         except (MasteryInteractionError, FileNotFoundError) as exc:
             return ToolResult(content=str(exc), success=False)
-        return _json_result({"question_id": question_id, "level": recorded}, meta_key="mastery_record_hint")
+        return _json_result(
+            {"question_id": question_id, "level": recorded}, meta_key="mastery_record_hint"
+        )
 
 
 class MasteryNoteExplainedTool(BaseTool):
@@ -1733,14 +1796,26 @@ class MasteryQuizTool(BaseTool):
                 )
         evidence_kind = str(kwargs.get("evidence_kind") or "recognition")
         from deeptutor.learning.wenjin import KINDS, objective_evidence
+
         if evidence_kind not in KINDS:
             return ToolResult(content="Unknown ability evidence kind.", success=False)
         if progress.wenjin_enabled:
             if q_type == "choice" and evidence_kind != "recognition":
-                return ToolResult(content="An option choice cannot demonstrate an explanation or worked application. Ask an open task.", success=False)
+                return ToolResult(
+                    content="An option choice cannot demonstrate an explanation or worked application. Ask an open task.",
+                    success=False,
+                )
             evidence = objective_evidence(progress, kp)
-            if evidence_kind in evidence["achieved"] and evidence["missing"] and _mode_of(kwargs) != "review":
-                return ToolResult(content="This ability already has independent evidence. Check the missing abilities: " + ", ".join(evidence["missing"]), success=False)
+            if (
+                evidence_kind in evidence["achieved"]
+                and evidence["missing"]
+                and _mode_of(kwargs) != "review"
+            ):
+                return ToolResult(
+                    content="This ability already has independent evidence. Check the missing abilities: "
+                    + ", ".join(evidence["missing"]),
+                    success=False,
+                )
         pending = PendingQuestion(
             question_id=uuid.uuid4().hex,
             evidence_kind=evidence_kind,
@@ -1942,8 +2017,12 @@ class MasteryGradeTool(BaseTool):
         # the outline rail, which correctly never moves.
         if progress.wenjin_enabled and kp is not None:
             from deeptutor.learning.wenjin import teaching_decision
+
             decision = teaching_decision(progress, kp, store=service.store)
-            next_move = "with your own teaching choice informed by this diagnostic brief (recommendations, not commands): " + json.dumps(decision, ensure_ascii=False)
+            next_move = (
+                "with your own teaching choice informed by this diagnostic brief (recommendations, not commands): "
+                + json.dumps(decision, ensure_ascii=False)
+            )
         elif mastered:
             next_move = "going: this objective is mastered, so continue with mastery_status.next."
         elif gate == "qualitative":
@@ -1963,14 +2042,27 @@ class MasteryGradeTool(BaseTool):
             )
         if interaction.result.get("result") == "ungraded":
             next_move = "going with source clarification or an explanation. This was ungraded, created no negative evidence and did not change mastery. Do not turn uncertainty into a wrong answer."
+        from deeptutor.learning.check_cycles import handoff as check_handoff
+
+        check = check_handoff(progress)
+        if check and not check["round_id"] and pending.question_id in check["question_ids"]:
+            next_move = (
+                "with the independent check's closing feedback. This check is finished; "
+                "explain its next phase and due date from independent_check, then end the turn. "
+                "Do not pose another task, skip delayed review or clear any missing mastery gate. "
+                "The learner may actively choose later practice."
+            )
         payload = {
+            "independent_check": check,
             "is_correct": is_correct,
             "replayed": replayed,
             "path_revision": progress.version,
             "knowledge_point_id": pending.knowledge_point_id,
             "question_id": pending.question_id,
             "mastery": round(display_mastery(progress, kp), 3) if kp else 0.0,
-            "threshold": round(gate_threshold(kp.type, evidence=progress.wenjin_enabled), 3) if kp else 0.0,
+            "threshold": round(gate_threshold(kp.type, evidence=progress.wenjin_enabled), 3)
+            if kp
+            else 0.0,
             # Which gate that number is being read against. Without it a
             # qualitative objective reports mastery 1.0 / threshold 1.0 /
             # mastered false, which is not a reading anyone can act on.
@@ -2086,10 +2178,13 @@ class MasteryGradeTool(BaseTool):
                     "mastered": bool(kp and is_mastered(progress, kp)),
                 }
             )
+        from deeptutor.learning.check_cycles import handoff as check_handoff
+
         return _json_result(
             {
                 "question_id": pending.question_id,
                 "question_type": "group",
+                "independent_check": check_handoff(progress),
                 "is_correct": group_result["is_correct"],
                 "complete": group_result.get("complete", True),
                 "remaining_question_ids": group_result.get("remaining_question_ids", []),
@@ -2097,7 +2192,7 @@ class MasteryGradeTool(BaseTool):
                 "path_revision": progress.version,
                 "result": group_result,
                 "next": next_objective(progress).to_dict(),
-                "instruction": "Give explanatory feedback only for answered questions. Preserve independent results; the parent grants no extra mastery. If complete=false, unanswered children remain open. Continue at the requested pace and explain reported gaps; do not infer confusion from an unanswered item, invent replies or regrade committed answers. Keep qualitative gates and adapt teaching to the learner's needs.",
+                "instruction": "Give explanatory feedback only for answered questions. Preserve independent results; the parent grants no extra mastery. If complete=false, unanswered children remain open. Continue at the requested pace and explain reported gaps; do not infer confusion from an unanswered item, invent replies or regrade committed answers. Keep qualitative gates and adapt teaching to the learner's needs. If independent_check is closed, summarize its phase and due date and end the turn without automatically posing another task.",
             },
             meta_key="mastery_grade",
         )
@@ -3910,7 +4005,209 @@ def _parse_modules(
     return modules, error
 
 
+class MasteryGoalProposeTool(BaseTool):
+    def get_definition(self):
+        return ToolDefinition(
+            name="mastery_goal_propose",
+            description="Propose a clear learning target for the learner to review in the goal panel. Never confirms it, grades work or changes an unanswered task. The learner must confirm the target and criteria in the UI. Existing confirmed goals remain active until the learner changes them.",
+            parameters=[
+                ToolParameter(
+                    name="level", type="string", enum=["understand", "apply", "transfer"]
+                ),
+                ToolParameter(name="summary", type="string"),
+                ToolParameter(name="reason", type="string"),
+                ToolParameter(name="learner_quote", type="string", required=False),
+            ],
+        )
+
+    async def execute(self, **kwargs):
+        from deeptutor.learning.goal_contract import propose
+
+        quote = str(kwargs.get("learner_quote") or "").strip()
+        if quote and quote not in str(kwargs.get("_learner_message") or ""):
+            return ToolResult(
+                content="引用必须来自学生当前消息；建议不能冒充学生确认。", success=False
+            )
+        try:
+            result = await asyncio.to_thread(
+                propose,
+                _new_service().store,
+                _resolve_path_id(kwargs),
+                str(kwargs.get("level") or ""),
+                str(kwargs.get("summary") or ""),
+                str(kwargs.get("reason") or ""),
+                learner_quote=quote,
+                session_id=_resolve_session_id(kwargs),
+                turn_id=_resolve_turn_id(kwargs),
+            )
+            return _json_result(result, meta_key="goal_proposal")
+        except (LookupError, ValueError, RuntimeError) as exc:
+            return ToolResult(content=str(exc), success=False)
+
+
+class MasterySupportPlanTool(BaseTool):
+    def get_definition(self):
+        return ToolDefinition(
+            name="mastery_support_plan",
+            description="Persist a reversible support choice for FUTURE tasks, with a reason and real observation IDs. Does not change current help, grades or mastery. Fade one step only after sufficient cross-session/day evidence and a stated target. Restore help freely; respect learner choice. For a learner-requested restoration, include an exact learner_request_quote from their current message so the choice is protected across sessions.",
+            parameters=[
+                ToolParameter(name="knowledge_point_id", type="string"),
+                ToolParameter(
+                    name="action",
+                    type="string",
+                    enum=["maintain", "fade_one_step", "restore_support"],
+                ),
+                ToolParameter(name="reason", type="string"),
+                ToolParameter(name="learner_request_quote", type="string", required=False),
+                ToolParameter(
+                    name="observation_ids", type="array", items={"type": "string"}, max_items=10
+                ),
+            ],
+        )
+
+    async def execute(self, **kwargs):
+        refusal = _wrong_mode_result("mastery_support_plan", kwargs)
+        if refusal:
+            return refusal
+        from deeptutor.learning.learning_support import record_plan
+
+        quote = str(kwargs.get("learner_request_quote") or "").strip()
+        learner_choice = bool(quote and kwargs.get("action") == "restore_support")
+        if quote and (
+            not learner_choice
+            or len(quote) < 4
+            or quote not in str(kwargs.get("_learner_message") or "")
+        ):
+            return ToolResult(
+                content="请引用学生本轮请求恢复帮助的原话；不能替学生作出选择。", success=False
+            )
+        try:
+            result = await asyncio.to_thread(
+                record_plan,
+                _new_service().store,
+                _resolve_path_id(kwargs),
+                str(kwargs.get("knowledge_point_id") or ""),
+                str(kwargs.get("action") or ""),
+                str(kwargs.get("reason") or ""),
+                kwargs.get("observation_ids") or [],
+                session_id=_resolve_session_id(kwargs),
+                turn_id=_resolve_turn_id(kwargs),
+                learner_choice=learner_choice,
+            )
+            return _json_result(result, meta_key="support_plan")
+        except (LookupError, ValueError, RuntimeError) as exc:
+            return ToolResult(content=str(exc), success=False)
+
+
+class MasteryStrategyCandidateTool(BaseTool):
+    def get_definition(self):
+        return ToolDefinition(
+            name="mastery_strategy_candidate",
+            description="Propose one consented bounded teaching strategy experiment from observed learner performance. Need 6 valid observations and cited IDs. Hypothesis must be testable. No grading/weights/access changes; structural acceptance is not proof of efficacy. You may retain current strategy instead.",
+            parameters=[
+                ToolParameter(
+                    name="template",
+                    type="string",
+                    enum=[
+                        "reason_first",
+                        "contrast_first",
+                        "self_explain",
+                        "plan_first",
+                        "boundary_check",
+                    ],
+                ),
+                ToolParameter(name="hypothesis", type="string"),
+                ToolParameter(
+                    name="observation_ids",
+                    type="array",
+                    items={"type": "string"},
+                    min_items=1,
+                    max_items=10,
+                ),
+            ],
+        )
+
+    async def execute(self, **kwargs):
+        refusal = _wrong_mode_result("mastery_strategy_candidate", kwargs)
+        if refusal:
+            return refusal
+        from deeptutor.learning.strategy_effects import propose
+
+        try:
+            result = await asyncio.to_thread(
+                propose,
+                _new_service().store,
+                _resolve_path_id(kwargs),
+                str(kwargs.get("template") or ""),
+                str(kwargs.get("hypothesis") or ""),
+                kwargs.get("observation_ids") or [],
+                session_id=_resolve_session_id(kwargs),
+                turn_id=_resolve_turn_id(kwargs),
+            )
+            return _json_result(result, meta_key="strategy_candidate")
+        except (LookupError, ValueError, RuntimeError) as exc:
+            return ToolResult(content=str(exc), success=False)
+
+
+class MasteryStrategyDeliveryTool(BaseTool):
+    def get_definition(self):
+        return ToolDefinition(
+            name="mastery_strategy_delivery",
+            description="Record an actually delivered teaching strategy, not a plan. Give an exact 24-2000 character quote already publicly delivered this turn. Record BEFORE posing a quiz, which ends the turn. Wrong assignment is excluded. This alone grants no effect or mastery credit.",
+            parameters=[
+                ToolParameter(name="knowledge_point_id", type="string"),
+                ToolParameter(
+                    name="template",
+                    type="string",
+                    enum=[
+                        "reason_first",
+                        "contrast_first",
+                        "self_explain",
+                        "plan_first",
+                        "boundary_check",
+                    ],
+                ),
+                ToolParameter(name="quote", type="string"),
+            ],
+        )
+
+    async def execute(self, **kwargs):
+        refusal = _wrong_mode_result("mastery_strategy_delivery", kwargs)
+        if refusal:
+            return refusal
+        quote = str(kwargs.get("quote") or "").strip()
+        if not 24 <= len(quote) <= 2000:
+            return ToolResult(
+                content="Provide an exact public quote of 24-2000 characters.", success=False
+            )
+        path = _resolve_path_id(kwargs)
+        delivery = _public_delivery(kwargs, path, quote)
+        if isinstance(delivery, ToolResult):
+            return delivery
+        from deeptutor.learning.strategy_effects import record_delivery
+
+        try:
+            await asyncio.to_thread(
+                record_delivery,
+                _new_service().store,
+                path,
+                str(kwargs.get("knowledge_point_id") or ""),
+                str(kwargs.get("template") or ""),
+                quote,
+                delivery,
+            )
+            return _json_result(
+                {"status": "delivered", "not_an_outcome": True}, meta_key="strategy_delivery"
+            )
+        except (LookupError, ValueError, RuntimeError) as exc:
+            return ToolResult(content=str(exc), success=False)
+
+
 MASTERY_TOOL_TYPES: tuple[type[BaseTool], ...] = (
+    MasteryGoalProposeTool,
+    MasterySupportPlanTool,
+    MasteryStrategyCandidateTool,
+    MasteryStrategyDeliveryTool,
     MasteryStatusTool,
     MasteryNoteExplainedTool,
     MasteryRecordHintTool,

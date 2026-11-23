@@ -7,8 +7,10 @@ from pathlib import Path
 import re
 import time
 import uuid
-from pydantic import BaseModel, Field
+
 from psycopg.types.json import Jsonb
+from pydantic import BaseModel, Field
+
 from deeptutor.learning import classroom as cr
 from deeptutor.learning.personal_training import connection, scope
 
@@ -41,6 +43,7 @@ def view(job):
         "engine": body.get("engine", "local"),
         "rate": body.get("rate", 1.0),
         "page_count": len(body.get("pages", [])),
+        "classroom_version": body.get("classroom_version", 1),
         "indices": body.get("indices", [body["index"]]),
         "partial": body.get("partial", False),
         "progress": body.get("progress"),
@@ -76,7 +79,9 @@ def request(store, project, cid, kind, index=0, media_range=None, engine="local"
     with cr.locked(store, project, cid) as (course_connection, d):
         if not d["pages"]:
             raise ValueError("请先等待至少一页课件准备好")
-        if d["state"] != "ready" and (kind not in {"voice", "video", "simulation", "linear"} or media_range == "course"):
+        if d["state"] != "ready" and (
+            kind not in {"voice", "video", "simulation", "linear"} or media_range == "course"
+        ):
             raise ValueError("请先等待课堂全部准备好，或选择已准备的本页/章节")
         if not 0 <= index < len(d["pages"]):
             raise ValueError("课堂页不存在")
@@ -85,24 +90,39 @@ def request(store, project, cid, kind, index=0, media_range=None, engine="local"
             indices = [index]
         elif media_range == "chapter":
             module = d["pages"][index].get("module_id")
-            if not module: raise ValueError("旧版课堂没有章节映射，请选择本页或全课")
-            indices = [i for i,p in enumerate(d["pages"]) if p.get("module_id") == module]
+            if not module:
+                raise ValueError("旧版课堂没有章节映射，请选择本页或全课")
+            indices = [i for i, p in enumerate(d["pages"]) if p.get("module_id") == module]
         pages = [d["pages"][i] for i in indices]
         partial = d["state"] != "ready" and media_range == "course"
         if media_range == "chapter":
-            complete = {x["objective_id"] for x in d.get("curriculum",[])[:d.get("objective_cursor",0)]}
-            required = {x["objective_id"] for x in d.get("curriculum",[]) if x["module_id"] == module}
+            complete = {
+                x["objective_id"] for x in d.get("curriculum", [])[: d.get("objective_cursor", 0)]
+            }
+            required = {
+                x["objective_id"] for x in d.get("curriculum", []) if x["module_id"] == module
+            }
             partial = bool(required - complete) if required else d["state"] != "ready"
         voice_signature = None
         if kind in {"voice", "video"}:
             from deeptutor.learning.classroom_av import config_signature
+
             voice_signature = config_signature(engine)
         pages = [
             {k: v for k, v in p.items() if k not in {"answer_index", "explanation"}} for p in pages
         ]
         digest = hashlib.sha256(
             json.dumps(
-                [kind, pages, media_range, engine, rate, voice_signature, d.get("input", {}).get("sources", []), "media-v5-av-highlight"],
+                [
+                    kind,
+                    pages,
+                    media_range,
+                    engine,
+                    rate,
+                    voice_signature,
+                    d.get("input", {}).get("sources", []),
+                    "media-v5-av-highlight",
+                ],
                 sort_keys=True,
                 ensure_ascii=False,
             ).encode()
@@ -123,6 +143,7 @@ def request(store, project, cid, kind, index=0, media_range=None, engine="local"
             "progress": {"stage": "等待生成", "completed": 0, "total": len(pages)},
             "sources": d.get("input", {}).get("sources", []),
             "title": d["title"],
+            "classroom_version": d["version"],
             "owner": {"id": user.id, "username": user.username, "role": user.role},
             "workspace": current_workspace_id(),
             "lease": 0,
@@ -136,7 +157,13 @@ def request(store, project, cid, kind, index=0, media_range=None, engine="local"
         ).fetchone()
         if row:
             body = row[0]
-            if body["state"] in {"failed", "cancelled"} or (body["state"] == "ready" and any(not (directory(store,cid,key)/name).is_file() for name in body.get("files",[]))):
+            if body["state"] in {"failed", "cancelled"} or (
+                body["state"] == "ready"
+                and any(
+                    not (directory(store, cid, key) / name).is_file()
+                    for name in body.get("files", [])
+                )
+            ):
                 body.update(state="queued", attempts=0, error=None)
                 c.execute(
                     "UPDATE wenjin_classroom_assets SET body=%s WHERE key=%s", (Jsonb(body), key)
@@ -147,6 +174,7 @@ def request(store, project, cid, kind, index=0, media_range=None, engine="local"
                 (scope(store), project, cid, key, Jsonb(body), time.time()),
             )
         return view({"key": key, "body": body})
+
 
 def get(store, project, cid, key):
     cr.load(store, project, cid)
@@ -206,18 +234,21 @@ def page_text(p):
             + "\n"
             + "\n".join(f"{chr(65 + i)}. {x}" for i, x in enumerate(p["options"]))
         )
+    if p.get("content_review") == "unverified":
+        text += "\n用户编辑内容 · 尚未核查"
     return plain(text)
 
 
 def exports(body, root, kind):
     if all(p.get("visual") for p in body["pages"]):
         from deeptutor.learning.slide_visuals import export
-        return export(body,root,kind)
+
+        return export(body, root, kind)
     if kind == "pdf":
-        from reportlab.pdfgen import canvas
+        from reportlab.lib.utils import simpleSplit
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        from reportlab.lib.utils import simpleSplit
+        from reportlab.pdfgen import canvas
 
         pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
         pdf = canvas.Canvas(str(root / "lesson.pdf"), pagesize=(842, 595))
@@ -287,11 +318,13 @@ def timestamp(seconds):
 
 def narrate(page, root):
     from deeptutor.learning.classroom_av import narrate as produce_narration
+
     return produce_narration(page, root)
 
 
 def video(body, root):
     from deeptutor.learning.classroom_av import produce
+
     return produce(dict(body, kind="video"), root)["files"]
 
 
@@ -315,6 +348,7 @@ def build(body, root, report=lambda **kw: None):
         return {"files": exports(body, root, kind)}
     if kind in {"voice", "video"}:
         from deeptutor.learning.classroom_av import produce
+
         return produce(body, root, report)
     if kind == "linear":
         match = re.search(
@@ -366,7 +400,7 @@ def build(body, root, report=lambda **kw: None):
 def execute(row):
     from deeptutor.multi_user.identity import get_user_by_id
     from deeptutor.multi_user.models import CurrentUser
-    from deeptutor.multi_user.paths import user_context, scope_for_user
+    from deeptutor.multi_user.paths import scope_for_user, user_context
     from deeptutor.services.workspace.context import workspace_context
 
     u = row["body"]["owner"]
@@ -382,18 +416,31 @@ def execute(row):
         if scope(store) != row["scope"]:
             raise ValueError("作用域不一致")
         last_check = [0.0]
+
         def report(**progress):
             now = time.monotonic()
-            if not progress and now - last_check[0] < 1: return
+            if not progress and now - last_check[0] < 1:
+                return
             from deeptutor.learning.classroom_av import Cancelled
+
             with connection() as c:
-                saved = c.execute("SELECT body FROM wenjin_classroom_assets WHERE key=%s FOR UPDATE", (row["key"],)).fetchone()
-                if not saved or saved[0].get("token") != row["body"]["token"] or saved[0]["state"] != "running":
+                saved = c.execute(
+                    "SELECT body FROM wenjin_classroom_assets WHERE key=%s FOR UPDATE",
+                    (row["key"],),
+                ).fetchone()
+                if (
+                    not saved
+                    or saved[0].get("token") != row["body"]["token"]
+                    or saved[0]["state"] != "running"
+                ):
                     raise Cancelled()
                 if progress:
-                    c.execute("UPDATE wenjin_classroom_assets SET body=jsonb_set(body,'{progress}',%s),updated=%s WHERE key=%s",
-                              (Jsonb(progress),time.time(),row["key"]))
+                    c.execute(
+                        "UPDATE wenjin_classroom_assets SET body=jsonb_set(body,'{progress}',%s),updated=%s WHERE key=%s",
+                        (Jsonb(progress), time.time(), row["key"]),
+                    )
             last_check[0] = now
+
         return build(row["body"], directory(store, row["cid"], row["key"]), report)
 
 
@@ -407,7 +454,7 @@ async def worker(stop, lane="all"):
                 initialize(c)
                 found = c.execute(
                     "SELECT scope,project,cid,key,body FROM wenjin_classroom_assets WHERE (body->>'state'='queued' OR (body->>'state'='running' AND (body->>'lease')::double precision<%s)) AND (%s='all' OR (%s='video' AND body->>'kind'='video') OR (%s='other' AND body->>'kind'<>'video')) ORDER BY updated FOR UPDATE SKIP LOCKED LIMIT 1",
-                    (time.time(),lane,lane,lane),
+                    (time.time(), lane, lane, lane),
                 ).fetchone()
                 if found:
                     row = dict(zip(["scope", "project", "cid", "key", "body"], found))
@@ -439,19 +486,31 @@ async def worker(stop, lane="all"):
                     error = None
                 except Exception as exc:
                     from deeptutor.learning.classroom_av import Cancelled
+
                     if not isinstance(exc, Cancelled):
-                        logging.getLogger(__name__).warning("Classroom asset generation failed: %s", type(exc).__name__)
+                        logging.getLogger(__name__).warning(
+                            "Classroom asset generation failed: %s", type(exc).__name__
+                        )
                     result = {}
                     state = "failed"
                     from deeptutor.learning.classroom_av import Cancelled
+
                     if isinstance(exc, Cancelled):
                         state, error = "cancelled", None
                     elif isinstance(exc, ValueError):
-                        error = str(exc) if str(exc).startswith(("本机语音", "语音配置已变化", "请先到设置", "单页讲稿", "配音格式")) else "媒体内容无法处理，请检查讲稿或语音配置后重试"
+                        error = (
+                            str(exc)
+                            if str(exc).startswith(
+                                ("本机语音", "语音配置已变化", "请先到设置", "单页讲稿", "配音格式")
+                            )
+                            else "媒体内容无法处理，请检查讲稿或语音配置后重试"
+                        )
                     elif isinstance(exc, TimeoutError):
                         error = "生成超时，已完成页面会在重试时复用；可先按本页或章节生成"
                     else:
-                        error = "媒体生成失败，请检查语音模型或本机中文语音组件后重试；已完成页面保留"
+                        error = (
+                            "媒体生成失败，请检查语音模型或本机中文语音组件后重试；已完成页面保留"
+                        )
                 with connection() as c:
                     saved = c.execute(
                         "SELECT body FROM wenjin_classroom_assets WHERE key=%s FOR UPDATE",
@@ -476,23 +535,36 @@ async def worker(stop, lane="all"):
 
 
 def control(store, project, cid, key, action, seconds=0, playback_rate=1):
-    get(store,project,cid,key)
+    get(store, project, cid, key)
     with connection() as c:
-        row=c.execute("SELECT body FROM wenjin_classroom_assets WHERE key=%s FOR UPDATE",(key,)).fetchone()
-        body=row[0]
-        if action=="cancel":
-            if body["state"] not in {"queued","running","cancelled"}: raise ValueError("当前资源无需取消")
-            body.update(state="cancelled",token=None,lease=0,error=None)
-        elif action=="retry":
-            if body["state"] not in {"failed","cancelled"}: raise ValueError("仅失败或已取消任务可以重试")
-            body.update(state="queued",token=None,lease=0,attempts=0,error=None)
-        elif action=="playback":
-            if body["state"]!="ready" or body["kind"] not in {"voice","video"}: raise ValueError("资源尚未准备好")
-            if not 0<=seconds<=(body.get("duration") or 86400)+1 or not .5<=playback_rate<=2: raise ValueError("无效播放位置或速度")
-            body["playback"]={"seconds":seconds,"rate":playback_rate,"updated":time.time()}
-        else: raise ValueError("无效资源操作")
-        c.execute("UPDATE wenjin_classroom_assets SET body=%s,updated=%s WHERE key=%s",(Jsonb(body),time.time(),key))
-        return view({"key":key,"body":body})
+        row = c.execute(
+            "SELECT body FROM wenjin_classroom_assets WHERE key=%s FOR UPDATE", (key,)
+        ).fetchone()
+        body = row[0]
+        if action == "cancel":
+            if body["state"] not in {"queued", "running", "cancelled"}:
+                raise ValueError("当前资源无需取消")
+            body.update(state="cancelled", token=None, lease=0, error=None)
+        elif action == "retry":
+            if body["state"] not in {"failed", "cancelled"}:
+                raise ValueError("仅失败或已取消任务可以重试")
+            body.update(state="queued", token=None, lease=0, attempts=0, error=None)
+        elif action == "playback":
+            if body["state"] != "ready" or body["kind"] not in {"voice", "video"}:
+                raise ValueError("资源尚未准备好")
+            if (
+                not 0 <= seconds <= (body.get("duration") or 86400) + 1
+                or not 0.5 <= playback_rate <= 2
+            ):
+                raise ValueError("无效播放位置或速度")
+            body["playback"] = {"seconds": seconds, "rate": playback_rate, "updated": time.time()}
+        else:
+            raise ValueError("无效资源操作")
+        c.execute(
+            "UPDATE wenjin_classroom_assets SET body=%s,updated=%s WHERE key=%s",
+            (Jsonb(body), time.time(), key),
+        )
+        return view({"key": key, "body": body})
 
 
 def interact(store, project, cid, key, phase, text, choices):

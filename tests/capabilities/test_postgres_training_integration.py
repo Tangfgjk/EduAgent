@@ -1,15 +1,18 @@
 """Real PostgreSQL acceptance in disposable schemas; no student data is used."""
 
-import asyncio, uuid
+import asyncio
 from pathlib import Path
 from unittest.mock import patch
-import pytest
+import uuid
+
 from psycopg import sql
-from deeptutor.learning.models import LearningProgress, LearningModule, KnowledgePoint
-from deeptutor.learning.storage import LearningStore
-from deeptutor.learning.diagnosis import _digest
+import pytest
+
 from deeptutor.learning import personal_training as models
 from deeptutor.learning import training_jobs as jobs
+from deeptutor.learning.diagnosis import _digest
+from deeptutor.learning.models import KnowledgePoint, LearningModule, LearningProgress
+from deeptutor.learning.storage import LearningStore
 
 
 @pytest.fixture

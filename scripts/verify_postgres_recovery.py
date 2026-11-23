@@ -1,9 +1,13 @@
 """Restore a consistent pg_dump into a disposable database and compare row counts."""
 
+import json
 from pathlib import Path
-import json, subprocess, sys, uuid
-from psycopg import sql
+import subprocess
+import sys
+import uuid
+
 import psycopg
+from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

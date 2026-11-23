@@ -8,6 +8,7 @@ import { masterySessionRoute as newStudyRoute, MASTERY_OPENING_SCOPE } from '@/l
 import { masterySessionRoute } from '@/lib/learning-routes'
 import Link from 'next/link'
 import ClassroomMedia from './ClassroomMedia'
+import ClassroomVersions from './ClassroomVersions'
 import MarkdownRenderer from '@/components/common/MarkdownRenderer'
 import { scopedUrl } from '@/lib/workspace-scope'
 import { LearningShell } from './LearningShell'
@@ -20,6 +21,7 @@ type Section = {
   goal: string
 }
 type Page = Section & {
+  content_review?: string
   canvas?: Element[]
   module_id?: string
   id: string
@@ -31,6 +33,7 @@ type Page = Section & {
   source_ids: string[]
 }
 type Course = {
+  version?: number
   mode?: string
   curriculum?: { module_id: string; module_name: string; objective_id: string; title: string }[]
   objective_cursor?: number
@@ -208,6 +211,7 @@ export default function Classroom() {
   async function handoff(intent: 'explain' | 'check', index = course?.position || 0) {
     const selectedPage = course?.pages[index]
     if (!course || !selectedPage) return
+    if (intent === 'check') { router.push(scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/checks?objective='+encodeURIComponent(selectedPage.objective_id))); return }
     setBusy(true)
     setError('')
     try {
@@ -219,7 +223,7 @@ export default function Classroom() {
           body: JSON.stringify({ index, intent }),
         }
       )
-      const prompt = `我刚阅读了PPT「${selectedPage.title}」。${intent === 'check' ? '请用没有在PPT展示答案的新任务检查我的理解；不要把看完当成掌握。' : '请围绕这一页继续解释，先了解我哪里没理解。'}如果已有未完成任务，请先说明接续方式，不要覆盖它。`
+      const prompt = `我刚阅读了PPT「${selectedPage.title}」。请围绕这一页继续解释，先了解我哪里没理解。如果已有未完成任务，请先说明接续方式，不要覆盖它。`
       setPendingPrompt(prompt, result.session_id ? 'mastery_path' : MASTERY_OPENING_SCOPE)
       router.push(
         result.session_id
@@ -319,8 +323,13 @@ export default function Classroom() {
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {courses.map(c => (
-            <button className={button} key={c.id} onClick={() => setCourse(c)}>
-              {c.title} · {states[c.state]}
+            <button className={button} key={c.id} onClick={() => {
+              setCourse(c);setQuestion('');setChat(false);setError('');setNotice('');
+              const target = new URL(window.location.href);
+              target.searchParams.set('classroom', c.id);target.searchParams.delete('scene');
+              window.history.replaceState(window.history.state, '', target.pathname + target.search + target.hash);
+            }}>
+              {c.title} · 第 {c.version || 1} 版 · {states[c.state]}
             </button>
           ))}
         </div>
@@ -453,7 +462,12 @@ export default function Classroom() {
                 <p className="text-sm text-muted-foreground">
                   第 {course.position + 1} 页 · {page.goal}
                 </p>
-                <h2 className="my-4 text-2xl font-semibold">{page.title}</h2>
+                <div className="my-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-2xl font-semibold">{page.title}</h2>
+                  {course.state === 'ready' && course.pages.some(p=>p.kind!=='quiz') && <Link className={button} href={scopedUrl('/learning/projects/'+encodeURIComponent(pathId)+'/classroom/'+encodeURIComponent(course.id)+'/edit?scene='+encodeURIComponent(page.id))}>编辑课件</Link>}
+                </div>
+                {page.content_review==='unverified' && <p className="mb-3 text-xs text-muted-foreground">本页内容经过修改，尚未核查；原来源仅作为参考线索。</p>}
+                <ClassroomVersions key={'versions:' + course.id} pathId={pathId} cid={course.id} version={course.version} />
                 {page.canvas ? (
                   <SlideCanvas elements={page.canvas} title={page.title} />
                 ) : (

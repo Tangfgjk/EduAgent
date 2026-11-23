@@ -1,11 +1,12 @@
 import asyncio
 import uuid
-import asyncio
-import pytest
+
 from psycopg import sql
 from psycopg.types.json import Jsonb
+import pytest
+
 from deeptutor.learning import classroom as cr
-from deeptutor.learning.models import LearningProgress, LearningModule, KnowledgePoint
+from deeptutor.learning.models import KnowledgePoint, LearningModule, LearningProgress
 from deeptutor.learning.storage import LearningStore
 
 
@@ -281,8 +282,17 @@ def test_delete_revokes_assets_preserves_project_and_allows_fresh_generation(roo
         d.update(state="generating", token="stale-worker", lease=9999999999)
         cr.put(c, d)
         media.initialize(c)
-        c.execute("INSERT INTO wenjin_classroom_assets VALUES(%s,%s,%s,%s,%s,%s)",
-                  (cr.scope(store), "p", cid, "asset", Jsonb({"state": "running", "token": "stale-media", "lease": 9999999999}), 0))
+        c.execute(
+            "INSERT INTO wenjin_classroom_assets VALUES(%s,%s,%s,%s,%s,%s)",
+            (
+                cr.scope(store),
+                "p",
+                cid,
+                "asset",
+                Jsonb({"state": "running", "token": "stale-media", "lease": 9999999999}),
+                0,
+            ),
+        )
     other = LearningStore(store.db_path.parent / "another-owner")
     other.save(LearningProgress(book_id="p"))
     with pytest.raises(LookupError):
@@ -295,7 +305,9 @@ def test_delete_revokes_assets_preserves_project_and_allows_fresh_generation(roo
         cr.control(store, "p", cid, "resume")
     with cr.connection() as c:
         deleted = c.execute("SELECT body FROM wenjin_classrooms WHERE id=%s", (cid,)).fetchone()[0]
-        asset = c.execute("SELECT body FROM wenjin_classroom_assets WHERE key='asset'").fetchone()[0]
+        asset = c.execute("SELECT body FROM wenjin_classroom_assets WHERE key='asset'").fetchone()[
+            0
+        ]
     assert deleted["state"] == "deleted" and deleted["token"] is None
     assert asset["state"] == "cancelled" and asset["token"] is None
     assert store.load("p").model_dump() == before
@@ -306,6 +318,7 @@ def test_delete_revokes_assets_preserves_project_and_allows_fresh_generation(roo
 
 def test_late_worker_cannot_restore_deleted_classroom(room, monkeypatch):
     import threading
+
     store, course = room
     started, released = threading.Event(), threading.Event()
 
@@ -326,6 +339,7 @@ def test_late_worker_cannot_restore_deleted_classroom(room, monkeypatch):
             stop.set()
             released.set()
             await asyncio.wait_for(task, 5)
+
     asyncio.run(run())
     with pytest.raises(LookupError):
         cr.load(store, "p", course["id"])
@@ -339,17 +353,158 @@ def test_failed_worker_reports_stopped_not_still_retrying(room, monkeypatch):
         loop = asyncio.get_running_loop()
         stop = asyncio.Event()
         calls = []
+
         def execute(d):
             calls.append(d["attempts"])
             if len(calls) == 2:
                 loop.call_soon_threadsafe(stop.set)
             raise ValueError("页面文字超出版式，请分成更多页")
+
         monkeypatch.setattr(cr, "execute", execute)
         await asyncio.wait_for(cr.worker(stop), 10)
         return calls
+
     assert asyncio.run(run()) == [1, 2]
     result = cr.load(store, "p", course["id"])
     assert result["state"] == "failed"
     assert "自动重试已结束" in result["error"] and "正在" not in result["error"]
     assert result["generation_issue"]["retrying"] is False
     assert result["retry_feedback"]
+
+
+def test_answer_write_failure_does_not_leave_orphan_evidence(room, monkeypatch):
+    store, course = room
+    cid = course["id"]
+    ready(store, cid)
+    original = cr.put
+    monkeypatch.setattr(
+        cr, "put", lambda *args: (_ for _ in ()).throw(RuntimeError("disk failure"))
+    )
+    with pytest.raises(RuntimeError, match="disk failure"):
+        cr.answer(store, "p", cid, 0, 0)
+    assert store.load("p").learning_evidence == []
+    monkeypatch.setattr(cr, "put", original)
+    result = cr.answer(store, "p", cid, 0, 1)
+    assert result["answers"]["scene-0"]["correct"]
+    assert store.load("p").learning_evidence[0].result == "correct"
+
+
+def test_answer_receipt_survives_evidence_failure_and_retry_keeps_first_choice(room, monkeypatch):
+    store, course = room
+    cid = course["id"]
+    ready(store, cid)
+    original = store.mutate
+    monkeypatch.setattr(
+        store,
+        "mutate",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("evidence unavailable")),
+    )
+    with pytest.raises(RuntimeError, match="evidence unavailable"):
+        cr.answer(store, "p", cid, 0, 0)
+    with cr.locked(store, "p", cid) as (_, d):
+        assert d["answers"]["scene-0"]["choice"] == 0
+    monkeypatch.setattr(store, "mutate", original)
+    result = cr.answer(store, "p", cid, 0, 1)
+    assert result["answers"]["scene-0"]["choice"] == 0
+    evidence = store.load("p").learning_evidence
+    assert len(evidence) == 1 and evidence[0].result == "incorrect"
+    assert result["answers"]["scene-0"]["evidence_status"] == "recorded"
+
+
+def test_answer_ack_failure_replays_one_receipt_on_reload(room, monkeypatch):
+    store, course = room
+    cid = course["id"]
+    ready(store, cid)
+    original = cr.put
+    calls = 0
+
+    def fail_ack(c, d):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("ack failure")
+        return original(c, d)
+
+    monkeypatch.setattr(cr, "put", fail_ack)
+    with pytest.raises(RuntimeError, match="ack failure"):
+        cr.answer(store, "p", cid, 0, 0)
+    assert len(store.load("p").learning_evidence) == 1
+    monkeypatch.setattr(cr, "put", original)
+    result = cr.load(store, "p", cid)
+    assert result["answers"]["scene-0"]["evidence_status"] == "recorded"
+    assert len(store.load("p").learning_evidence) == 1
+
+
+@pytest.mark.asyncio
+async def test_worker_recovers_durable_answer_without_browser_reload(room, monkeypatch):
+    store, course = room
+    cid = course["id"]
+    ready(store, cid)
+    original = store.mutate
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("temporary projection failure")
+
+    monkeypatch.setattr(store, "mutate", unavailable)
+    with pytest.raises(RuntimeError):
+        cr.answer(store, "p", cid, 0, 0)
+    monkeypatch.setattr(store, "mutate", original)
+    monkeypatch.setattr(
+        cr, "recover_answers", lambda d: cr.flush_answers(store, d["project"], d["id"])
+    )
+    stop = asyncio.Event()
+    task = asyncio.create_task(cr.worker(stop))
+    try:
+        for _ in range(60):
+            if store.load("p").learning_evidence:
+                break
+            await asyncio.sleep(0.05)
+        assert len(store.load("p").learning_evidence) == 1
+        with cr.locked(store, "p", cid) as (_, d):
+            assert not d["answer_outbox"]
+            assert d["answers"]["scene-0"]["choice"] == 0
+    finally:
+        stop.set()
+        await asyncio.wait_for(task, 5)
+
+
+def test_projection_retry_retains_answer_time_objective_snapshot(room, monkeypatch):
+    store, course = room
+    cid = course["id"]
+    ready(store, cid)
+    from deeptutor.learning import goal_contract as goals
+
+    goals.confirm(
+        store,
+        "p",
+        revision=store.load("p").version,
+        level="understand",
+        summary="Understand this lesson",
+        request_id="classroom-goal-one",
+    )
+    original = store.mutate
+
+    def unavailable(*args, **kwargs):
+        raise RuntimeError("temporary evidence failure")
+
+    monkeypatch.setattr(store, "mutate", unavailable)
+    with pytest.raises(RuntimeError):
+        cr.answer(store, "p", cid, 0, 1)
+    monkeypatch.setattr(store, "mutate", original)
+    goals.confirm(
+        store,
+        "p",
+        revision=store.load("p").version,
+        level="apply",
+        summary="Apply this lesson",
+        request_id="classroom-goal-two",
+    )
+    p = store.load("p")
+    old_name = p.modules[0].knowledge_points[0].name
+    p.modules[0].knowledge_points[0].name = "changed objective"
+    store.save(p)
+    monkeypatch.setattr(store, "mutate", original)
+    cr.load(store, "p", cid)
+    assert store.load("p").learning_evidence[0].diagnostic_context.objective_name == old_name
+
+    assert store.load("p").learning_evidence[0].diagnostic_context.goal_version == 1

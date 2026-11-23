@@ -34,6 +34,20 @@ def app(tmp_path, monkeypatch):
         "deeptutor.api.routers.mastery_path.LearningStore",
         _make_store_with_tmp,
     )
+    # Replay tests mount only this router, without the app authentication layer.
+    # Scope/authentication behavior is exercised by tests/multi_user separately.
+    from deeptutor.api.routers import auth
+    from deeptutor.multi_user.context import get_current_user, set_current_user
+
+    async def authenticate_stream(ws):
+        return set_current_user(get_current_user())
+
+    monkeypatch.setattr(auth, "ws_require_auth", authenticate_stream)
+    from deeptutor.services import session
+    from deeptutor.services.session.sqlite_store import SQLiteSessionStore
+
+    session_store = SQLiteSessionStore(db_path=tmp_path / "sessions.sqlite3")
+    monkeypatch.setattr(session, "get_session_store", lambda: session_store)
     app = FastAPI()
     app.state.learning_root = tmp_path
     app.include_router(router, prefix="/api/mastery-paths")
@@ -911,6 +925,7 @@ class TestGetProgress:
         assert [event["event_type"] for event in all_events.json()["events"]] == [
             "path.created",
             "path.modules_replaced",
+            "plan.versioned",
         ]
         assert (
             client.get(

@@ -4,7 +4,9 @@ import copy
 
 import pytest
 
-from deeptutor.learning.diagnosis_models import DiagnosticContext
+from deeptutor.learning.diagnosis import assessment_context
+from deeptutor.learning.goal_contract import bind_task
+from deeptutor.learning.goal_models import GoalContract
 from deeptutor.learning.models import (
     KnowledgePoint,
     LearnerProfile,
@@ -39,6 +41,10 @@ def state():
 
 def add(p, kind="application", result="correct", assistance="independent", timestamp=1):
     sid = str(len(p.quiz_attempts))
+    question = PendingQuestion(
+        question_id="q" + sid, knowledge_point_id="k", prompt="task " + sid, expected_answer="2"
+    )
+    bind_task(p, question)
     p.quiz_attempts.append(
         QuizAttempt(
             question_id="q" + sid,
@@ -59,8 +65,8 @@ def add(p, kind="application", result="correct", assistance="independent", times
             result=result,
             timestamp=timestamp,
             evidence_kind=kind,
-            diagnostic_context=DiagnosticContext(
-                assistance=assistance, objective_name="Elimination"
+            diagnostic_context=assessment_context(
+                p, question, "2", "short", assistance_used=assistance == "assisted"
             ),
         )
     )
@@ -96,15 +102,23 @@ def test_teach_first_respects_preference_and_does_not_pass_gate():
 
 def test_independent_open_abilities_advance_real_policy():
     p = state()
+    p.goal_contract = GoalContract(
+        version=1,
+        assessment_version=1,
+        level="apply",
+        summary="Apply the method",
+        confirmed_at=0,
+        evidence_since=0,
+    )
     kp = p.modules[0].knowledge_points[0]
-    add(p)
-    assert teaching_decision(p, kp)["action"] == "check_transfer"
-    add(p, kind="transfer", timestamp=2)
+    add(p, kind="explanation")
+    assert teaching_decision(p, kp)["action"] == "check_application"
+    add(p, kind="application", timestamp=2)
     assert is_assessed_mastered(p, kp)
     assert next_objective(p).action == "complete"
 
 
-def test_error_asks_reason_then_minimal_hint_then_fades_on_new_task():
+def test_error_asks_reason_then_minimal_hint_then_independent_recheck():
     p = state()
     kp = p.modules[0].knowledge_points[0]
     add(p, result="incorrect")
@@ -112,7 +126,8 @@ def test_error_asks_reason_then_minimal_hint_then_fades_on_new_task():
     add(p, result="partial", timestamp=2)
     assert teaching_decision(p, kp)["action"] == "offer_hint"
     add(p, assistance="assisted", timestamp=3)
-    assert teaching_decision(p, kp)["scaffold"] == "fade_one_step"
+    assert teaching_decision(p, kp)["scaffold"] == "maintain"
+    assert teaching_decision(p, kp)["action"] == "practice"
     assert not is_assessed_mastered(p, kp)
 
 
@@ -126,10 +141,18 @@ def test_invalid_sources_are_excluded_and_explained():
 
 def test_newer_assisted_failure_requires_recheck_not_old_pass():
     p = state()
-    add(p)
-    add(p, kind="transfer", timestamp=2)
+    p.goal_contract = GoalContract(
+        version=1,
+        assessment_version=1,
+        level="apply",
+        summary="Apply the method",
+        confirmed_at=0,
+        evidence_since=0,
+    )
+    add(p, kind="explanation")
+    add(p, kind="application", timestamp=2)
     assert is_assessed_mastered(p, p.modules[0].knowledge_points[0])
-    add(p, kind="transfer", result="incorrect", assistance="assisted", timestamp=3)
+    add(p, kind="application", result="incorrect", assistance="assisted", timestamp=3)
     assert not is_assessed_mastered(p, p.modules[0].knowledge_points[0])
 
 

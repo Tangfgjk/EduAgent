@@ -9,6 +9,7 @@ on:
       - main
       - dev
       - preview
+      - "V*"
     paths:
       - "deeptutor/**"
       - "deeptutor_cli/**"
@@ -307,6 +308,19 @@ jobs:
     runs-on: ubuntu-24.04
     needs: import-check
     services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: wenjin_ci
+          POSTGRES_PASSWORD: ephemeral_ci_only
+          POSTGRES_DB: wenjin_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wenjin_ci -d wenjin_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
       redis:
         image: redis:7.4-alpine
         ports:
@@ -343,7 +357,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/full.txt
           pip install -r requirements/partners.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio -r requirements/postgres.txt
 
       - name: Install optional fastapi-guard
         run: pip install -r requirements/guard.txt
@@ -366,6 +380,17 @@ jobs:
             level: WARNING
           YAML
           cp tests/fixtures/ci_model_catalog.json data/user/settings/model_catalog.json
+
+      - name: Configure disposable PostgreSQL for integration tests
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from deeptutor.runtime.home import get_runtime_home
+          target = get_runtime_home() / "data/system/postgres/connection.json"
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(json.dumps({"host": "127.0.0.1", "port": 5432, "dbname": "wenjin_ci", "user": "wenjin_ci", "password": "ephemeral_ci_only"}))
+          PY
 
       - name: Run Python tests
         run: |

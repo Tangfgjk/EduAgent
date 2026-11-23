@@ -132,11 +132,11 @@ async def test_batch_revises_modules_in_one_revision_and_one_event(path_id):
     assert isinstance(payload["map"]["modules"], list)
     assert len(payload["map"]["modules"]) == 3
 
-    # Exactly one journal event for the whole coordinated request.
+    # One domain event and one plan-version receipt share the same revision.
     progress, store = _stored_state(path_id)
     assert progress.version == base_revision + 1
     events = store.list_events(path_id, after_revision=base_revision)
-    assert [event.event_type for event in events] == ["path.module_revised"]
+    assert [event.event_type for event in events] == ["path.module_revised", "plan.versioned"]
     assert events[0].payload["module_count"] == 3
 
     # The stored outline reflects both modules' changes and nothing else.
@@ -405,7 +405,8 @@ async def test_single_module_form_keeps_its_contract(path_id):
     progress, store = _stored_state(path_id)
     assert progress.version == base_revision + 1
     assert [e.event_type for e in store.list_events(path_id, after_revision=base_revision)] == [
-        "path.module_revised"
+        "path.module_revised",
+        "plan.versioned",
     ]
 
 

@@ -218,6 +218,7 @@ def commit_import(store, path_id, request: ExternalCommitRequest):
 
     progress, result = store.mutate(path_id, save)
     from deeptutor.learning.diagnostic_impact import import_impact
+
     return {**result, "impact": import_impact(progress, result["import_id"])}
 
 

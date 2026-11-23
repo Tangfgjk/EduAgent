@@ -1,9 +1,13 @@
 """Run existing storage behavioral contracts against real PostgreSQL."""
 
-import asyncio, inspect, runpy
+import asyncio
+import inspect
 from pathlib import Path
-import pytest
+import runpy
+
 from psycopg import sql
+import pytest
+
 from deeptutor.services.session.sqlite_store import SQLiteSessionStore
 from deeptutor.services.storage import postgres_adapter as pg
 from deeptutor.services.storage.postgres_migration import migrate

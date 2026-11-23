@@ -250,8 +250,8 @@ def enroll(path):
         return
     if any(part in {"private", "backups"} for part in relative.parts):
         return
-    from deeptutor.services.storage.postgres_migration import migrate
     from deeptutor.services.file_io import atomic_write_text
+    from deeptutor.services.storage.postgres_migration import migrate
 
     with connect_raw() as lock:
         lock.execute("SELECT pg_advisory_xact_lock(981307127)")

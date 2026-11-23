@@ -13,6 +13,7 @@ from deeptutor.learning.diagnostic_datasets import create_snapshot
 
 def connection():
     import psycopg
+
     from deeptutor.runtime.home import get_runtime_home
 
     config = get_runtime_home() / "data/system/postgres/connection.json"
@@ -146,6 +147,7 @@ def fit_rows(rows, baseline=None):
 def record_model_event(c, store, path_id, event_type, payload):
     """Record model change and project revision in the same PostgreSQL transaction."""
     from psycopg import sql
+
     from deeptutor.services.storage.postgres_adapter import enabled, schema_name
 
     if not enabled(store.db_path):

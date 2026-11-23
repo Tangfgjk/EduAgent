@@ -31,7 +31,16 @@ def project_handoff(progress, store=None):
                         "scene_id": event.payload.get("scene_id"),
                     }
                 )
+    from deeptutor.learning.check_cycles import handoff as check_handoff
+    from deeptutor.learning.goal_contract import view as goal_view
+    from deeptutor.learning.learning_support import agent_context
+    from deeptutor.learning.teach_ai import handoff as teach_handoff
+
     return {
+        "goal_contract": goal_view(progress),
+        "learning_support": agent_context(progress),
+        "teach_ai": teach_handoff(progress),
+        "independent_check": check_handoff(progress),
         "reading_context": next(
             (
                 e.payload

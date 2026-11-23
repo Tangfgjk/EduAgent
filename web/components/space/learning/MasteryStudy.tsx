@@ -61,11 +61,15 @@ import { ModeSwitch } from "./ModeSwitch";
 import { MasteryPathCrumb } from "@/components/layout/instance-crumbs";
 import { PageBarSlot, usePageBarOffers } from "@/components/layout/PageChrome";
 import { topicDisplayName, type Translate } from "./format";
-import { LevelUpCelebration } from "./LevelUpCelebration";
 import { MasteryComposer } from "./MasteryComposer";
 import { ProgressRing } from "./ProgressRing";
 import { WenjinLearningPanel } from "./WenjinLearningPanel";
 import { StudyOutline } from "./StudyOutline";
+
+const LevelUpCelebration = dynamic(
+  () => import("./LevelUpCelebration").then(module => module.LevelUpCelebration),
+  { ssr: false },
+);
 
 const OUTLINE_STORAGE_KEY = "dt.mastery.outline";
 

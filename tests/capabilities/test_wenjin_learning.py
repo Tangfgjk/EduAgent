@@ -77,14 +77,23 @@ def add(
 
     # Simulate current native receipts rather than claiming independence from legacy defaults.
     from deeptutor.learning.diagnosis_models import DiagnosticContext
+
     attempt = state.quiz_attempts[-1]
     attempt.diagnostic_evidence_id = "receipt-" + question
-    state.learning_evidence.append(LearningEvidence(
-        evidence_id=attempt.diagnostic_evidence_id, question_id=question,
-        knowledge_point_id=kp_id, result=attempt.result, evidence_kind=kind, timestamp=timestamp,
-        hints_used=0 if independent else 1,
-        diagnostic_context=DiagnosticContext(assistance="independent" if independent else "assisted"),
-    ))
+    state.learning_evidence.append(
+        LearningEvidence(
+            evidence_id=attempt.diagnostic_evidence_id,
+            question_id=question,
+            knowledge_point_id=kp_id,
+            result=attempt.result,
+            evidence_kind=kind,
+            timestamp=timestamp,
+            hints_used=0 if independent else 1,
+            diagnostic_context=DiagnosticContext(
+                assistance="independent" if independent else "assisted"
+            ),
+        )
+    )
 
 
 def test_recognition_alone_never_proves_explanation():
@@ -99,7 +108,10 @@ def test_recognition_alone_never_proves_explanation():
     add(state, "assisted", "explanation", independent=False)
     assert not policy.is_assessed_mastered(state, kp)
     add(state, "why", "explanation")
-    assert policy.is_assessed_mastered(state, kp)
+    assert not objective_evidence(state, kp)["missing"]
+    assert not policy.is_assessed_mastered(
+        state, kp
+    )  # Historical observations need a confirmed target.
 
 
 @pytest.mark.parametrize(
@@ -117,7 +129,10 @@ def test_gate_requires_independent_distinct_abilities(kind, required):
     for index, ability in enumerate(required):
         assert not policy.is_assessed_mastered(state, kp)
         add(state, str(index), ability)
-    assert policy.is_assessed_mastered(state, kp)
+    assert not objective_evidence(state, kp)["missing"]
+    assert not policy.is_assessed_mastered(
+        state, kp
+    )  # Historical observations need a confirmed target.
     state.quiz_attempts[-1].voided = True
     assert not policy.is_assessed_mastered(state, kp)
 
@@ -278,9 +293,10 @@ def test_no_evolution_without_consent_and_no_promotion_from_short_term_results()
     assert not state.evolution
     state.evolution = {"consent": True, "consent_at": 0}
     update_evolution(state, now=100)
-    assert state.evolution["candidate"]["status"] == "trial"
+    assert state.evolution["protocol"] == "observed-delivery-v2"
+    assert "candidate" not in state.evolution
     update_evolution(state, now=101)
-    assert state.evolution["status"] == "trial_insufficient_evidence"
+    assert state.evolution["status"] in {"collecting_evidence", "awaiting_agent_proposal"}
     assert state.evolution["active"]["version"] == "baseline"
 
 
@@ -313,7 +329,7 @@ def _cohort(state, strategy, success, prefix, start=1):
         )
 
 
-def test_candidate_promotes_only_after_independent_and_delayed_evidence(tmp_path):
+def test_legacy_trials_without_delivery_are_archived_not_promoted(tmp_path):
     store = LearningStore(tmp_path)
     state = progress()
     state.evolution = {
@@ -330,15 +346,13 @@ def test_candidate_promotes_only_after_independent_and_delayed_evidence(tmp_path
     _cohort(state, "baseline", False, "b")
     _cohort(state, "candidate-1", True, "c")
     update_evolution(state, now=200000)
-    assert state.evolution["status"] == "monitoring"
-    assert state.evolution["active"]["version"] == "candidate-1"
-    store.save(state)
-    restored = rollback(store, "p")
-    assert restored.evolution["active"]["version"] == "baseline"
-    assert restored.evolution["history"][-1]["event"] == "learner_rollback"
+    assert state.evolution["protocol"] == "observed-delivery-v2"
+    assert state.evolution["active"]["version"] == "baseline"
+    assert "candidate" not in state.evolution
+    assert state.evolution["history"][-1]["event"] == "protocol_upgraded"
 
 
-def test_automatic_rollback_on_later_regression():
+def test_legacy_monitoring_is_archived_under_observed_delivery_protocol():
     state = progress()
     state.evolution = {
         "consent": True,
@@ -354,8 +368,9 @@ def test_automatic_rollback_on_later_regression():
     }
     _cohort(state, "candidate-1", False, "bad", start=200001)
     monitor_evolution(state)
-    assert state.evolution["status"] == "rolled_back"
-    assert state.evolution["active"]["version"] == "baseline"
+    assert state.evolution["protocol"] == "observed-delivery-v2"
+    assert state.evolution["status"] in {"collecting_evidence", "awaiting_agent_proposal"}
+    assert state.evolution["history"][-1]["event"] == "protocol_upgraded"
 
 
 def test_consent_revocation_stops_new_trials(tmp_path):
@@ -375,7 +390,10 @@ def test_new_independent_failure_reopens_the_ability_gap():
     add(state, "a")
     add(state, "b", "explanation")
     kp = state.modules[0].knowledge_points[0]
-    assert policy.is_assessed_mastered(state, kp)
+    assert not objective_evidence(state, kp)["missing"]
+    assert not policy.is_assessed_mastered(
+        state, kp
+    )  # Historical observations need a confirmed target.
     add(state, "c", "explanation", correct=False)
     assert objective_evidence(state, kp)["missing"] == ["explanation"]
     assert not policy.is_assessed_mastered(state, kp)
@@ -430,7 +448,7 @@ async def test_disabled_web_search_is_honored_without_a_provider_call(monkeypatc
     assert json.loads(result.content)["status"] == "disabled"
 
 
-def test_invalidated_evidence_withdraws_a_promotion():
+def test_invalid_legacy_evidence_cannot_promote_after_protocol_upgrade():
     from deeptutor.learning.evolution import revalidate_after_repair
 
     state = progress()
@@ -448,10 +466,10 @@ def test_invalidated_evidence_withdraws_a_promotion():
     _cohort(state, "baseline", False, "b")
     _cohort(state, "candidate-1", True, "c")
     update_evolution(state, now=200000)
-    assert state.evolution["status"] == "monitoring"
+    assert state.evolution["active"]["version"] == "baseline"
     for attempt in state.quiz_attempts:
         if attempt.strategy_version == "candidate-1":
             attempt.voided = True
     revalidate_after_repair(state)
-    assert state.evolution["status"] == "rolled_back"
+    assert state.evolution["protocol"] == "observed-delivery-v2"
     assert state.evolution["active"]["version"] == "baseline"

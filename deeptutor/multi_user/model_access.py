@@ -143,8 +143,15 @@ def allowed_llm_options() -> dict[str, Any]:
     active_profile_id = str(llm_service.get("active_profile_id") or "")
     active_model_id = str(llm_service.get("active_model_id") or "")
     from .personal_api_models import PROFILE_ID
-    personal = next((p for p in redacted_model_access(user.id).get("llm", [])
-                     if p.get("profile_id") == PROFILE_ID), None)
+
+    personal = next(
+        (
+            p
+            for p in redacted_model_access(user.id).get("llm", [])
+            if p.get("profile_id") == PROFILE_ID
+        ),
+        None,
+    )
     if personal:
         active_profile_id, active_model_id = personal["profile_id"], personal["model_id"]
     options = [

@@ -437,6 +437,7 @@ class LearningStore:
 
     def _ensure_initialized(self) -> None:
         from deeptutor.services.storage.postgres_adapter import enabled
+
         if enabled(self.db_path):
             self._initialized = True
             return
@@ -654,6 +655,7 @@ class LearningStore:
             self._initialized = True
             _initialized_db_paths.add(db_path)
             from deeptutor.services.storage.postgres_adapter import enroll
+
             enroll(self.db_path)
 
     @staticmethod
@@ -720,7 +722,8 @@ class LearningStore:
     def _connect(self, *, initialize: bool = True) -> Iterator[sqlite3.Connection]:
         if initialize:
             self._ensure_initialized()
-        from deeptutor.services.storage.postgres_adapter import enabled, Connection
+        from deeptutor.services.storage.postgres_adapter import Connection, enabled
+
         if enabled(self.db_path):
             conn = Connection(self.db_path, autocommit=True)
             try:
@@ -739,9 +742,26 @@ class LearningStore:
 
     @staticmethod
     def _progress_from_row(row: sqlite3.Row) -> LearningProgress:
-        progress = LearningProgress.model_validate(json.loads(row["state_json"]))
+        payload = json.loads(row["state_json"])
+        payload.setdefault("data_origin", "legacy_unknown")
+        for receipt in payload.get("learning_evidence", []):
+            receipt.setdefault("data_origin", "legacy_unknown")
+        progress = LearningProgress.model_validate(payload)
         progress.version = int(row["revision"])
         return progress
+
+    @staticmethod
+    def _preserve_provenance(progress, row):
+        if row is None:
+            return
+        previous = LearningStore._progress_from_row(row)
+        progress.data_origin = previous.data_origin
+        origins = {
+            e.evidence_id: e.data_origin for e in previous.learning_evidence if e.evidence_id
+        }
+        for evidence in progress.learning_evidence:
+            if evidence.evidence_id in origins:
+                evidence.data_origin = origins[evidence.evidence_id]
 
     @staticmethod
     def _progress_payload(progress: LearningProgress, revision: int, updated_at: float) -> str:
@@ -1110,6 +1130,7 @@ class LearningStore:
                     expected = int(progress.version)
                     if actual != expected:
                         raise LearningConflictError(path_id, expected, actual)
+                    self._preserve_provenance(progress, row)
                     revision = actual + 1
                     cursor = conn.execute(
                         """
@@ -1211,9 +1232,25 @@ class LearningStore:
                 tx = LearningTransaction(conn, progress, created=created)
                 previous_plan = [m.model_dump(mode="json") for m in progress.modules]
                 yield tx
+                if row is not None:
+                    self._preserve_provenance(tx.progress, row)
                 current_plan = [m.model_dump(mode="json") for m in tx.progress.modules]
                 if previous_plan != current_plan:
-                    tx.emit("plan.versioned", {"before": previous_plan, "after": current_plan, "base_revision": tx.base_revision, "reason": next((str(payload.get("reason") or payload.get("rationale") or event) for event,payload,_,_ in reversed(tx.events)), "Curriculum changed")})
+                    tx.emit(
+                        "plan.versioned",
+                        {
+                            "before": previous_plan,
+                            "after": current_plan,
+                            "base_revision": tx.base_revision,
+                            "reason": next(
+                                (
+                                    str(payload.get("reason") or payload.get("rationale") or event)
+                                    for event, payload, _, _ in reversed(tx.events)
+                                ),
+                                "Curriculum changed",
+                            ),
+                        },
+                    )
                 if tx.changed:
                     now = time.time()
                     revision = tx.base_revision + 1

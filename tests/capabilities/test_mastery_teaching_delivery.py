@@ -361,7 +361,8 @@ async def test_delivered_hint_survives_reload_and_marks_answer_assisted(lesson):
     assert (await record(level=2, turn_id="followup")).success
     fresh = LearningService(LearningStore(lesson.store._root))
     events = [
-        event for event in fresh.store.list_events("p")
+        event
+        for event in fresh.store.list_events("p")
         if event.event_type == "interaction.hint_delivered"
     ]
     assert [event.payload["level"] for event in events] == [1, 2]

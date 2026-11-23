@@ -453,6 +453,7 @@ def test_map_summary_carries_the_display_name():
     progress.name = "Quadratics"
     assert policy.map_summary(progress)["name"] == "Quadratics"
 
+
 def test_scaffold_adapts_to_distinct_valid_attempts_on_the_current_objective():
     progress = _progress(_kp("kp1", KnowledgeType.PROCEDURE))
 

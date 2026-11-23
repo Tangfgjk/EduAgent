@@ -249,6 +249,7 @@ def get_llm_config() -> LLMConfig:
         return scoped
 
     from deeptutor.multi_user.context import get_current_user_or_none
+
     if get_current_user_or_none() is not None:
         return _get_llm_config_from_resolver()
 

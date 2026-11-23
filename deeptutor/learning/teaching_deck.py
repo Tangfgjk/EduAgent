@@ -1,7 +1,10 @@
 """Detailed teaching slides following the confirmed project curriculum."""
 
-import asyncio, hashlib, json
+import asyncio
+import hashlib
+import json
 from typing import Literal
+
 from pydantic import BaseModel, Field
 
 

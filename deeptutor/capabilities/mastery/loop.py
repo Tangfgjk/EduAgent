@@ -161,8 +161,14 @@ class MasteryLoopCapability:
         if tool_name in MASTERY_TOOL_NAMES:
             updated = dict(kwargs)
             if tool_name == "mastery_quiz":
-                state["quiz_requested"] = True
-                state["quiz_awaiting_grade"] = True
+                check = state.get("independent_check") or {}
+                closing_check = check.get("closing_turn_id") and check["closing_turn_id"] == str(
+                    context.metadata.get("turn_id") or ""
+                )
+                # An intentional check-completion refusal is not a failed card
+                # delivery to retry; no new question is owed in this turn.
+                state["quiz_requested"] = not closing_check
+                state["quiz_awaiting_grade"] = not closing_check
                 # Only preparation after the latest failed attempt can earn a
                 # final delivery round; an old packet must not reopen the loop.
                 state.pop("quiz_recovery_receipt", None)
@@ -186,6 +192,8 @@ class MasteryLoopCapability:
             updated["_mastery_session_mode"] = context.metadata.get("mastery_session_mode")
             updated["_session_id"] = str(context.session_id or "").strip()
             updated["_turn_id"] = str(context.metadata.get("turn_id") or "").strip()
+            if tool_name == "mastery_support_plan":
+                updated["_learner_message"] = context.user_message or ""
             if tool_name == "mastery_profile":
                 updated["_learner_message"] = context.user_message or ""
                 selection = int(state.get("profile_selection", 0)) + 1
@@ -202,7 +210,11 @@ class MasteryLoopCapability:
 
                 updated["_profile_recorded"] = profile_recorded
 
-            if tool_name in {"mastery_note_explained", "mastery_record_hint"}:
+            if tool_name in {
+                "mastery_note_explained",
+                "mastery_record_hint",
+                "mastery_strategy_delivery",
+            }:
                 session_id = str(context.session_id or "").strip()
                 turn_id = str(context.metadata.get("turn_id") or "").strip()
 
@@ -545,6 +557,17 @@ class MasteryLoopCapability:
                 )
             )
 
+        check = grade.get("independent_check")
+        if isinstance(check, dict) and check.get("question_ids") and not check.get("round_id"):
+            return (
+                "[Independent check completed] This answer was already assessed; do not regrade it. "
+                "Summarize the saved feedback and the next phase, then END this turn without posing another question. "
+                "A missing mastery gate does not override the scheduled check sequence. "
+                "Use the exact due_at_iso (UTC, convert only if needed), or tell the learner to consult Checks and review; "
+                "never invent a date. Early practice is optional and never substitutes for delayed review. "
+                "The learner may choose a fresh task in a later turn. Saved check data: "
+                + json.dumps(check, ensure_ascii=False)
+            )
         results = result.get("results")
         if isinstance(results, list) and results:
             parts = [

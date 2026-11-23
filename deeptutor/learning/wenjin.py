@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 
+from deeptutor.learning.goal_contract import view as goal_view
 from deeptutor.learning.models import KnowledgePoint, LearningProgress
 
 KINDS = ("recognition", "explanation", "application", "transfer")
@@ -15,11 +16,17 @@ REQUIREMENTS = {
 }
 
 
-def objective_evidence(progress: LearningProgress, kp: KnowledgePoint) -> dict:
+def objective_evidence(
+    progress: LearningProgress, kp: KnowledgePoint, *, observations=None
+) -> dict:
     """One normalized source of truth for diagnostics and the Wenjin ability gate."""
     from deeptutor.learning.diagnosis import project_facts
 
-    all_rows = [o for o in project_facts(progress).observations if o.objective_id == kp.id]
+    all_rows = [
+        o
+        for o in (project_facts(progress).observations if observations is None else observations)
+        if o.objective_id == kp.id
+    ]
     rows = sorted(
         [
             o
@@ -29,6 +36,11 @@ def objective_evidence(progress: LearningProgress, kp: KnowledgePoint) -> dict:
         ],
         key=lambda o: o.occurred_at,
     )
+    from deeptutor.learning.goal_contract import LEVELS, active, qualifying_rows
+
+    goal = active(progress)
+    if goal:
+        rows = qualifying_rows(progress, kp, rows)
     latest = {o.ability: o for o in rows if o.assistance == "independent"}
     achieved = {kind for kind, row in latest.items() if row.result == "correct"}
     # A subsequent failure is a reason to verify again, even if the task had help.
@@ -39,9 +51,30 @@ def objective_evidence(progress: LearningProgress, kp: KnowledgePoint) -> dict:
             and row.occurred_at >= latest[row.ability].occurred_at
         ):
             achieved.discard(row.ability)
-    required = REQUIREMENTS[kp.type.value]
+    required = LEVELS[goal.level]["abilities"] if goal else REQUIREMENTS[kp.type.value]
     missing = [kind for kind in required if kind not in achieved]
+    task_versions = {
+        o.context.task_version
+        for o in rows
+        if o.context
+        and o.assistance == "independent"
+        and o.result == "correct"
+        and o.ability in achieved
+        and o.ability in required
+    }
+    goal_achieved = bool(goal and not missing and len(task_versions) >= 2)
+    if goal and goal.level == "transfer" and goal_achieved:
+        from deeptutor.learning.check_cycles import state_for
+
+        goal_achieved = state_for(progress, kp)["completed_cycles"] >= 1
     return {
+        "goal_status": "confirmed" if goal else "needs_confirmation",
+        "goal_version": goal.assessment_version if goal else 0,
+        "goal_achieved": goal_achieved,
+        "distinct_tasks": len(task_versions),
+        "model_feedback_used": any(
+            o.context and o.context.grading_method == "semantic" for o in rows
+        ),
         "required": list(required),
         "achieved": sorted(achieved),
         "missing": missing,
@@ -86,6 +119,10 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
         ],
         key=lambda o: o.occurred_at,
     )
+    from deeptutor.learning.goal_contract import active, qualifying_rows
+
+    if active(progress):
+        rows = qualifying_rows(progress, kp, rows)
     from deeptutor.learning.external_diagnoses import external_references
 
     references = external_references(progress, kp.id)
@@ -117,8 +154,8 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
             else "这次回答尚未通过，先了解理由，不凭一次错误认定薄弱原因。"
         )
     elif rows and rows[-1].assistance == "assisted" and rows[-1].result == "correct":
-        action, reason_code, scaffold = "fade_support", "assisted_success", "fade_one_step"
-        reason = "上次借助帮助完成，换一个任务减少一级帮助后再确认，仍可随时求助。"
+        action, reason_code = "practice", "assisted_success"
+        reason = "上次借助帮助完成，可先换一个新任务核查；不凭一次受助成功自动减少支持。"
     elif evidence["unknown_assistance_count"] and not evidence["achieved"]:
         action, reason_code = "verify_independence", "assistance_unknown"
         reason = "已有作答记录，但是否借助帮助不清楚；可用一个新任务确认，也可以先听讲。"
@@ -131,6 +168,11 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
     elif evidence["missing"]:
         action = "check_" + kind
         reason = "已有部分独立表现，下一步核查尚缺的能力，不重复刷已经确认的部分。"
+    elif not evidence["goal_achieved"]:
+        action, reason_code = "probe", "goal_not_demonstrated"
+        reason = (
+            "先确认目标与标准，再用不同新任务或到期复习补齐依据；已有记录保留，不自动宣布达标。"
+        )
     else:
         action, reason_code = "reflect", "abilities_observed"
         reason = "本目标已有独立能力证据，可简短回顾并安排后续复习；这不保证长期保持。"
@@ -147,7 +189,10 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
                             "reason": "先修目标有未通过的记录，只作为可选择的核查方向，不认定为当前错误的根因。",
                         }
                     )
+    from deeptutor.learning.learning_support import support_plan
+
     return {
+        "support_plan": support_plan(progress, kp.id),
         "action": action,
         "evidence_kind": kind,
         "scaffold": scaffold,
@@ -160,8 +205,24 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
         "recommendation_only": True,
         "diagnostic_estimate": diagnostic_estimate(progress, kp, store=store),
         "decision_contract": {
-            "inputs": ["learner_goal", "learner_preference", "current_response", "evidence", "diagnostic_estimate"],
-            "model_chooses": ["explain", "ask_reason", "probe", "practice", "offer_hint", "fade_one_step", "restore_support", "reflect", "pause"],
+            "inputs": [
+                "learner_goal",
+                "learner_preference",
+                "current_response",
+                "evidence",
+                "diagnostic_estimate",
+            ],
+            "model_chooses": [
+                "explain",
+                "ask_reason",
+                "probe",
+                "practice",
+                "offer_hint",
+                "fade_one_step",
+                "restore_support",
+                "reflect",
+                "pause",
+            ],
             "required_explanation": "Briefly explain the selected next action using actual evidence; do not claim a decision was persisted.",
             "constraints": [
                 "The action/scaffold fields are fallback suggestions, not commands.",
@@ -172,6 +233,7 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
                 "No autonomous replacement of an unanswered registered task; respect pause and requests for help.",
             ],
         },
+        "goal_contract": goal_view(progress),
         "source_revision": progress.version,
         "preference": preference,
         "prerequisite_suggestions": prerequisites,
@@ -181,6 +243,7 @@ def teaching_decision(progress: LearningProgress, kp: KnowledgePoint, *, store=N
         "instruction": (
             "You select the teaching action; action/scaffold are fallback recommendations, not commands. "
             "Use goals, preferences, the current reply and diagnostic evidence together. Explain your choice briefly. "
+            "When goal_contract.status is needs_confirmation, ask what finishing means or propose with mastery_goal_propose; only the learner confirms in the goal panel. Never claim a proposal was confirmed. "
             "BKT is uncalibrated shadow context: do not report precise mastery percentages or use it to fade support. "
             "Actual independent/assisted performance may justify a reversible one-step support change; restore help on request. "
             "Use normalized diagnostic facts, not raw attempt defaults. Unknown is not weak. "
@@ -216,12 +279,14 @@ def state_summary(progress: LearningProgress, *, now: float | None = None, store
     ]
     pending = progress.pending_question
     from deeptutor.learning.diagnostic_impact import import_impact
+
     return {
+        "goal_contract": goal_view(progress),
         "import_impact": import_impact(progress),
         "enabled": progress.wenjin_enabled,
         "complete": step.action == "complete"
         and bool(objectives)
-        and all(not item["missing"] for item in objectives),
+        and all(item["goal_achieved"] for item in objectives),
         "claimed_complete": step.action == "complete"
         and any(item["missing"] for item in objectives),
         "objective": {"id": kp.id, "name": kp.name} if kp else None,

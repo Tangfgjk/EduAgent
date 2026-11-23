@@ -193,6 +193,13 @@ function Harness({
 beforeEach(() => {
   live = fixture();
   mocks.fetch.mockReset();
+  // Unrelated automatic discovery remains in flight until unmount. Model the
+  // real fetch cancellation contract instead of resolving outside React act.
+  mocks.fetch.mockImplementation((_url, options) => new Promise((_resolve, reject) => {
+    const abort = () => reject(new DOMException("Aborted", "AbortError"));
+    if (options?.signal?.aborted) abort();
+    else options?.signal?.addEventListener("abort", abort, { once: true });
+  }));
   mocks.save.mockReset();
   window.history.replaceState(null, "", "/settings/llm");
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
@@ -419,7 +426,9 @@ it("offers unverified embedding providers after opting into custom integration",
   expect(within(select).queryByRole("option", { name: "xAI" })).toBeNull();
   fireEvent.click(screen.getByLabelText("settings.serviceConfig.custom"));
   expect(within(select).getByRole("option", { name: "xAI" })).toBeTruthy();
-  fireEvent.change(select, { target: { value: "connection:x" } });
+  await act(async () => {
+    fireEvent.change(select, { target: { value: "connection:x" } });
+  });
   fireEvent.change(screen.getByLabelText("Model ID"), {
     target: { value: "text-embedding-3-small" },
   });
@@ -434,7 +443,8 @@ it("offers unverified embedding providers after opting into custom integration",
   expect(
     screen.getByRole("region", { name: "Model connection test" }),
   ).toBeTruthy();
-  // Let the editor's usage fetch land so its state update stays in this test.
+  // Flush automatic discovery and usage requests inside this test's act boundary.
+  await act(async () => { await Promise.resolve(); });
   await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull());
 });
 it("invalidates tests on referenced key changes but keeps them after unrelated model edits", () => {

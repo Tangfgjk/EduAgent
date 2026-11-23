@@ -1,7 +1,10 @@
 """A shared, declarative slide canvas for browser, PPTX, PDF and video."""
 
-import base64, io, os, threading
+import base64
 from functools import lru_cache
+import io
+import os
+import threading
 
 W, H = 1200, 675
 _lock = threading.RLock()
@@ -32,19 +35,21 @@ class FormulaRenderError(ValueError):
 @lru_cache(maxsize=256)
 def formula_png(formula):
     import json
+    from pathlib import Path
     import shutil
     import subprocess
-    from pathlib import Path
 
     formula = formula.strip().strip("$")
     import hashlib
     import uuid
+
     from deeptutor.runtime.home import get_runtime_home
+
     cache = get_runtime_home() / "data/system/formula-cache"
-    cache.mkdir(parents=True,exist_ok=True)
-    cached = cache / (hashlib.sha256(("mathjax-v2:"+formula).encode()).hexdigest()+".png")
+    cache.mkdir(parents=True, exist_ok=True)
+    cached = cache / (hashlib.sha256(("mathjax-v2:" + formula).encode()).hexdigest() + ".png")
     if cached.is_file():
-        data=cached.read_bytes()
+        data = cached.read_bytes()
         if data.startswith(b"\x89PNG\r\n\x1a\n"):
             return base64.b64encode(data).decode()
     node = shutil.which("node")
@@ -56,8 +61,11 @@ def formula_png(formula):
             result = subprocess.run(
                 [node, "--max-old-space-size=256", str(script)],
                 input=json.dumps({"formula": formula}, ensure_ascii=False),
-                capture_output=True, text=True, encoding="utf-8", timeout=25,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=25,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
             )
         except subprocess.TimeoutExpired as exc:
             raise FormulaRenderError("公式渲染超时，请拆分复杂公式") from exc
@@ -67,9 +75,9 @@ def formula_png(formula):
             raise FormulaRenderError("公式渲染失败，请检查 LaTeX 语法并拆分过长公式")
         try:
             encoded = json.loads(result.stdout)["data"]
-            temporary = cache / (uuid.uuid4().hex+".tmp")
+            temporary = cache / (uuid.uuid4().hex + ".tmp")
             temporary.write_bytes(base64.b64decode(encoded))
-            os.replace(temporary,cached)
+            os.replace(temporary, cached)
             return encoded
         except (ValueError, KeyError) as exc:
             raise RuntimeError("本地公式渲染服务返回无效结果") from exc
@@ -181,6 +189,8 @@ def elements(page):
             rect(x, y, 5, ph - 16, "#438f72" if i % 2 == 0 else "#ce7847")
             text(x + 20, y + 14, pw - 55, p["heading"], 23, "#174d3a", True)
             text(x + 20, y + 58, pw - 55, p["text"], 20)
+    if page.get("content_review") == "unverified":
+        text(45, H - 30, 1100, "用户编辑内容 · 尚未核查", 12, "#65776d")
     for el in out:
         if el["type"] == "text" and el["y"] + el["h"] > H - 12:
             raise ValueError("页面文字超出版式，请分成更多页")
@@ -189,6 +199,7 @@ def elements(page):
 
 def png(page, path):
     from PIL import Image, ImageDraw, ImageFont
+
     from deeptutor.learning.classroom_media import font_path
 
     img = Image.new("RGB", (W, H), "white")
@@ -214,10 +225,10 @@ def png(page, path):
 
 def export(body, root, kind):
     if kind == "pdf":
-        from reportlab.pdfgen import canvas
+        from reportlab.lib.utils import ImageReader
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        from reportlab.lib.utils import ImageReader
+        from reportlab.pdfgen import canvas
 
         pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
         deck = canvas.Canvas(str(root / "lesson.pdf"), pagesize=(W, H))
@@ -257,9 +268,9 @@ def export(body, root, kind):
         deck.save()
         return ["lesson.pdf"]
     from pptx import Presentation
-    from pptx.util import Inches, Pt
     from pptx.dml.color import RGBColor
-    from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+    from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
+    from pptx.util import Inches, Pt
 
     deck = Presentation()
     deck.slide_width = Inches(13.333)

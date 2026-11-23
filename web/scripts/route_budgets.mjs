@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const NEXT_OUTPUT_DIR = path.join(WEB_ROOT, ".next");
+const NEXT_OUTPUT_DIR = path.resolve(WEB_ROOT, process.env.DEEPTUTOR_NEXT_DIST_DIR || ".next");
 const BUILD_MANIFEST_PATH = path.join(NEXT_OUTPUT_DIR, "build-manifest.json");
 const NEXT_BIN = path.join(WEB_ROOT, "node_modules", "next", "dist", "bin", "next");
 
@@ -81,6 +81,10 @@ async function startBuildServer() {
       env: {
         ...process.env,
         NEXT_TELEMETRY_DISABLED: "1",
+        // This isolated bundle-measurement server has no usable backend. Do not
+        // measure the login redirect in place of the requested page bundle.
+        DEEPTUTOR_AUTH_ENABLED: "false",
+        NEXT_PUBLIC_AUTH_ENABLED: "false",
         DEEPTUTOR_API_BASE_URL: "http://127.0.0.1:9",
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -124,9 +128,9 @@ async function assertRootRedirect(baseUrl) {
   if (
     ![307, 308].includes(response.status) ||
     destination?.origin !== baseUrl ||
-    destination.pathname !== "/chat"
+    destination.pathname !== "/today"
   ) {
-    throw new Error(`/ must redirect to /chat, got HTTP ${response.status} to ${location || "(none)"}`);
+    throw new Error(`/ must redirect to /today, got HTTP ${response.status} to ${location || "(none)"}`);
   }
 }
 

@@ -277,12 +277,28 @@ def test_revoke_allows_correcting_self_declared_student_binding(store):
 
 
 def test_new_local_success_is_not_overridden_by_external_low_probability(store):
-    # Use this project's objective ID in real normalized local receipts.
+    from deeptutor.learning import goal_contract as goals
+    from deeptutor.learning.diagnosis import assessment_context
+    from deeptutor.learning.models import LearningEvidence, PendingQuestion, QuizAttempt
+
+    goals.confirm(
+        store,
+        "p",
+        revision=store.load("p").version,
+        level="apply",
+        summary="Apply equations independently",
+        request_id="local-goal-confirmation",
+    )
     p = store.load("p")
-    from deeptutor.learning.diagnosis_models import DiagnosticContext
-    from deeptutor.learning.models import LearningEvidence, QuizAttempt
 
     for i, ability in enumerate(("explanation", "application")):
+        q = PendingQuestion(
+            question_id=str(i),
+            knowledge_point_id="k",
+            prompt="new task " + str(i),
+            expected_answer="2",
+        )
+        goals.bind_task(p, q)
         p.quiz_attempts.append(
             QuizAttempt(
                 question_id=str(i),
@@ -299,7 +315,7 @@ def test_new_local_success_is_not_overridden_by_external_low_probability(store):
                 knowledge_point_id="k",
                 result="correct",
                 evidence_kind=ability,
-                diagnostic_context=DiagnosticContext(assistance="independent"),
+                diagnostic_context=assessment_context(p, q, "2", "short"),
             )
         )
     store.save(p)

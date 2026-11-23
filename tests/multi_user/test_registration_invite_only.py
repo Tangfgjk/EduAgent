@@ -51,6 +51,7 @@ def test_create_only_registration_never_replaces_existing_credentials(mu_isolate
     from deeptutor.multi_user.identity import load_users, save_user
 
     save_user("admin", "admin-hash", role="admin")
+
     def register():
         try:
             save_user("student", "student-hash", create_only=True)
@@ -68,8 +69,9 @@ def test_create_only_registration_never_replaces_existing_credentials(mu_isolate
 async def test_self_registration_after_admin_exists(mu_isolated_root, monkeypatch):
     from fastapi import FastAPI
     import httpx
+
     from deeptutor.api.routers import auth
-    from deeptutor.multi_user.identity import save_user, load_users
+    from deeptutor.multi_user.identity import load_users, save_user
 
     save_user("admin", "admin-hash", role="admin")
     monkeypatch.setattr(auth, "AUTH_ENABLED", True)
@@ -77,11 +79,17 @@ async def test_self_registration_after_admin_exists(mu_isolated_root, monkeypatc
     monkeypatch.setattr(auth, "PRIVATE_LOGIN_HOSTS", frozenset())
     app = FastAPI()
     app.include_router(auth.router, prefix="/auth")
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-        result = await client.post("/auth/register", json={"username": "student", "password": "student123"})
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        result = await client.post(
+            "/auth/register", json={"username": "student", "password": "student123"}
+        )
         assert result.status_code == 201
         assert result.json()["role"] == "user"
         original = load_users()["student"]["hash"]
-        duplicate = await client.post("/auth/register", json={"username": "student", "password": "changed123"})
+        duplicate = await client.post(
+            "/auth/register", json={"username": "student", "password": "changed123"}
+        )
         assert duplicate.status_code == 409
         assert load_users()["student"]["hash"] == original

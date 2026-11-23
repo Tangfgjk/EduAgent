@@ -2559,14 +2559,18 @@ class PersonalApiModelPayload(BaseModel):
 @router.get("/personal-model")
 async def get_personal_api_model():
     from deeptutor.multi_user.personal_api_models import view
+
     return view()
 
 
 @router.put("/personal-model")
 async def save_personal_api_model(payload: PersonalApiModelPayload):
     from deeptutor.multi_user.personal_api_models import save
+
     try:
-        result = await asyncio.to_thread(save, payload.provider, payload.base_url.strip(), payload.model, payload.api_key)
+        result = await asyncio.to_thread(
+            save, payload.provider, payload.base_url.strip(), payload.model, payload.api_key
+        )
         clear_llm_config_cache()
         return result
     except ValueError as exc:
@@ -2576,6 +2580,7 @@ async def save_personal_api_model(payload: PersonalApiModelPayload):
 @router.delete("/personal-model")
 async def remove_personal_api_model():
     from deeptutor.multi_user.personal_api_models import remove
+
     result = remove()
     clear_llm_config_cache()
     return result

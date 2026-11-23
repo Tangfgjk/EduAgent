@@ -176,6 +176,12 @@ function describeToolCall(
   };
 
   switch (toolName) {
+    case "mastery_support_plan":
+      return { verb: t("Recording support plan"), chip: null, mono: false };
+    case "mastery_strategy_candidate":
+      return { verb: t("Proposing teaching strategy"), chip: null, mono: false };
+    case "mastery_strategy_delivery":
+      return { verb: t("Recording teaching delivery"), chip: null, mono: false };
     case "exec":
       return {
         verb: a.language === "shell" ? t("Running command") : t("Running code"),

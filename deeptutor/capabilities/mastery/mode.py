@@ -69,6 +69,9 @@ DEFAULT_MODE = STUDY
 #: * **Examining the learner** belongs to ``study`` and ``review``. An outline
 #:   sitting has nothing agreed to examine on yet.
 TOOL_MODES: dict[str, frozenset[str]] = {
+    "mastery_support_plan": frozenset({STUDY, REVIEW}),
+    "mastery_strategy_candidate": frozenset({STUDY, REVIEW}),
+    "mastery_strategy_delivery": frozenset({STUDY, REVIEW}),
     "mastery_build": frozenset({OUTLINE}),
     "mastery_revise": frozenset({OUTLINE}),
     "mastery_quiz": frozenset({STUDY, REVIEW}),

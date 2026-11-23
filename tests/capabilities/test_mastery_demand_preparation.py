@@ -7,7 +7,12 @@ import pytest
 
 from deeptutor.capabilities.mastery.pipeline import MasteryLoopPipeline
 from deeptutor.core.context import UnifiedContext
-from deeptutor.learning import lesson_evidence, policy, storage
+from deeptutor.learning import lesson_evidence, policy, project_continuity, storage
+
+
+def lesson_messages(messages):
+    """Exclude the independently tested project-state system messages."""
+    return [m for m in messages if not m.get("_project_handoff")]
 
 
 @pytest.fixture
@@ -15,6 +20,10 @@ def preparation(monkeypatch):
     progress = SimpleNamespace(book_id="path", modules=[object()], lesson_evidence={})
     store = SimpleNamespace(load=Mock(return_value=progress), get_topic=Mock(return_value=object()))
     monkeypatch.setattr(storage, "LearningStore", lambda: store)
+    # Project handoff has its own integration tests; this fixture isolates paid preparation.
+    monkeypatch.setattr(
+        project_continuity, "project_handoff", lambda *args: {"independent_check": {}}
+    )
     monkeypatch.setattr(
         policy, "next_objective", lambda _: SimpleNamespace(knowledge_point_id="next")
     )
@@ -59,8 +68,8 @@ async def test_cache_miss_never_starts_automatic_paid_preparation(preparation, l
             == []
         )
     preparation.paid.assert_not_awaited()
-    assert messages[0]["content"] == learner_message
-    assert messages[1]["content"] == "Earlier assessment already saved"
+    assert lesson_messages(messages)[0]["content"] == learner_message
+    assert lesson_messages(messages)[1]["content"] == "Earlier assessment already saved"
     packets = [m for m in messages if m.get("_lesson_packet")]
     assert len(packets) == 1
     assert "mastery_prepare_lesson" in packets[0]["content"]
@@ -87,7 +96,10 @@ async def test_valid_packet_is_reused_without_new_preparation(preparation, monke
     assert pixels.call_count == 1
     assert pixels.call_args.args == (evidence["sources"][:2],)
     preparation.stream.sources.assert_not_awaited()
-    assert len(messages) == 1 and messages[0]["content"] == "VERIFIED ACTIVE LESSON"
+    assert (
+        len(lesson_messages(messages)) == 1
+        and lesson_messages(messages)[0]["content"] == "VERIFIED ACTIVE LESSON"
+    )
 
 
 @pytest.mark.asyncio
@@ -101,7 +113,7 @@ async def test_stale_packet_offers_authorized_refresh_without_automatic_paid_wor
         await preparation.pipeline.prepare_model_request(context, preparation.stream, messages)
         == []
     )
-    notice = messages[0]["content"]
+    notice = lesson_messages(messages)[0]["content"]
     assert "mastery_prepare_lesson" in notice and '"knowledge_point_id": "next"' in notice
     assert "access denial" in notice and "unchanged" in notice
     preparation.paid.assert_not_awaited()
@@ -136,7 +148,7 @@ async def test_text_only_route_does_not_acquire_a_pdf_gate(preparation):
         await preparation.pipeline.prepare_model_request(context, preparation.stream, messages)
         == []
     )
-    assert len(messages) == 1
+    assert len(lesson_messages(messages)) == 1
     assert preparation.pipeline._lesson_pixels is None
     preparation.paid.assert_not_awaited()
 
@@ -170,7 +182,7 @@ async def test_access_failure_is_reported_without_paid_recovery(preparation):
     )
     assert "Selected material access denied" in messages[-1]["content"]
     assert "NOT conversation" in messages[-1]["content"]
-    assert messages[0]["content"] == context.user_message
+    assert lesson_messages(messages)[0]["content"] == context.user_message
     preparation.paid.assert_not_awaited()
 
 
@@ -180,7 +192,8 @@ async def test_outline_mode_does_not_load_or_prepare_lesson(preparation):
         metadata={"mastery_path_id": "path", "mastery_session_mode": "outline"}
     )
     assert await preparation.pipeline.prepare_model_request(context, preparation.stream, []) == []
-    preparation.store.load.assert_not_called()
+    preparation.cache.assert_not_called()
+    preparation.scope.assert_not_called()
     preparation.paid.assert_not_awaited()
 
 
@@ -281,6 +294,6 @@ async def test_historical_packet_refresh_preserves_archive_boundary_and_literal_
     ]
     preparation.pipeline._model_turn_start = 3
     await preparation.pipeline.prepare_model_request(context, preparation.stream, messages)
-    assert preparation.pipeline._model_turn_start == 2
-    assert messages[2]["content"] == "I literally wrote old packet in my question"
+    assert preparation.pipeline._model_turn_start == 4
+    assert lesson_messages(messages)[2]["content"] == "I literally wrote old packet in my question"
     assert len([m for m in messages if m.get("_lesson_packet")]) == 1

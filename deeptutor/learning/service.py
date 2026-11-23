@@ -113,7 +113,9 @@ def _apply_source_assistance(progress: LearningProgress, question: PendingQuesti
 
 def _question_independent(question: PendingQuestion) -> bool:
     return not (
-        question.assistance_used or question.scaffold_level or question.visual_context.get("hints_used")
+        question.assistance_used
+        or question.scaffold_level
+        or question.visual_context.get("hints_used")
     )
 
 
@@ -649,8 +651,12 @@ class LearningService:
             evidence.evidence_id = evidence.evidence_id or uuid.uuid4().hex
             evidence.learner_answer = user_answer
             evidence.diagnostic_context = assessment_context(
-                progress, diagnostic_question, expected_answer, question_type,
-                assistance_used=assistance_used, scaffold_level=scaffold_level,
+                progress,
+                diagnostic_question,
+                expected_answer,
+                question_type,
+                assistance_used=assistance_used,
+                scaffold_level=scaffold_level,
                 hints_used=int((visual_context or {}).get("hints_used") or 0),
                 semantic=verdict is not None,
             )
@@ -725,6 +731,9 @@ class LearningService:
     def set_pending_question(self, progress: LearningProgress, pending: PendingQuestion) -> None:
         """Store the question the tutor just posed so its expected answer can
         be graded deterministically on a later turn (never via the model)."""
+        from deeptutor.learning.goal_contract import bind_task
+
+        bind_task(progress, pending)
         for question in pending.questions or [pending]:
             _apply_source_assistance(progress, question)
         progress.pending_question = pending
@@ -954,6 +963,7 @@ class LearningService:
             leaves = pending.questions or [pending]
             if tx.progress.wenjin_enabled:
                 from deeptutor.learning.evolution import policy_for_next
+
                 strategy = policy_for_next(tx.progress)
                 for leaf in leaves:
                     leaf.strategy_version = strategy["version"]
@@ -980,6 +990,19 @@ class LearningService:
                     _apply_source_assistance(tx.progress, question)
             except LessonUnavailable as exc:
                 raise MasteryInteractionError(str(exc)) from exc
+            from deeptutor.learning.check_cycles import (
+                bind as bind_check_cycle,
+            )
+            from deeptutor.learning.check_cycles import (
+                withdraw as withdraw_check_task,
+            )
+
+            if active is not None:
+                withdraw_check_task(tx, active.question, reason="explicit_replacement")
+            try:
+                bind_check_cycle(tx, leaves, session_id=session_id, turn_id=turn_id)
+            except ValueError as exc:
+                raise MasteryInteractionError(str(exc)) from exc
             if active is not None:
                 active.status = InteractionStatus.ABANDONED
                 tx.put_interaction(active)
@@ -994,6 +1017,9 @@ class LearningService:
                     turn_id=turn_id,
                 )
 
+            from deeptutor.learning.goal_contract import bind_task
+
+            bind_task(tx.progress, pending)
             interaction = MasteryInteraction(
                 interaction_id=pending.question_id,
                 path_id=book_id,
@@ -1089,7 +1115,9 @@ class LearningService:
                 return question.scaffold_level
 
             if question.scaffold_turn_id == delivery["turn_id"]:
-                raise MasteryInteractionError("Wait for the learner before increasing the hint level.")
+                raise MasteryInteractionError(
+                    "Wait for the learner before increasing the hint level."
+                )
 
             question.scaffold_level = level
             question.scaffold_turn_id = delivery["turn_id"]
@@ -1766,16 +1794,21 @@ class LearningService:
         if is_correct is not None and tx.progress.wenjin_enabled:
             import copy
 
-            from deeptutor.learning.evolution import monitor_evolution, update_evolution
+            from deeptutor.learning.evolution import update_evolution
+
             before = copy.deepcopy(tx.progress.evolution)
             update_evolution(tx.progress)
-            monitor_evolution(tx.progress)
             if before != tx.progress.evolution:
-                tx.emit("wenjin.strategy_evaluated", {
-                    "status": tx.progress.evolution.get("status"),
-                    "active": tx.progress.evolution.get("active"),
-                    "evaluation": tx.progress.evolution.get("evaluation"),
-                }, session_id=session_id, turn_id=turn_id)
+                tx.emit(
+                    "wenjin.strategy_evaluated",
+                    {
+                        "status": tx.progress.evolution.get("status"),
+                        "active": tx.progress.evolution.get("active"),
+                        "evaluation": tx.progress.evolution.get("evaluation"),
+                    },
+                    session_id=session_id,
+                    turn_id=turn_id,
+                )
         return raw_answer, is_correct, visual_result, visual_diagnosis
 
     def replace_modules_for_path(
@@ -2285,6 +2318,9 @@ class LearningService:
                 from deeptutor.learning.storage import LearningConflictError
 
                 raise LearningConflictError(book_id, expected_revision, tx.progress.version)
+            if "target_level" in changed:
+                tx.progress.support_goal_updated_at = time.time()
+                tx.progress.goal_needs_confirmation = True
             updated = profile.model_copy(
                 update={**cleaned, **teaching_fields, "updated_at": time.time()}
             )
@@ -2292,10 +2328,12 @@ class LearningService:
             tx.touch()
             tx.emit(
                 "path.learner_profile_recorded",
-                {"fields": changed,
-                 "values": {key: getattr(updated, key) for key in changed if key in cleaned},
-                 "learner_quote": learner_message,
-                 "provenance": "profile_service"},
+                {
+                    "fields": changed,
+                    "values": {key: getattr(updated, key) for key in changed if key in cleaned},
+                    "learner_quote": learner_message,
+                    "provenance": "profile_service",
+                },
                 session_id=session_id,
                 turn_id=turn_id,
             )
@@ -2326,6 +2364,10 @@ class LearningService:
                 abandoned = True
             if not abandoned:
                 return False
+            from deeptutor.learning.check_cycles import withdraw as withdraw_check_task
+
+            if interaction is not None:
+                withdraw_check_task(tx, interaction.question, reason="learner_skipped")
             tx.touch()
             tx.emit(
                 "interaction.abandoned",
@@ -2346,6 +2388,8 @@ class LearningService:
             progress.learning_evidence = []
             progress.repetition_states = {}
             progress.review_queue = []
+            progress.check_cycles = {}
+            progress.check_intent = {}
             progress.learner_mastery_overrides = {}
             progress.deferred_objectives = {}
             progress.explained_objectives = {}
@@ -2723,6 +2767,7 @@ class LearningService:
             self._recompute_objective_state(tx.progress, kp_id, scheduler)
             if tx.progress.wenjin_enabled:
                 from deeptutor.learning.evolution import revalidate_after_repair
+
                 revalidate_after_repair(tx.progress)
             if interaction is not None and interaction.result.get("group_question_id"):
                 self._refresh_group_result(tx, interaction)
@@ -3029,7 +3074,8 @@ class LearningService:
         review_evidence = LearningEvidence(
             diagnostic_context=DiagnosticContext(
                 grading_method="semantic" if verdict else "legacy",
-                grading_version="native-v1", assistance="unknown",
+                grading_version="native-v1",
+                assistance="unknown",
             ),
             evidence_id=evidence_id,
             knowledge_point_id=kp_id,

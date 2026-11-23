@@ -36,8 +36,8 @@ def test_get_ui_language_reads_per_user_interface_json(mu_isolated_root, as_user
 
 def test_get_ui_language_defaults_when_no_file(mu_isolated_root, as_user):
     with as_user("u_alice", role="user"):
-        # Bob has nothing on disk yet — falls back to the default "en".
-        assert get_ui_language() == "en"
+        # A new account uses the product default Chinese interface.
+        assert get_ui_language() == "zh"
 
 
 def test_response_language_is_scoped_independently_per_user(mu_isolated_root, as_user):

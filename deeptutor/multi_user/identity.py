@@ -8,7 +8,6 @@ import json
 import logging
 from pathlib import Path
 import secrets
-import threading
 from typing import Any
 from uuid import uuid4
 
@@ -33,6 +32,7 @@ logger = logging.getLogger(__name__)
 # multi-worker deployments still race and must rely on an external user store
 # (e.g. PocketBase), which is documented in the multi-user README.
 from deeptutor.services.storage.postgres_accounts import AccountLock
+
 _USERS_WRITE_LOCK = AccountLock()
 
 AUTH_DIR = SYSTEM_ROOT / "auth"
@@ -103,11 +103,13 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _users_exist() -> bool:
     from deeptutor.services.storage.postgres_accounts import enabled
+
     return enabled() or USERS_FILE.exists()
 
 
 def _write_users(users: dict[str, dict[str, Any]]) -> None:
     from deeptutor.services.storage.postgres_accounts import enabled, write
+
     if enabled():
         write(users)
         return
@@ -193,6 +195,7 @@ def load_users(  # nosec B107 - empty defaults mean "no env fallback supplied".
     migrate_legacy_multi_user_tree()
     users: dict[str, dict[str, Any]] | None = None
     from deeptutor.services.storage.postgres_accounts import enabled, read
+
     if enabled():
         users = read()
     elif USERS_FILE.exists():
@@ -308,6 +311,7 @@ def get_user(username: str) -> dict[str, Any] | None:
 
 def get_user_by_id(user_id: str) -> tuple[str, dict[str, Any]] | None:
     from deeptutor.services.storage.postgres_accounts import enabled, lookup
+
     if enabled():
         return lookup(user_id)
     for username, record in load_users().items():

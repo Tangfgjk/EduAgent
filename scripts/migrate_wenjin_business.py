@@ -1,7 +1,8 @@
 """Create native PostgreSQL business schemas. Explicit cutover is separate."""
 
-import json, sys
+import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
