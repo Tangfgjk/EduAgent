@@ -1,0 +1,4 @@
+# Optional CPU-only server speech. Models are installed separately under data/system/voice.
+sherpa-onnx==2.0.3
+vosk==0.3.45
+srt==3.5.3

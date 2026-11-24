@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew the Guizi Wenjin IP certificate
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/opt/guiziwenjin-tools/certbot/bin/certbot renew --cert-name guiziwenjin-ip --quiet --deploy-hook /usr/local/sbin/wenjin-certificate-reloaded

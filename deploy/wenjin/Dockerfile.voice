@@ -1,0 +1,8 @@
+# Build with a context containing verified Linux wheels in ./wheels/.
+FROM guiziwenjin:20261123-base
+USER root
+COPY wheels/ /tmp/wenjin-voice-wheels/
+RUN python -m pip install --no-index --no-deps /tmp/wenjin-voice-wheels/*.whl \
+    && python -m pip check \
+    && rm -rf /tmp/wenjin-voice-wheels
+USER wenjin

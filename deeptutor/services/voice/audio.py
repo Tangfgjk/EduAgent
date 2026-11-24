@@ -25,7 +25,7 @@ def pcm_to_wav(audio: bytes, sample_rate: int = 24000) -> bytes:
     return output.getvalue()
 
 
-async def normalize_wav(audio: bytes) -> bytes:
+async def normalize_wav(audio: bytes, *, max_seconds: int | None = None) -> bytes:
     """16 kHz mono signed PCM WAV; ffmpeg handles browser WebM/Opus too."""
     try:
         with wave.open(io.BytesIO(audio), "rb") as wav:
@@ -49,6 +49,7 @@ async def normalize_wav(audio: bytes) -> bytes:
                 "error",
                 "-i",
                 str(source),
+                *(["-t", str(max_seconds)] if max_seconds is not None else []),
                 "-vn",
                 "-acodec",
                 "pcm_s16le",

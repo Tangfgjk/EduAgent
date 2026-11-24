@@ -47,7 +47,16 @@ async def synthesize_speech(
     """
     from deeptutor.services.config.provider_runtime import resolve_tts_runtime_config
 
-    config = resolve_tts_runtime_config(catalog=catalog)
+    try:
+        config = resolve_tts_runtime_config(catalog=catalog)
+    except ValueError:
+        from . import local
+        if not local.fallback_allowed("tts", catalog):
+            raise
+        prepared = strip_markdown_for_speech(text, max_chars=4096, math_speak=_math_speak_from_settings() if math_speak is None else math_speak) if strip_markdown else text.strip()
+        if not prepared:
+            raise VoiceProviderError("Nothing to speak after cleaning the text.")
+        return await local.synthesize(prepared, response_format)
     if voice:
         config.voice = voice
     if response_format:
@@ -75,7 +84,13 @@ async def transcribe_audio(
     """Transcribe ``audio`` using the active STT catalog selection."""
     from deeptutor.services.config.provider_runtime import resolve_stt_runtime_config
 
-    config = resolve_stt_runtime_config(catalog=catalog)
+    try:
+        config = resolve_stt_runtime_config(catalog=catalog)
+    except ValueError:
+        from . import local
+        if not local.fallback_allowed("stt", catalog):
+            raise
+        return await local.transcribe(audio, language)
     if language:
         config.language = language
     adapter = get_stt_adapter(config.adapter)
@@ -97,7 +112,14 @@ async def transcribe_audio_cues(
     """
     from deeptutor.services.config.provider_runtime import resolve_stt_runtime_config
 
-    config = resolve_stt_runtime_config(catalog=catalog)
+    try:
+        config = resolve_stt_runtime_config(catalog=catalog)
+    except ValueError:
+        from . import local
+        if not local.fallback_allowed("stt", catalog):
+            raise
+        text = await local.transcribe(audio, language)
+        return [TranscriptCue(0, 0, text, timed=False)] if text else []
     if language:
         config.language = language
     adapter = get_stt_adapter(config.adapter)

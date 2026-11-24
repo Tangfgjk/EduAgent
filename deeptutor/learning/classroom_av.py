@@ -146,7 +146,10 @@ def chunks(text, limit=90):
 
 def config_signature(engine):
     if engine == "local":
-        return "windows-zh-auto-v2"
+        if os.name == "nt":
+            return "windows-zh-auto-v2"
+        from deeptutor.services.voice.local import signature
+        return signature()
     from deeptutor.services.config.provider_runtime import resolve_tts_runtime_config
 
     try:
@@ -164,7 +167,9 @@ def capabilities():
         configured = True
     except ValueError:
         pass
-    return {"local": os.name == "nt", "configured": configured}
+    from deeptutor.services.voice.local import available
+    return {"local": os.name == "nt" or available("tts"), "configured": configured,
+            "local_label": "本机中文语音" if os.name == "nt" else "服务器中文语音"}
 
 
 def duration(path):
@@ -196,7 +201,8 @@ def combine(paths, output, pad=0):
 
 def local_segments(parts, root, rate, check):
     if os.name != "nt":
-        raise ValueError("本机语音仅支持 Windows，请在设置配置语音模型后选择“我的语音模型”")
+        from deeptutor.services.voice.local import synthesize_segments
+        return synthesize_segments(parts, root, rate, check)
     (root / "speech.json").write_text(json.dumps(parts, ensure_ascii=False), encoding="utf-8")
     ps = r"""$ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Speech

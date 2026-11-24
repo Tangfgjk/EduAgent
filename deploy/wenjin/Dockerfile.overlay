@@ -1,10 +1,11 @@
-# Reuse the locally built Linux dependencies and frontend; only copy source here.
-FROM guiziwenjin:20261123-base
+# Reuse installed Linux speech dependencies and copy the rebuilt frontend artifact.
+FROM guiziwenjin:20261124-voice-base
 WORKDIR /opt/guiziwenjin
 COPY deeptutor/ deeptutor/
 COPY deeptutor_cli/ deeptutor_cli/
 COPY scripts/ scripts/
 COPY requirements/ requirements/
 COPY deploy/wenjin/container_entrypoint.py deploy/wenjin/container_entrypoint.py
+ADD deploy/wenjin/runtime-assets/frontend.tar.gz /opt/guiziwenjin/web/.next/
 ARG SOURCE_COMMIT=unknown
 LABEL org.opencontainers.image.revision=$SOURCE_COMMIT

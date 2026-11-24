@@ -68,10 +68,10 @@ export default function ClassroomMedia({
   const [showHistory,setShowHistory] = useState(false)
   const awaitingExport = useRef<string | null>(null)
   const [range, setRange] = useState('page'), [engine, setEngine] = useState('local'), [speechRate, setSpeechRate] = useState(1)
-  const [capabilities, setCapabilities] = useState({ local: true, configured: false })
+  const [capabilities, setCapabilities] = useState({ local: false, configured: false, local_label: '本地中文语音' })
   useEffect(() => {
-    void projectRequest<{local:boolean;configured:boolean}>('/classroom-media/capabilities').then(value=>{
-      if(typeof value.local==='boolean'){setCapabilities(value);if(!value.local && value.configured)setEngine('configured')}
+    void projectRequest<{local:boolean;configured:boolean;local_label?:string}>('/classroom-media/capabilities').then(value=>{
+      if(typeof value.local==='boolean'){setCapabilities({...value,local_label:value.local_label || '本地中文语音'});if(!value.local && value.configured)setEngine('configured')}
     }).catch(()=>{})
   }, [])
   async function resourceAction(a: Asset, action: string) {
@@ -192,7 +192,7 @@ export default function ClassroomMedia({
             <option value="page">当前页</option><option value="chapter">当前章节已准备页面</option><option value="course" disabled={!ready}>完整课堂{!ready?'（等待课件完成）':''}</option>
           </select></label>
           <label>配音来源 <select aria-label="配音来源" value={engine} onChange={e=>setEngine(e.target.value)} className="rounded-lg border border-border bg-background p-2">
-            <option value="local" disabled={!capabilities.local}>本机中文语音</option><option value="configured" disabled={!capabilities.configured}>我的语音模型</option>
+            <option value="local" disabled={!capabilities.local}>{capabilities.local_label}</option><option value="configured" disabled={!capabilities.configured}>我的语音模型</option>
           </select></label>
           <label>配音语速 <select aria-label="配音语速" value={speechRate} onChange={e=>setSpeechRate(Number(e.target.value))} className="rounded-lg border border-border bg-background p-2">
             {[.75,1,1.25,1.5].map(v=><option key={v} value={v}>{v}×</option>)}
@@ -202,7 +202,7 @@ export default function ClassroomMedia({
           {([['voice','生成配音'],['video','生成讲解视频']] as const).map(([kind,label])=><button key={kind} className={button}
             disabled={busy || (range==='course'&&!ready) || (engine==='local'?!capabilities.local:!capabilities.configured)} onClick={()=>void generate(kind)}>{label}</button>)}
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">本机语音可直接使用；“我的语音模型”沿用设置中的语音配置。视频包含PPT画面、讲解声音与字幕，完成后可播放和下载。</p>
+        <p className="mt-3 text-xs text-muted-foreground">{capabilities.local ? `${capabilities.local_label}无需配置密钥。` : '本地语音尚未就绪，可先配置个人语音模型。'}“我的语音模型”沿用你的语音设置。视频包含PPT画面、讲解声音与字幕，完成后可播放和下载。</p>
       </div>
       <div className="flex flex-wrap gap-2">
         {([['pdf','导出PDF'],['pptx','导出PPTX']] as const).map(([kind,label])=><button key={kind} className={button} disabled={busy||downloading||!ready||!!exportKey} onClick={()=>void generate(kind)}>{label}</button>)}
@@ -250,7 +250,7 @@ export default function ClassroomMedia({
                 )[a.state]
               }
             </p>
-            {a.page_count ? <p className="mt-1 text-xs text-muted-foreground">{{page:'本页',chapter:'本章节',course:'全课'}[a.range || 'course']} · {a.page_count} 页{a.partial?'（提交时已准备的页面快照）':''}{a.duration?` · ${Math.round(a.duration/60)} 分钟`:''}{['voice','video'].includes(a.kind)?` · ${a.engine==='configured'?'我的语音模型':'本机中文语音'} · 配音 ${a.rate || 1}×`:''}</p> : null}
+            {a.page_count ? <p className="mt-1 text-xs text-muted-foreground">{{page:'本页',chapter:'本章节',course:'全课'}[a.range || 'course']} · {a.page_count} 页{a.partial?'（提交时已准备的页面快照）':''}{a.duration?` · ${Math.round(a.duration/60)} 分钟`:''}{['voice','video'].includes(a.kind)?` · ${a.engine==='configured'?'我的语音模型':'本地中文语音'} · 配音 ${a.rate || 1}×`:''}</p> : null}
             {a.progress && ['queued','running'].includes(a.state) && <div className="my-3 text-sm">
               <p>{a.progress.stage} · 已处理 {a.progress.completed}/{a.progress.total} 页</p>
               <progress className="mt-2 h-2 w-full accent-primary" value={a.progress.completed} max={a.progress.total || 1} aria-label="资源生成进度" />

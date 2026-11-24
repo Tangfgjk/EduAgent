@@ -146,3 +146,15 @@ def test_stt_rejects_empty_upload(client: TestClient) -> None:
         files={"file": ("empty.webm", b"", "audio/webm")},
     )
     assert resp.status_code == 400
+
+
+def test_voice_capabilities_reports_readiness_without_credentials(client, monkeypatch):
+    def missing(**kwargs):
+        raise ValueError("not configured")
+    monkeypatch.setattr("deeptutor.services.config.provider_runtime.resolve_tts_runtime_config", missing)
+    monkeypatch.setattr("deeptutor.services.config.provider_runtime.resolve_stt_runtime_config", missing)
+    monkeypatch.setattr("deeptutor.services.voice.local.available", lambda kind: kind == "tts")
+    response=client.get("/api/voice/capabilities")
+    assert response.status_code == 200
+    assert response.json() == {"tts": {"configured": False,"local": True,"available": True},
+                               "stt": {"configured": False,"local": False,"available": False}}

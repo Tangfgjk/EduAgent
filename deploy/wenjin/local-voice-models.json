@@ -1,0 +1,14 @@
+[
+  {
+    "name": "vits-melo-tts-zh_en.tar.bz2",
+    "bytes": 167006755,
+    "sha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514",
+    "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2"
+  },
+  {
+    "name": "vosk-model-small-cn-0.22.zip",
+    "bytes": 43898754,
+    "sha256": "3af8b0e7e0f835ae9d414ce5df580237a3cfb08d586c9fbbb0f7ff29ad5b14ba",
+    "source": "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"
+  }
+]

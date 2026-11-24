@@ -139,3 +139,32 @@ def test_engine_copy_is_inherited_not_restated() -> None:
     assert "mastery_status" in pack["loop"]["system"]
     # …while the sibling keys chat defines survive the override.
     assert pack["loop"]["continue_truncated"]
+
+
+def test_automatic_deepseek_tutoring_uses_fast_effort_without_mutating_user_config(monkeypatch):
+    from deeptutor.services.llm.config import LLMConfig
+
+    config = LLMConfig(model="deepseek-v4-pro", api_key="test-only", binding="deepseek", provider_name="deepseek")
+    monkeypatch.setattr("deeptutor.agents.loop.pipeline.get_llm_config", lambda: config)
+    pipeline = MasteryLoopPipeline(language="zh")
+    assert pipeline.reasoning_effort == "none"
+    assert pipeline._client_config.reasoning_effort == "none"
+    assert config.reasoning_effort is None
+
+
+def test_tutoring_keeps_explicit_reasoning_preference(monkeypatch):
+    from deeptutor.services.llm.config import LLMConfig
+
+    config = LLMConfig(model="deepseek-v4-pro", api_key="test-only", binding="deepseek", provider_name="deepseek", reasoning_effort="high")
+    monkeypatch.setattr("deeptutor.agents.loop.pipeline.get_llm_config", lambda: config)
+    pipeline = MasteryLoopPipeline(language="zh")
+    assert pipeline.reasoning_effort == pipeline._client_config.reasoning_effort == "high"
+
+
+def test_tutoring_reasoning_default_can_use_native_provider_behavior(monkeypatch):
+    from deeptutor.services.llm.config import LLMConfig
+
+    config = LLMConfig(model="deepseek-v4-pro", api_key="test-only", binding="deepseek", provider_name="deepseek")
+    monkeypatch.setattr("deeptutor.agents.loop.pipeline.get_llm_config", lambda: config)
+    monkeypatch.setenv("WENJIN_MASTERY_REASONING_EFFORT", "native")
+    assert MasteryLoopPipeline(language="zh").reasoning_effort is None

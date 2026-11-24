@@ -294,3 +294,6 @@ dmypy.json
 *.mp3
 *.wav
 *.ogg
+
+# Build artifacts transferred separately during deployment.
+/deploy/wenjin/runtime-assets/

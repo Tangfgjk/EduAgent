@@ -37,6 +37,23 @@ class TTSRequest(BaseModel):
     format: str | None = None
 
 
+@router.get("/capabilities")
+async def voice_capabilities():
+    from deeptutor.services.config.provider_runtime import resolve_stt_runtime_config, resolve_tts_runtime_config
+    from deeptutor.services.voice.local import available
+
+    result = {}
+    for kind, resolver in (("tts", resolve_tts_runtime_config), ("stt", resolve_stt_runtime_config)):
+        try:
+            resolver()
+            configured = True
+        except ValueError:
+            configured = False
+        local = available(kind)
+        result[kind] = {"configured": configured, "local": local, "available": configured or local}
+    return result
+
+
 @router.post("/tts")
 async def text_to_speech(payload: TTSRequest) -> Response:
     """Synthesize ``text`` to audio using the active TTS provider."""
@@ -71,7 +88,7 @@ async def speech_to_text(
     language: str | None = Form(default=None),
 ) -> dict[str, str]:
     """Transcribe an uploaded audio clip using the active STT provider."""
-    audio = await file.read()
+    audio = await file.read(_MAX_AUDIO_BYTES + 1)
     if not audio:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty audio upload.")
     if len(audio) > _MAX_AUDIO_BYTES:

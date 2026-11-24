@@ -1,5 +1,5 @@
 {
-  "fingerprint": "285d95435b3172ac6f6e0be5f8b9eda1593a68f3368f5c1be3fea15748c1bbd3",
+  "fingerprint": "225bce2c63aaf548ab1af523376735b97ab5d4a77cf6b58ad37cb18f652aa4a5",
   "routers": {
     "deeptutor.api.routers.auth:router": [
       {
@@ -1484,6 +1484,518 @@
       {
         "path": "/progress/{book_id}/generate-from-reading",
         "name": "generate_from_reading",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin",
+        "name": "get_wenjin_state",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin/enable",
+        "name": "enable_wenjin",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin/consent",
+        "name": "update_wenjin_consent",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin/rollback",
+        "name": "rollback_wenjin_strategy",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/project-materials",
+        "name": "upload_project_material",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/project-materials",
+        "name": "attach_project_material",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/project",
+        "name": "get_learning_project",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/chapters/{chapter_id}",
+        "name": "prepare_project_chapter",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/project/location",
+        "name": "update_project_location",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-facts",
+        "name": "get_diagnostic_facts",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin/preference",
+        "name": "set_diagnostic_preference",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-imports/preview",
+        "name": "preview_external_diagnosis",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-imports",
+        "name": "commit_external_diagnosis",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-imports",
+        "name": "get_external_diagnoses",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-imports/{import_id}/revoke",
+        "name": "revoke_external_diagnosis",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnostic-impact",
+        "name": "get_diagnostic_import_impact",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/evidence",
+        "name": "diagnostic_catalogue",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/datasets",
+        "name": "diagnostic_datasets",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/datasets",
+        "name": "diagnostic_dataset_create",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/datasets/{snapshot_id}",
+        "name": "diagnostic_dataset_get",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/source",
+        "name": "diagnostic_source",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/training",
+        "name": "personal_training_runs",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/training",
+        "name": "personal_training_start",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/plans",
+        "name": "diagnosis_plan_history",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/plans/rollback",
+        "name": "diagnosis_plan_rollback",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/training/jobs",
+        "name": "personal_training_jobs",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/training/rollback",
+        "name": "personal_model_rollback",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/wenjin/help-requests",
+        "name": "record_learning_help_request",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/diagnosis/training/jobs/{job_id}/retry",
+        "name": "retry_personal_training_job",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms",
+        "name": "list_classrooms",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms",
+        "name": "create_classroom",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}",
+        "name": "get_classroom",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}",
+        "name": "delete_classroom",
+        "kind": "http",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/confirm",
+        "name": "confirm_classroom",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/control",
+        "name": "control_classroom",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/answer",
+        "name": "answer_classroom",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/ask",
+        "name": "ask_classroom",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/classroom-media/capabilities",
+        "name": "classroom_media_capabilities",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets/{key}/control",
+        "name": "control_classroom_asset",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets",
+        "name": "request_classroom_asset",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets/{key}",
+        "name": "get_classroom_asset",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets/{key}/files/{name}",
+        "name": "download_classroom_asset",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets/{key}/interact",
+        "name": "classroom_simulation",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/assets",
+        "name": "list_classroom_assets",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/tutor",
+        "name": "slide_tutor_handoff",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/checks",
+        "name": "independent_checks",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/checks/start",
+        "name": "start_independent_check",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/teach-ai",
+        "name": "list_teach_ai",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/teach-ai",
+        "name": "create_teach_ai",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/teach-ai/{sid}",
+        "name": "load_teach_ai",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/teach-ai/{sid}/turn",
+        "name": "turn_teach_ai",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/teach-ai/{sid}/control",
+        "name": "control_teach_ai",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/learning-support",
+        "name": "learning_portrait",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/learning-support/profile",
+        "name": "edit_learning_portrait",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/learning-support/choice",
+        "name": "learning_support_choice",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor",
+        "name": "start_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor/{did}",
+        "name": "get_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor/{did}",
+        "name": "save_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor/{did}/publish",
+        "name": "publish_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor/{did}/discard",
+        "name": "discard_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editions",
+        "name": "classroom_editions",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/classrooms/{cid}/editor/{did}/pages",
+        "name": "arrange_classroom_edit",
+        "kind": "http",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/goal-contract",
+        "name": "get_goal_contract",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/topics/{path_id}/goal-contract",
+        "name": "confirm_goal_contract",
         "kind": "http",
         "methods": [
           "POST"
@@ -4080,6 +4592,30 @@
         "methods": [
           "GET"
         ]
+      },
+      {
+        "path": "/personal-model",
+        "name": "get_personal_api_model",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/personal-model",
+        "name": "save_personal_api_model",
+        "kind": "http",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "path": "/personal-model",
+        "name": "remove_personal_api_model",
+        "kind": "http",
+        "methods": [
+          "DELETE"
+        ]
       }
     ],
     "deeptutor.api.routers.workspace:settings_router": [
@@ -4897,6 +5433,14 @@
       }
     ],
     "deeptutor.api.routers.voice:router": [
+      {
+        "path": "/capabilities",
+        "name": "voice_capabilities",
+        "kind": "http",
+        "methods": [
+          "GET"
+        ]
+      },
       {
         "path": "/tts",
         "name": "text_to_speech",
