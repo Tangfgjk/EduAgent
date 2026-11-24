@@ -719,6 +719,15 @@ def _learning_surface_for_path(
     ):
         if normalized == root or normalized.startswith(f"{root}/"):
             return surface
+    # Spoken input/output belongs to tutoring, not server administration.
+    # Keep an exact method/template allowlist so future voice management APIs
+    # do not become available merely by sharing this prefix.
+    if route_path == normalized and (method.upper(), normalized) in {
+        ("GET", "/api/voice/capabilities"),
+        ("POST", "/api/voice/tts"),
+        ("POST", "/api/voice/stt"),
+    }:
+        return "chat"
     # Match the resolved route template, not just the URL prefix: this keeps
     # admin diagnostics and engine configuration GETs out of the learner shell.
     if (

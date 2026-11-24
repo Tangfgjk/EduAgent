@@ -727,3 +727,43 @@ def test_display_personal_exception_requires_exact_method_and_resolved_route(
     with pytest.raises(HTTPException) as error:
         asyncio.run(auth.require_learning_surface(request, None))
     assert error.value.status_code == 403
+
+
+@pytest.mark.parametrize(("path", "method", "expected"), [
+    ("/api/voice/capabilities", "GET", "chat"),
+    ("/api/voice/tts", "POST", "chat"),
+    ("/api/voice/stt", "POST", "chat"),
+    ("/api/voice/stt", "GET", ""),
+    ("/api/voice/providers", "POST", ""),
+    ("/api/voice/tts/extra", "POST", ""),
+])
+def test_learner_voice_endpoints_are_exact(path, method, expected):
+    assert _learning_surface_for_path(path, method, route_path=path) == expected
+    assert _learning_surface_for_path(path, method) == ""
+
+
+def test_voice_router_uses_learner_surface_guard(monkeypatch):
+    from deeptutor.api.routers import voice
+    from deeptutor.api.routers.auth import require_auth, require_learning_surface
+    from deeptutor.multi_user import learning_access
+
+    observed = []
+    def admit_chat(surface):
+        observed.append(surface)
+        if surface != "chat":
+            raise PermissionError("denied")
+    monkeypatch.setattr(learning_access, "assert_learning_surface", admit_chat)
+    async def synthesize(*args, **kwargs):
+        return b"audio", "audio/wav"
+    async def transcribe(*args, **kwargs):
+        return "中文录音"
+    monkeypatch.setattr(voice, "synthesize_speech", synthesize)
+    monkeypatch.setattr(voice, "transcribe_audio", transcribe)
+    app = FastAPI()
+    app.dependency_overrides[require_auth] = lambda: None
+    app.include_router(voice.router, prefix="/api/voice", dependencies=[Depends(require_learning_surface)])
+    with TestClient(app) as client:
+        assert client.get("/api/voice/capabilities").status_code == 200
+        assert client.post("/api/voice/tts", json={"text": "你好"}).status_code == 200
+        assert client.post("/api/voice/stt", files={"file": ("clip.wav", b"audio", "audio/wav")}).json() == {"text": "中文录音"}
+    assert observed == ["chat", "chat", "chat"]
