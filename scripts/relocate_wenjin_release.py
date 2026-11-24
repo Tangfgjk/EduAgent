@@ -9,11 +9,17 @@ import psycopg
 from psycopg import sql
 from psycopg.types.json import Json, Jsonb
 
+if __package__:
+    from .relocate_wenjin_workspaces import relocate_catalogs
+else:
+    from relocate_wenjin_workspaces import relocate_catalogs
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--workspaces-only", action="store_true", help="Repair auxiliary workspace catalogs on an existing deployment")
     args = parser.parse_args()
     if not args.apply:
         raise RuntimeError("Use --apply on the verified restored target only")
@@ -22,6 +28,10 @@ def main():
     root = Path(os.environ.get("DEEPTUTOR_HOME", Path(__file__).resolve().parents[1])).resolve()
     if str(root).replace("\\", "/").lower() == source.lower():
         raise RuntimeError("Refusing to relocate the source installation")
+    workspace_report = relocate_catalogs(root, source, manifest["files"])
+    if args.workspaces_only:
+        print(json.dumps({"workspace_catalogs": workspace_report}, ensure_ascii=False))
+        return
     missing = set()
     path_keys = re.compile(r"(?:^|_)(?:path|paths|directory|dir|root|file|files)$", re.I)
 
@@ -106,6 +116,7 @@ def main():
                     changes[label] = changes.get(label, 0) + 1
     print(json.dumps({
         "updated_json_files": json_files, "database_updates": changes,
+        "workspace_catalogs": workspace_report,
         "stable_resources": len(resources), "missing_path_count": len(missing),
         "missing_paths": sorted(missing)[:20],
     }, ensure_ascii=False))
