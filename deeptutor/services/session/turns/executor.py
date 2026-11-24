@@ -565,7 +565,9 @@ class TurnExecutor:
                         capability=capability_name or "chat",
                     )
 
-            llm_config, llm_scope_token = activate_llm_selection(payload.get("llm_selection"))
+            llm_config, llm_scope_token = activate_llm_selection(
+                payload.get("llm_selection"), tutoring=workspace_mode == WORKSPACE_MODE_MASTERY
+            )
             builder = (
                 self._create_context_builder(tutoring=True)
                 if workspace_mode == WORKSPACE_MODE_MASTERY

@@ -168,3 +168,18 @@ def test_tutoring_reasoning_default_can_use_native_provider_behavior(monkeypatch
     monkeypatch.setattr("deeptutor.agents.loop.pipeline.get_llm_config", lambda: config)
     monkeypatch.setenv("WENJIN_MASTERY_REASONING_EFFORT", "native")
     assert MasteryLoopPipeline(language="zh").reasoning_effort is None
+
+
+def test_tutoring_scope_covers_nested_calls_and_resets(monkeypatch):
+    from deeptutor.services.llm import config as configs
+    from deeptutor.services.model_selection import runtime
+
+    config = configs.LLMConfig(model="deepseek-v4-pro", api_key="test-only", binding="deepseek", provider_name="deepseek")
+    monkeypatch.setattr(runtime, "resolve_llm_config_for_selection", lambda _selection: config)
+    selected, token = runtime.activate_llm_selection(None, tutoring=True)
+    try:
+        assert configs.get_llm_config().reasoning_effort == selected.reasoning_effort == "none"
+        assert config.reasoning_effort is None
+    finally:
+        runtime.reset_llm_selection(token)
+    assert configs._SCOPED_LLM_CONFIG.get() is None

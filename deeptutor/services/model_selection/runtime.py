@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from contextvars import Token
+from dataclasses import replace
+import os
 from typing import Any
 
 from deeptutor.services.config.provider_runtime import ResolvedLLMConfig, resolve_llm_runtime_config
@@ -36,9 +38,23 @@ def resolve_llm_config_for_selection(selection: Any) -> LLMConfig:
     return llm_config_from_resolved(resolve_llm_runtime_config(llm_selection=selection))
 
 
-def activate_llm_selection(selection: Any) -> tuple[LLMConfig, Token[LLMConfig | None]]:
+def tutoring_config(config: LLMConfig) -> LLMConfig:
+    """Copy an automatic interactive setting; explicit user preferences win."""
+    provider = str(config.provider_name or config.binding).lower()
+    model = str(config.model or "").lower().split("/")[-1]
+    if config.reasoning_effort is not None or provider != "deepseek" or not model.startswith(("deepseek-v4", "deepseek-flash")):
+        return config
+    effort = os.environ.get("WENJIN_MASTERY_REASONING_EFFORT", "none").strip().lower()
+    if effort not in {"none", "low", "high", "max", "native"}:
+        raise ValueError("WENJIN_MASTERY_REASONING_EFFORT must be none, low, high, max or native")
+    return config if effort == "native" else replace(config, reasoning_effort=effort)
+
+
+def activate_llm_selection(selection: Any, *, tutoring: bool = False) -> tuple[LLMConfig, Token[LLMConfig | None]]:
     """Resolve and install a scoped LLM config for the current async context."""
     config = resolve_llm_config_for_selection(selection)
+    if tutoring:
+        config = tutoring_config(config)
     token = llm_config_module.set_scoped_llm_config(config)
     return config, token
 

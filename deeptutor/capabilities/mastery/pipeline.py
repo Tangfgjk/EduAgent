@@ -24,7 +24,6 @@ if it ever proves worth doing — which is the point of having this class at all
 from __future__ import annotations
 
 from dataclasses import replace
-import os
 from typing import Any
 
 from deeptutor.agents.loop.pipeline import AgenticLoopPipeline
@@ -80,18 +79,12 @@ class MasteryLoopPipeline(AgenticLoopPipeline):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Interactive tutoring should not inherit V4's implicit high-thinking
-        # default. An explicit model preference always wins; the selected model
-        # and all evidence/assessment gates stay unchanged.
-        provider = str(getattr(self.llm_config, "provider_name", "") or self.binding).lower()
-        model = str(self.model or "").lower().split("/")[-1]
-        if self.reasoning_effort is None and provider == "deepseek" and model.startswith(("deepseek-v4", "deepseek-flash")):
-            effort = os.environ.get("WENJIN_MASTERY_REASONING_EFFORT", "none").strip().lower()
-            if effort not in {"none", "low", "high", "max", "native"}:
-                raise ValueError("WENJIN_MASTERY_REASONING_EFFORT must be none, low, high, max or native")
-            if effort != "native":
-                self.reasoning_effort = effort
-                self._client_config = replace(self._client_config, reasoning_effort=effort)
+        from deeptutor.services.model_selection.runtime import tutoring_config
+
+        config = tutoring_config(self.llm_config)
+        self.llm_config = config
+        self.reasoning_effort = config.reasoning_effort
+        self._client_config = replace(self._client_config, reasoning_effort=config.reasoning_effort)
 
     async def prepare_model_request(self, context, stream, messages):
         """Re-check the live objective before any model iteration, even forced finish."""

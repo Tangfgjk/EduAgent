@@ -19,7 +19,7 @@
 
 ## 陪学延迟
 
-原 DeepSeek V4 省略 thinking 参数时隐式启用 high。现在只对未明确选择思考强度的 DeepSeek V4 陪学回合采用 none，保留原模型、工具和证据判断。明确的用户思考设置优先。WENJIN_MASTERY_REASONING_EFFORT=native 可恢复提供方默认行为。
+原 DeepSeek V4 省略 thinking 参数时隐式启用 high。现在只对未明确选择思考强度的 DeepSeek V4 陪学回合采用 none，保留原模型、工具和证据判断。对话执行器在历史整理之前建立本回合专属配置，让评分、画像和历史辅助调用继承同一强度；不修改共享账号设置。明确的用户思考设置优先。WENJIN_MASTERY_REASONING_EFFORT=native 可恢复提供方默认行为。
 
 ## 来源
 
