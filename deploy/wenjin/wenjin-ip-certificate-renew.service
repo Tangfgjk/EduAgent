@@ -6,4 +6,4 @@ After=network-online.target
 [Service]
 Type=oneshot
 UMask=0077
-ExecStart=/opt/guiziwenjin-tools/certbot/bin/certbot renew --cert-name guiziwenjin-ip --quiet --deploy-hook /usr/local/sbin/wenjin-certificate-reloaded
+ExecStart=/opt/guiziwenjin-tools/certbot/bin/certbot renew --cert-name guiziwenjin-ip --quiet --no-random-sleep-on-renew --deploy-hook /usr/local/sbin/wenjin-certificate-reloaded
